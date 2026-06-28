@@ -4,8 +4,21 @@
 
 const API = '/api';
 
-// Pilot şehir
-const CITIES = ['İstanbul'];
+// Türkiye'nin 81 ili — en büyük 5 şehir önce (plaka sırasına göre), sonra diğerleri
+const CITIES_TOP5 = ['Ankara', 'Antalya', 'Bursa', 'İstanbul', 'İzmir'];
+const CITIES_REST = [
+  'Adana','Adıyaman','Afyonkarahisar','Ağrı','Aksaray','Amasya','Ardahan','Artvin',
+  'Aydın','Balıkesir','Bartın','Batman','Bayburt','Bilecik','Bingöl','Bitlis',
+  'Bolu','Burdur','Çanakkale','Çankırı','Çorum','Denizli','Diyarbakır','Düzce',
+  'Edirne','Elazığ','Erzincan','Erzurum','Eskişehir','Gaziantep','Giresun',
+  'Gümüşhane','Hakkari','Hatay','Iğdır','Isparta','Kahramanmaraş','Karabük',
+  'Karaman','Kars','Kastamonu','Kayseri','Kilis','Kırıkkale','Kırklareli',
+  'Kırşehir','Kocaeli','Konya','Kütahya','Malatya','Manisa','Mardin','Mersin',
+  'Muğla','Muş','Nevşehir','Niğde','Ordu','Osmaniye','Rize','Sakarya','Samsun',
+  'Siirt','Sinop','Sivas','Şanlıurfa','Şırnak','Tekirdağ','Tokat','Trabzon',
+  'Tunceli','Uşak','Van','Yalova','Yozgat','Zonguldak'
+];
+const CITIES = CITIES_TOP5.concat(CITIES_REST);
 
 // Sektör ikonları (SVG)
 const SECTOR_ICONS = [
@@ -358,10 +371,27 @@ function timeAgo(dateStr) {
 function citySelectHTML(name, selected) {
   return '<select name="' + name + '" class="form-control" id="' + name + '">' +
     '<option value="">— Şehir Seçin —</option>' +
-    CITIES.map(function(c) { return '<option value="' + c + '"' + (c === selected ? ' selected' : '') + '>' + c + '</option>'; }).join('') +
-    '<optgroup label="Yakında Açılacak İller">' +
-    '<option disabled>Ankara</option><option disabled>İzmir</option><option disabled>Bursa</option><option disabled>Antalya</option><option disabled>... ve diğer 77 il</option>' +
-    '</optgroup></select>';
+    '<optgroup label="Büyük Şehirler">' +
+    CITIES_TOP5.map(function(c) { return '<option value="' + c + '"' + (c === selected ? ' selected' : '') + '>' + c + '</option>'; }).join('') +
+    '</optgroup>' +
+    '<optgroup label="Diğer İller">' +
+    CITIES_REST.map(function(c) { return '<option value="' + c + '"' + (c === selected ? ' selected' : '') + '>' + c + '</option>'; }).join('') +
+    '</optgroup>' +
+    '</select>';
+}
+
+// Türk GSM numarası doğrulama
+function validateTurkishPhone(val) {
+  if (!val) return 'Telefon numarası zorunludur.';
+  var digits = val.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('90')) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+  if (digits.length !== 10) return 'Geçerli bir telefon numarası giriniz (+90 5XX XXX XX XX).';
+  if (!digits.startsWith('5')) return 'Cep telefonu numarası 5 ile başlamalıdır.';
+  if (parseInt(digits[1]) > 7) return 'Geçersiz GSM numarası. Lütfen gerçek numaranızı giriniz.';
+  if (/^(.)\1{9}$/.test(digits)) return 'Geçerli bir telefon numarası giriniz.';
+  if (digits === '5000000000' || digits === '5111111111' || digits === '5123456789') return 'Geçerli bir telefon numarası giriniz.';
+  return null;
 }
 
 function catSelectHTML(selected, name) {
@@ -532,7 +562,7 @@ async function renderHome() {
             '<div class="hero-stats">' +
               '<div><em class="hero-stat-val">' + (data.pagination ? data.pagination.total : (data.total || 0)) + '</em><span class="hero-stat-lbl">Aktif İlan</span></div>' +
               '<div><em class="hero-stat-val">' + State.categories.length + '</em><span class="hero-stat-lbl">Sektör</span></div>' +
-              '<div><em class="hero-stat-val">İstanbul</em><span class="hero-stat-lbl">Pilot Şehir</span></div>' +
+              '<div><em class="hero-stat-val">5 İl</em><span class="hero-stat-lbl">Hizmet Bölgesi</span></div>' +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -629,7 +659,7 @@ async function renderSearch() {
         { title:'İlan Türü', name:'f_type', current:type, options:[['','Tümü'],['sell','Satılır'],['buy','Alınır']], linkFn: function(v){ return aLink({listing_type:v, page:1}); } },
         { title:'Sıralama',  name:'f_sort', current:sort, options:[['newest','En Yeni'],['oldest','En Eski'],['price_asc','Ucuzdan Pahalıya'],['price_desc','Pahalıdan Ucuza'],['views','En Çok Görüntülenen']], linkFn: function(v){ return aLink({sort:v}); } },
         { title:'Sektör', name:'f_cat', current:cat, options:[['','Tümü']].concat(State.categories.map(function(c){ return [c.slug, c.name]; })), linkFn: function(v){ return aLink({category:v, page:1}); } },
-        { title:'Şehir',    name:'f_city', current:city, options:[['','Tümü'],['İstanbul','İstanbul']], linkFn: function(v){ return aLink({city:v, page:1}); } },
+        { title:'Şehir',    name:'f_city', current:city, options:[['','Tümü']].concat(CITIES.map(function(c){return[c,c];})), linkFn: function(v){ return aLink({city:v, page:1}); } },
         { title:'Fiyat Bazı', name:'f_pbasis', current:qs.get('price_basis')||'', options:[['','Tümü'],['per_unit','Lot Başı'],['total','Toplam Fiyat']], linkFn: function(v){ return aLink({price_basis:v, page:1}); } },
         { title:'Fiyat Türü', name:'f_ptype', current:ptype, options:[['','Tümü'],['fixed','Sabit Fiyat'],['negotiable','Pazarlık Usulü'],['on_request','Fiyat Sorunuz']], linkFn: function(v){ return aLink({price_type:v, page:1}); } },
         { title:'Para Birimi', name:'f_cur', current:qs.get('currency')||'', options:[['','Tümü'],['TRY','₺ TRY'],['USD','$ USD'],['EUR','€ EUR']], linkFn: function(v){ return aLink({currency:v, page:1}); } },
@@ -749,7 +779,7 @@ async function renderCategory(params) {
       filterSidebar([
         { title:'İlan Türü',   name:'f_type', current:type, options:[['','Tümü'],['sell','Satılır'],['buy','Alınır']], linkFn: function(v){ return catLink({listing_type:v}); } },
         { title:'Sıralama',    name:'f_sort', current:sort, options:[['newest','En Yeni'],['oldest','En Eski'],['price_asc','Ucuzdan Pahalıya'],['price_desc','Pahalıdan Ucuza'],['views','En Çok Görüntülenen']], linkFn: function(v){ return catLink({sort:v}); } },
-        { title:'Şehir',       name:'f_city', current:city, options:[['','Tümü'],['İstanbul','İstanbul']], linkFn: function(v){ return catLink({city:v}); } },
+        { title:'Şehir',       name:'f_city', current:city, options:[['','Tümü']].concat(CITIES.map(function(c){return[c,c];})), linkFn: function(v){ return catLink({city:v}); } },
         { title:'Fiyat Türü',  name:'f_ptype', current:'',  options:[['','Tümü'],['fixed','Sabit Fiyat'],['negotiable','Pazarlık Usulü'],['on_request','Fiyat Sorunuz']], linkFn: function(v){ return catLink({price_type:v}); } },
         { title:'Para Birimi', name:'f_cur',  current:cur,  options:[['','Tümü'],['TRY','₺ TRY'],['USD','$ USD'],['EUR','€ EUR']], linkFn: function(v){ return catLink({currency:v}); } },
       ]);
@@ -1113,7 +1143,7 @@ function listingFormHTML(l) {
     '<div class="form-group"><label class="form-label">Birim</label><select name="quantity_unit" class="form-control">' + ['','Ton','Kg','Litre','m³','Adet','Palet','Lot','Konteyner','Fıçı','m²','m'].map(function(u){ return '<option value="'+u+'"'+(l.quantity_unit===u?' selected':'')+'>'+(u||'— Birim Seçin —')+'</option>'; }).join('') + '</select></div>' +
     '<div class="form-group"><label class="form-label">Şehir <span class="req">*</span></label>' + citySelectHTML('city', l.city) + '</div>' +
     '<div class="form-group"><label class="form-label">İlçe</label><input type="text" name="district" class="form-control" value="' + esc(l.district||'') + '" placeholder="Örn: Pendik" /></div>' +
-    '<div class="form-group"><label class="form-label">İletişim Telefonu</label><input type="tel" name="contact_phone" class="form-control" value="' + esc(l.contact_phone||'+90 ') + '" placeholder="+90 5XX XXX XX XX" /></div>' +
+    '<div class="form-group"><label class="form-label">İletişim Telefonu <span class="req">*</span></label><input type="tel" name="contact_phone" class="form-control" value="' + esc(l.contact_phone||'+90 ') + '" placeholder="+90 5XX XXX XX XX" required /></div>' +
     '<div class="form-group"><label class="form-label">İletişim E-postası</label><input type="email" name="contact_email" class="form-control" value="' + esc(l.contact_email||'') + '" placeholder="firma@ornek.com" /></div>' +
     '<div class="form-group" style="grid-column:1/-1;"><label class="form-label">Web Sitesi</label><input type="url" name="website" class="form-control" value="' + esc(l.website||'') + '" placeholder="https://www.firma.com" /></div>' +
     '<div class="form-group" style="grid-column:1/-1;"><label class="form-label">Açıklama <span class="req">*</span></label><textarea name="description" class="form-control" rows="7" placeholder="Ürün özellikleri, kalite standardı, ambalaj türü, teslimat koşulları..." required>' + esc(l.description||'') + '</textarea></div>' +
@@ -1184,6 +1214,8 @@ async function renderCreateListing() {
     btn.disabled = true; btn.textContent = 'Gönderiliyor...';
     try {
       var fd = new FormData(e.target);
+      var phoneErr = validateTurkishPhone(fd.get('contact_phone'));
+      if (phoneErr) { toast(phoneErr, 'error'); btn.disabled = false; btn.textContent = 'İlanı Gönder'; return; }
       _pendingFiles.forEach(function(f) { fd.append('images', f); });
       var res = await api('POST', '/listings', fd, true);
       toast(res.message, 'success');
@@ -1252,6 +1284,8 @@ async function renderEditListing(params) {
     btn.disabled = true; btn.textContent = 'Güncelleniyor...';
     try {
       var fd = new FormData(e.target);
+      var phoneErr = validateTurkishPhone(fd.get('contact_phone'));
+      if (phoneErr) { toast(phoneErr, 'error'); btn.disabled = false; btn.textContent = 'Güncelle'; return; }
       _toDeleteImgs.forEach(function(imgId) { fd.append('delete_images', imgId); });
       _pendingFiles.forEach(function(f) { fd.append('images', f); });
       var res = await api('PUT', '/listings/' + id, fd, true);
@@ -1452,7 +1486,7 @@ async function renderRegister() {
           '</div>' +
           '<div class="form-group mb-4"><label class="form-label">E-posta <span class="req">*</span></label><input type="email" name="email" class="form-control" placeholder="ornek@firma.com" required /></div>' +
           '<div class="grid-2">' +
-            '<div class="form-group mb-4"><label class="form-label">Telefon</label><input type="tel" name="phone" class="form-control" value="+90 " placeholder="+90 5XX XXX XX XX" /></div>' +
+            '<div class="form-group mb-4"><label class="form-label">Telefon <span class="req">*</span></label><input type="tel" name="phone" class="form-control" value="+90 " placeholder="+90 5XX XXX XX XX" required /></div>' +
             '<div class="form-group mb-4"><label class="form-label">Şehir</label>' + citySelectHTML('city','') + '</div>' +
           '</div>' +
           '<div class="form-group mb-4"><label class="form-label">Şifre <span class="req">*</span></label><input type="password" name="password" class="form-control" placeholder="En az 8 karakter" required minlength="8" /></div>' +
@@ -1476,6 +1510,8 @@ async function renderRegister() {
     errEl.style.display = 'none';
     try {
       var fd = new FormData(e.target);
+      var phoneErr = validateTurkishPhone(fd.get('phone'));
+      if (phoneErr) { errEl.textContent = phoneErr; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Üye Ol'; return; }
       var remember = fd.has('remember');
       fd.delete('remember');
       var res = await api('POST', '/auth/register', Object.fromEntries(fd));
