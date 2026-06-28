@@ -4,8 +4,21 @@
 
 const API = '/api';
 
-// Aktif şehirler (Türkiye'nin 5 büyük ili, plaka sırasına göre)
-const CITIES = ['Ankara', 'Antalya', 'Bursa', 'İstanbul', 'İzmir'];
+// Türkiye'nin 81 ili — en büyük 5 şehir önce (plaka sırasına göre), sonra diğerleri
+const CITIES_TOP5 = ['Ankara', 'Antalya', 'Bursa', 'İstanbul', 'İzmir'];
+const CITIES_REST = [
+  'Adana','Adıyaman','Afyonkarahisar','Ağrı','Aksaray','Amasya','Ardahan','Artvin',
+  'Aydın','Balıkesir','Bartın','Batman','Bayburt','Bilecik','Bingöl','Bitlis',
+  'Bolu','Burdur','Çanakkale','Çankırı','Çorum','Denizli','Diyarbakır','Düzce',
+  'Edirne','Elazığ','Erzincan','Erzurum','Eskişehir','Gaziantep','Giresun',
+  'Gümüşhane','Hakkari','Hatay','Iğdır','Isparta','Kahramanmaraş','Karabük',
+  'Karaman','Kars','Kastamonu','Kayseri','Kilis','Kırıkkale','Kırklareli',
+  'Kırşehir','Kocaeli','Konya','Kütahya','Malatya','Manisa','Mardin','Mersin',
+  'Muğla','Muş','Nevşehir','Niğde','Ordu','Osmaniye','Rize','Sakarya','Samsun',
+  'Siirt','Sinop','Sivas','Şanlıurfa','Şırnak','Tekirdağ','Tokat','Trabzon',
+  'Tunceli','Uşak','Van','Yalova','Yozgat','Zonguldak'
+];
+const CITIES = CITIES_TOP5.concat(CITIES_REST);
 
 // Sektör ikonları (SVG)
 const SECTOR_ICONS = [
@@ -358,7 +371,12 @@ function timeAgo(dateStr) {
 function citySelectHTML(name, selected) {
   return '<select name="' + name + '" class="form-control" id="' + name + '">' +
     '<option value="">— Şehir Seçin —</option>' +
-    CITIES.map(function(c) { return '<option value="' + c + '"' + (c === selected ? ' selected' : '') + '>' + c + '</option>'; }).join('') +
+    '<optgroup label="Büyük Şehirler">' +
+    CITIES_TOP5.map(function(c) { return '<option value="' + c + '"' + (c === selected ? ' selected' : '') + '>' + c + '</option>'; }).join('') +
+    '</optgroup>' +
+    '<optgroup label="Diğer İller">' +
+    CITIES_REST.map(function(c) { return '<option value="' + c + '"' + (c === selected ? ' selected' : '') + '>' + c + '</option>'; }).join('') +
+    '</optgroup>' +
     '</select>';
 }
 
@@ -641,7 +659,7 @@ async function renderSearch() {
         { title:'İlan Türü', name:'f_type', current:type, options:[['','Tümü'],['sell','Satılır'],['buy','Alınır']], linkFn: function(v){ return aLink({listing_type:v, page:1}); } },
         { title:'Sıralama',  name:'f_sort', current:sort, options:[['newest','En Yeni'],['oldest','En Eski'],['price_asc','Ucuzdan Pahalıya'],['price_desc','Pahalıdan Ucuza'],['views','En Çok Görüntülenen']], linkFn: function(v){ return aLink({sort:v}); } },
         { title:'Sektör', name:'f_cat', current:cat, options:[['','Tümü']].concat(State.categories.map(function(c){ return [c.slug, c.name]; })), linkFn: function(v){ return aLink({category:v, page:1}); } },
-        { title:'Şehir',    name:'f_city', current:city, options:[['','Tümü'],['Ankara','Ankara'],['Antalya','Antalya'],['Bursa','Bursa'],['İstanbul','İstanbul'],['İzmir','İzmir']], linkFn: function(v){ return aLink({city:v, page:1}); } },
+        { title:'Şehir',    name:'f_city', current:city, options:[['','Tümü']].concat(CITIES.map(function(c){return[c,c];})), linkFn: function(v){ return aLink({city:v, page:1}); } },
         { title:'Fiyat Bazı', name:'f_pbasis', current:qs.get('price_basis')||'', options:[['','Tümü'],['per_unit','Lot Başı'],['total','Toplam Fiyat']], linkFn: function(v){ return aLink({price_basis:v, page:1}); } },
         { title:'Fiyat Türü', name:'f_ptype', current:ptype, options:[['','Tümü'],['fixed','Sabit Fiyat'],['negotiable','Pazarlık Usulü'],['on_request','Fiyat Sorunuz']], linkFn: function(v){ return aLink({price_type:v, page:1}); } },
         { title:'Para Birimi', name:'f_cur', current:qs.get('currency')||'', options:[['','Tümü'],['TRY','₺ TRY'],['USD','$ USD'],['EUR','€ EUR']], linkFn: function(v){ return aLink({currency:v, page:1}); } },
@@ -761,7 +779,7 @@ async function renderCategory(params) {
       filterSidebar([
         { title:'İlan Türü',   name:'f_type', current:type, options:[['','Tümü'],['sell','Satılır'],['buy','Alınır']], linkFn: function(v){ return catLink({listing_type:v}); } },
         { title:'Sıralama',    name:'f_sort', current:sort, options:[['newest','En Yeni'],['oldest','En Eski'],['price_asc','Ucuzdan Pahalıya'],['price_desc','Pahalıdan Ucuza'],['views','En Çok Görüntülenen']], linkFn: function(v){ return catLink({sort:v}); } },
-        { title:'Şehir',       name:'f_city', current:city, options:[['','Tümü'],['Ankara','Ankara'],['Antalya','Antalya'],['Bursa','Bursa'],['İstanbul','İstanbul'],['İzmir','İzmir']], linkFn: function(v){ return catLink({city:v}); } },
+        { title:'Şehir',       name:'f_city', current:city, options:[['','Tümü']].concat(CITIES.map(function(c){return[c,c];})), linkFn: function(v){ return catLink({city:v}); } },
         { title:'Fiyat Türü',  name:'f_ptype', current:'',  options:[['','Tümü'],['fixed','Sabit Fiyat'],['negotiable','Pazarlık Usulü'],['on_request','Fiyat Sorunuz']], linkFn: function(v){ return catLink({price_type:v}); } },
         { title:'Para Birimi', name:'f_cur',  current:cur,  options:[['','Tümü'],['TRY','₺ TRY'],['USD','$ USD'],['EUR','€ EUR']], linkFn: function(v){ return catLink({currency:v}); } },
       ]);
