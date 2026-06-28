@@ -28,6 +28,9 @@ const reportsRoutes     = require('./routes/reports');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
+
+// Railway/proxy arkasında çalışırken IP'yi doğru al
+app.set('trust proxy', 1);
 const isProd = process.env.NODE_ENV === 'production';
 
 // ---------- Güvenlik başlıkları ----------
