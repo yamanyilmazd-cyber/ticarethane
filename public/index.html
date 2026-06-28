@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Ticarethane — İstanbul'dan başlayan ticari mal ilan platformu. Kimya, demir-çelik, tarım, plastik ve daha fazlası." />
+  <title>Ticarethane | Ticari Mal Platformu</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <!-- SEO -->
+  <meta name="description" content="Ticarethane - Türkiye'nin ticaret platformu. Toplu mal, hammadde, sanayi ürünü ilan verin ve alın." />
+  <meta name="keywords" content="toptan, ticaret, hammadde, sanayi, ilan, turkiye" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Ticarethane" />
+  <meta property="og:title" content="Ticarethane - Ticari Mal Platformu" />
+  <meta property="og:description" content="Toplu mal, hammadde ve sanayi urunu alim-satim ilanlari." />
+  <meta name="twitter:card" content="summary" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://ticarethane.com/" />
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+  <div class="container navbar-inner">
+    <a href="#/" class="navbar-logo">Ticaret<span>hane</span></a>
+
+    <div class="navbar-search">
+      <form id="navSearchForm">
+        <input type="text" id="navSearchInput" placeholder="Ürün, sektör veya firma arayın..." autocomplete="off" />
+        <button type="submit">Ara</button>
+      </form>
+    </div>
+
+    <div class="navbar-actions" id="navActions"></div>
+  </div>
+</nav>
+
+<!-- Kategori şeridi -->
+<div class="cat-bar" id="catBar">
+  <div class="container">
+    <div class="cat-bar-inner" id="catBarInner"></div>
+  </div>
+</div>
+
+<!-- ===== ANA İÇERİK ===== -->
+<main id="app">
+  <div class="page-loading"><div class="spinner"></div></div>
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <h4>Ticarethane</h4>
+        <p>Türkiye'nin ticari mal platformu. Alıcı ve satıcıları sektörel kategorilerle buluşturuyoruz. Şu an yalnızca İstanbul'da hizmet veriyoruz; diğer şehirlere yakında açılıyoruz.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Platform</h4>
+        <ul>
+          <li><a href="#/">Ana Sayfa</a></li>
+          <li><a href="#/ara">Tüm İlanlar</a></li>
+          <li><a href="#/ilan-ver">İlan Ver</a></li>
+          <li><a href="#/hesabim">Hesabım</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Yasal</h4>
+        <ul>
+          <li><a href="#">Kullanım Koşulları</a></li>
+          <li><a href="#">Gizlilik Politikası</a></li>
+          <li><a href="#">İlan Kuralları</a></li>
+          <li><a href="#">İletişim</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-logo">Ticaret<span>hane</span></div>
+      <div style="font-size:.8rem;">&copy; <span id="footerYear"></span> Ticarethane. Tüm hakları saklıdır.</div>
+    </div>
+  </div>
+</footer>
+
+<div class="toast-container" id="toastContainer"></div>
+<div id="modalContainer"></div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
