@@ -286,34 +286,36 @@ router.post('/forgot-password', async (req, res) => {
     db.prepare('DELETE FROM password_reset_tokens WHERE user_id=?').run(user.id);
     db.prepare('INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?,?,?)').run(user.id, token, exp);
 
-    // E-posta gonder (nodemailer yapilandirmasi varsa)
-    const SMTP_HOST = process.env.SMTP_HOST;
-    if (SMTP_HOST) {
+    // E-posta gonder
+    const base = process.env.APP_URL || 'http://localhost:3000';
+    const resetLink = base + '/#/sifre-sifirla?token=' + token;
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+
+    if (RESEND_API_KEY) {
+      // Resend HTTP API (SMTP port bloklarina takilmaz)
       try {
-        const nodemailer = require('nodemailer');
-        const transporter = nodemailer.createTransport({
-          host: SMTP_HOST,
-          port: parseInt(process.env.SMTP_PORT || '587'),
-          secure: process.env.SMTP_SECURE === 'true',
-          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        const fromAddr = process.env.SMTP_FROM || 'Ticarethane <onboarding@resend.dev>';
+        const resp = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: fromAddr,
+            to: [email],
+            subject: 'Sifre Sifirlama - Ticarethane',
+            html: '<p>Merhaba ' + user.name + ',</p><p>Sifrenizi sifirlamak icin asagidaki linke tiklayin (1 saat gecerli):</p><p><a href="' + resetLink + '">Sifremi Sifirla</a></p><p>Bu istegi siz yapmadiysa dikkate almayiniz.</p>',
+          }),
         });
-        const base = process.env.APP_URL || 'http://localhost:3000';
-        await transporter.sendMail({
-          from: process.env.SMTP_FROM || 'Ticarethane <noreply@ticarethane.com>',
-          to: email,
-          subject: 'Sifre Sifirlama - Ticarethane',
-          html: '<p>Merhaba ' + user.name + ',</p><p>Sifrenizi sifirlamak icin asagidaki linke tiklayin (1 saat gecerli):</p><p><a href="' + base + '/#/sifre-sifirla?token=' + token + '">Sifremi Sifirla</a></p><p>Bu istegi siz yapmadiysa dikkate almayiniz.</p>',
-        });
+        const result = await resp.json();
+        if (!resp.ok) console.error('[AUTH] Resend hatasi:', JSON.stringify(result));
+        else console.info('[AUTH] Mail gonderildi:', result.id);
       } catch(mailErr) {
         console.error('[AUTH] mail error:', mailErr.message);
       }
     } else {
-      // SMTP yapilandirilmamis — linki response'a ekle (uretimde gizlenir)
-      const base = process.env.APP_URL || 'http://localhost:3000';
-      const resetLink = base + '/#/sifre-sifirla?token=' + token;
-      console.info('[AUTH] Sifre sifirlama linki (SMTP YOK):', resetLink);
+      // Yapilandirilmamis — dev modda linki don
+      console.info('[AUTH] Sifre sifirlama linki (MAIL YOK):', resetLink);
       if (process.env.NODE_ENV !== 'production') {
-        return res.json({ message: 'SMTP yapilandirilmamis. Asagidaki linki kullanin:', dev_link: resetLink });
+        return res.json({ message: 'Mail yapilandirilmamis. Asagidaki linki kullanin:', dev_link: resetLink });
       }
     }
 
