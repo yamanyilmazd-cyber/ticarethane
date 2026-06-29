@@ -160,7 +160,7 @@ function getHash() {
 }
 
 function matchRoute(hash) {
-  var path = (hash.replace(/^#/, '') || '/').split('?')[0];
+  var path = (hash.replace(/^#!?/, '').replace(/^\/+/, '/') || '/').split('?')[0];
   var patterns = Object.keys(routes);
   for (var i = 0; i < patterns.length; i++) {
     var pattern = patterns[i];
