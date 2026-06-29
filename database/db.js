@@ -15,6 +15,8 @@ let _db           = null;
 let _dirty        = false;
 let _saveTimer    = null;
 let _tursoReady   = false;   // true after background restore completes
+let _initComplete = false;   // true after initDatabase() finishes
+let _tursoQueue   = [];      // runtime writes queued before Turso is ready
 
 // ── Turso HTTP yardımcıları ────────────────────────────────────────────────
 function buildArgs(params) {
@@ -77,7 +79,13 @@ function tursoWrite(sql, params) {
       t.startsWith('CREATE') || t.startsWith('DROP') ||
       t.startsWith('ALTER')  || t.startsWith('BEGIN') ||
       t.startsWith('COMMIT') || t.startsWith('ROLLBACK')) return;
-  tursoHttp(sql, params, 8000).catch(() => {});
+  if (_tursoReady) {
+    tursoHttp(sql, params, 8000).catch(() => {});
+  } else if (_initComplete) {
+    // Runtime write during Turso restore window — queue for later
+    _tursoQueue.push({ sql, params });
+  }
+  // Startup writes (_initComplete=false) are intentionally skipped
 }
 
 // ── sql.js kalıcı kayıt ─────────────────────────────────────────────────────
@@ -301,6 +309,14 @@ async function initTursoBackground() {
   }
 
   _tursoReady = true;
+  // Flush writes that were queued during restore window
+  if (_tursoQueue.length > 0) {
+    console.log(`[TURSO] ${_tursoQueue.length} bekleyen yazma işlemi gönderiliyor...`);
+    for (const { sql, params } of _tursoQueue) {
+      tursoHttp(sql, params, 8000).catch(() => {});
+    }
+    _tursoQueue = [];
+  }
   console.log('[TURSO] Hazır. Çift yazma aktif.');
 }
 
@@ -355,6 +371,7 @@ async function initDatabase() {
     initTursoBackground().catch(e => console.error('[TURSO] Arka plan hatası:', e.message));
   }
 
+  _initComplete = true; // Artık runtime yazmaları kuyruğa alınabilir
   console.log('[DB] Veritabanı hazır' + (tursoEnabled ? ' (Turso arka planda)' : ' (yerel mod)') + '.');
 }
 
