@@ -583,7 +583,7 @@ async function renderHome() {
           '<div class="section-header"><div><div class="section-title">Son İlanlar</div><div class="section-sub">Platforma yeni eklenen ilanlar</div></div><a href="#/ara" class="btn btn-ghost btn-sm">Tümünü Gör</a></div>' +
           listings +
         '</div>' +
-      '</section> +
+      '</section> '+
 
       '<section class="py-5" style="background:#f8f9fa">' +
       '<div class="container text-center">' +
@@ -591,8 +591,7 @@ async function renderHome() {
       '<p class="lead mb-2">Sorular&#305;n&#305;z i&#231;in bizimle ileti&#351;ime ge&#231;ebilirsiniz:</p>' +
       '<a href="mailto:destek@ticaret-hane.net" class="btn btn-primary btn-lg">&#128231; destek@ticaret-hane.net</a>' +
       '</div>' +
-      '</section>' +
-      ';
+      '</section>';
 
     document.getElementById('heroSearchForm').addEventListener('submit', function(e) {
       e.preventDefault();
