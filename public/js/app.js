@@ -382,17 +382,19 @@ function citySelectHTML(name, selected) {
 
 // Türk GSM numarası doğrulama
 function validateTurkishPhone(val) {
-  if (!val) return 'Telefon numarası zorunludur.';
+  if (!val) return 'Telefon numarısı zorunludur.';
   var digits = val.replace(/\D/g, '');
+  // Ülke kodu normalizasyonu
   if (digits.length === 12 && digits.startsWith('90')) digits = digits.slice(2);
   if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
-  if (digits.length !== 10) return 'Geçerli bir telefon numarası giriniz (+90 5XX XXX XX XX).';
+  // Tam 10 hane olmalı
+  if (digits.length !== 10) return 'Geçerli bir Türk cep telefonu numarası giriniz.';
+  // 5 ile başlamalı
   if (!digits.startsWith('5')) return 'Cep telefonu numarası 5 ile başlamalıdır.';
-
+  // Aynı rakamlardan oluşmamalı (5555555555 vb.)
   if (/^(.)\1{9}$/.test(digits)) return 'Geçerli bir telefon numarası giriniz.';
-  if (digits === '5000000000' || digits === '5111111111' || digits === '5123456789') return 'Geçerli bir telefon numarası giriniz.';
   return null;
-}
+}}
 
 function catSelectHTML(selected, name) {
   name = name || 'category_id';
