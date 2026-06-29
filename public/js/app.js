@@ -151,6 +151,8 @@ var routes = {
   '/bildirimler':          renderNotifications,
   '/sifre-sifirla':        renderResetPassword,
   '/sifremi-unuttum':      renderForgotPassword,
+  '/sozlesme':            renderSozlesme,
+  '/kvkk':               renderKvkk,
 };
 
 function getHash() {
@@ -1496,6 +1498,12 @@ async function renderRegister() {
             '<input type="checkbox" class="form-check-input" id="rememberReg" name="remember" value="1" checked />' +
             '<label class="form-check-label" for="rememberReg" style="cursor:pointer;"> Beni hatırla</label>' +
           '</div>' +
+          '<div style="background:#f8f9ff;border:1px solid #dde3f0;border-radius:8px;padding:12px 14px;margin-bottom:12px;">' +
+          '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;color:#444;line-height:1.5;">' +
+          '<input type="checkbox" id="termsCheck" name="termsCheck" required style="margin-top:3px;flex-shrink:0;cursor:pointer;" />' +
+          '<span><a href="#!/sozlesme" target="_blank" style="color:#2563eb;text-decoration:underline;">Kullanım Koşulları ve Üyelik Sözleşmesi</a>'ni ve <a href="#!/kvkk" target="_blank" style="color:#2563eb;text-decoration:underline;">KVKK Aydınlatma Metni</a>'ni okudum, kabul ediyorum.</span>' +
+          '</label>' +
+          '</div>' +
           '<div id="regError" class="alert alert-error" style="display:none;"></div>' +
           '<button type="submit" class="btn btn-accent w-100 btn-lg" id="regBtn">Üye Ol</button>' +
           '<div class="auth-divider">Zaten hesabınız var mı?</div>' +
@@ -2620,4 +2628,80 @@ async function loadAdminReports() {
   } catch(err) {
     c.innerHTML = '<div class="alert alert-error">' + esc(err.message) + '</div>';
   }
+}
+
+
+function renderSozlesme() {
+  document.getElementById('app').innerHTML =
+    '<div style="max-width:820px;margin:40px auto;padding:0 20px 60px;">' +
+    '<a href="#!/kayit" style="color:#888;font-size:0.85rem;text-decoration:none;">&larr; Geri Dön</a>' +
+    '<h1 style="font-size:1.5rem;margin:20px 0 4px;">Kullanım Koşulları ve Üyelik Sözleşmesi</h1>' +
+    '<p style="color:#aaa;font-size:0.8rem;margin-bottom:28px;">Son güncelleme: Haziran 2024</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">1. Taraflar</h2>' +
+    '<p style="line-height:1.7;color:#444;">Bu sözleşme; <strong>Ticarethane</strong> platformu (“Platform”) ile platforma üye olan gerçek ya da tüzel kişi (“Kullanıcı”) arasında akdedilmiştir.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">2. Platformun Aracı Sıfatı</h2>' +
+    '<p style="line-height:1.7;color:#444;">Ticarethane, alıcılar ile satıcılar arasında iletişim ve ilan yayınına aracılık eden bir elektronik ticaret platformudur. Platform, kullanıcılar arasında gerçekleştirilecek alım-satım işlemlerinde <strong>taraf değildir</strong>; söz konusu işlemlerin hiçbir aşamasında sorumluluk üstlenmez.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">3. Sorumluluk Reddi</h2>' +
+    '<p style="line-height:1.7;color:#444;">Platform aşağıdaki durumlarda hiçbir hukuki veya mali sorumluluk kabul etmez:</p>' +
+    '<ul style="color:#444;line-height:2;padding-left:22px;">' +
+    '<li>Kullanıcılar arasındaki dolandırıcılık, sahtecilik veya kötü niyetli eylemler</li>' +
+    '<li>Ürnün teslim edilmemesi, ayıplı mal veya hizmet</li>' +
+    '<li>Ödeme anlaşmazlıkları</li>' +
+    '<li>Üçüncü kişilerin yol açtığı maddi veya manevi zararlar</li>' +
+    '<li>Kullanıcı tarafından girilen bilgilerin doğruluğu</li>' +
+    '</ul>' +
+    '<p style="line-height:1.7;color:#444;">Kullanıcı, diğer kullanıcılarla gerçekleştireceği işlemlerde tüm sorumluluğun kendisine ait olduğunu kabul eder ve platformu bu tür uyumazlıklardan beri kılar.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">4. Üyelik ve Hesap</h2>' +
+    '<p style="line-height:1.7;color:#444;">Kullanıcı, platforma kayıt olurken gerçek ve güncel bilgi vermekle yükümlüdür. Hesap güvenliği kullanıcının sorumluluğundadır. Platform, kurallara aykırı davranan kullanıcıların hesabını bildirimde bulunmaksızın askuya alabilir veya silebilir.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">5. İlan Kuralları</h2>' +
+    '<p style="line-height:1.7;color:#444;">Yasadışı mal/hizmet, sahte ürün, yanıltıcı ilan, başkasının fikri mülkiyetini ihlal eden içerik yayımlamak yasaktır. Platform, kurallara aykırı ilanı kaldırma ve hesabı askuya alma hakkını saklı tutar.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">6. Uyuşmazlık Çözümü</h2>' +
+    '<p style="line-height:1.7;color:#444;">Kullanıcılar arasındaki uyuzmazlıklar öncelikle kendi aralarında çözülür. Türk hukuku uygulanır; yetkili mahkemeler İstanbul Merkez Mahkemeleri ve İcra Daireleri’dir.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">7. Değişiklik Hakkı</h2>' +
+    '<p style="line-height:1.7;color:#444;">Platform, bu sözleşmeyi önceden bildirmeksizin değiştirme hakkını saklı tutar. Platformu kullanmaya devam etmek, değişiklikleri kabul anlamına gelir.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">8. İletişim</h2>' +
+    '<p style="line-height:1.7;color:#444;">Sözleşmeye ilişkin sorular için: <strong>destek@ticaret-hane.net</strong></p>' +
+    '</div>';
+}
+
+function renderKvkk() {
+  document.getElementById('app').innerHTML =
+    '<div style="max-width:820px;margin:40px auto;padding:0 20px 60px;">' +
+    '<a href="#!/kayit" style="color:#888;font-size:0.85rem;text-decoration:none;">&larr; Geri Dön</a>' +
+    '<h1 style="font-size:1.5rem;margin:20px 0 4px;">KVKK Aydınlatma Metni</h1>' +
+    '<p style="color:#aaa;font-size:0.8rem;margin-bottom:28px;">6698 Sayılı Kişisel Verilerin Korunması Kanunu kapsamında hazırlanmıştır.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">1. Veri Sorumlusu</h2>' +
+    '<p style="line-height:1.7;color:#444;">Kişisel verileriniz, <strong>Ticarethane</strong> tarafından, 6698 sayılı KVKK uyarınca aşağıda açıklanan kapsam ve amaçlarla işlenmektedir.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">2. İşlenen Kişisel Veriler</h2>' +
+    '<ul style="color:#444;line-height:2;padding-left:22px;">' +
+    '<li><strong>Kimlik:</strong> Ad, soyad</li>' +
+    '<li><strong>İletişim:</strong> E-posta adresi, telefon numarası</li>' +
+    '<li><strong>Kullanım verileri:</strong> İlan geçmişi, mesajlaşma kayıtları, oturum bilgileri</li>' +
+    '<li><strong>Teknik:</strong> IP adresi, tarayıcı bilgisi</li>' +
+    '</ul>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">3. İşleme Amaçları</h2>' +
+    '<ul style="color:#444;line-height:2;padding-left:22px;">' +
+    '<li>Üyelik ve hesap yönetimi</li>' +
+    '<li>Platform hizmetlerinin sunulması</li>' +
+    '<li>Güvenlik ve doğrulama işlemleri</li>' +
+    '<li>Yasal yükümlülük</li>' +
+    '<li>Şikayet ve destek taleplerine yanıt verilmesi</li>' +
+    '</ul>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">4. Hukuki Dayanak</h2>' +
+    '<p style="line-height:1.7;color:#444;">Kişisel verileriniz; KVKK md. 5/2-c (sözleşmenin ifası), md. 5/2-ç (hukuki yükümlülük) ve md. 5/1 (açık rıza) kapsamlarında işlenmektedir.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">5. Aktarım</h2>' +
+    '<p style="line-height:1.7;color:#444;">Kişisel verileriniz, yasal zorunluluklar dışında üçüncü kişilerle paylaşılmaz. E-posta iletimi için Resend hizmetinden yararlanılmakta olup bu kapsamın ötesine geçilmez.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">6. Saklama Süresi</h2>' +
+    '<p style="line-height:1.7;color:#444;">Üyelik süresince ve hesap silme talebinden itibaren yasal yükümlülükler kapsamında en fazla <strong>3 yıl</strong> saklanır.</p>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">7. Veri Sahibi Hakları (KVKK md. 11)</h2>' +
+    '<ul style="color:#444;line-height:2;padding-left:22px;">' +
+    '<li>Kişisel verilerinizin işlenip işlenmediğini öğrenme</li>' +
+    '<li>Eksik veya yanlış işlenmesi halinde düzeltilmesini isteme</li>' +
+    '<li>Silinmesini veya yok edilmesini isteme</li>' +
+    '<li>Aktarıldığı üçüncü kişilere bildirilmesini talep etme</li>' +
+    '<li>Kanuna aykırı işlenmesi halinde zararın giderilmesini talep etme</li>' +
+    '</ul>' +
+    '<h2 style="font-size:1rem;margin:20px 0 6px;border-bottom:1px solid #eee;padding-bottom:6px;">8. Başvuru</h2>' +
+    '<p style="line-height:1.7;color:#444;">KVKK kapsamındaki haklarınızı kullanmak için <strong>destek@ticaret-hane.net</strong> adresine yazılı başvuruda bulunabilirsiniz. Başvurunuz en geç 30 gün içinde sonuçlandırılır.</p>' +
+    '</div>';
 }
