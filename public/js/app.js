@@ -1501,7 +1501,7 @@ async function renderRegister() {
           '<div style="background:#f8f9ff;border:1px solid #dde3f0;border-radius:8px;padding:12px 14px;margin-bottom:12px;">' +
           '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;color:#444;line-height:1.5;">' +
           '<input type="checkbox" id="termsCheck" name="termsCheck" required style="margin-top:3px;flex-shrink:0;" />' +
-          '<span><a href="#!/sozlesme" target="_blank" style="color:#2563eb;text-decoration:underline;">Kullanim Kosullari</a> ve <a href="#!/kvkk" target="_blank" style="color:#2563eb;text-decoration:underline;">KVKK Metni</a> kapsaminda bilgilendirildim, kabul ediyorum.</span>' +
+          '<span><a href="#//sozlesme" style="color:#2563eb;text-decoration:underline;">Kullanim Kosullari</a> ve <a href="#//kvkk" style="color:#2563eb;text-decoration:underline;">KVKK Metni</a> kapsaminda bilgilendirildim, kabul ediyorum.</span>' +
           '</label>' +
           '</div>' +
           '<div id="regError" class="alert alert-error" style="display:none;"></div>' +
@@ -2632,29 +2632,64 @@ async function loadAdminReports() {
 
 
 function renderSozlesme() {
-  var h = '<div style="max-width:820px;margin:40px auto;padding:0 20px 60px;">';
-  h += '<a href="#!/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:24px;">&larr; Ana Sayfa</a>';
-  h += '<h1 style="font-size:1.5rem;font-weight:700;margin-bottom:24px;">Kullanim Kosullari ve Uyelik Sozlesmesi</h1>';
-  h += '<p><strong>1. Taraflar:</strong> Bu sozlesme Ticarethane ile uye arasinda akdedilmistir.</p>';
-  h += '<p><strong>2. Platform Niteligi:</strong> Ticarethane bir pazar yeri platformudur. Uyeler arasindaki ticari iliskilere aracilik eder, bizzat alici veya satici degildir.</p>';
-  h += '<p><strong>3. Sorumluluk Reddi:</strong> Platform, urunlerin kalitesi veya teslimi hakkinda garanti vermez. Dolandiricilik, anlasmazlik veya odeme sorunlarindan Platform sorumlu tutulamaz. Bu tur durumlarda ilgili hukuki mercilere (savcilik, icra daireleri) basvurulabilir.</p>';
-  h += '<p><strong>4. Uye Yukumlulükleri:</strong> Uye yayinladigi ilanlarin dogru oldugunu taahhut eder. Sahte ilan yayinlanamaz.</p>';
-  h += '<p><strong>5. Degisiklikler:</strong> Platform bu sozlesme hukumlerini onceden bildirmeksizin degistirme hakkini sakli tutar.</p>';
-  h += '<p><strong>6. Uygulanacak Hukuk:</strong> Turkiye Cumhuriyeti hukuku geçerlidir. Anlasmazliklarda Istanbul Mahkemeleri yetkilidir.</p>';
-  h += '</div>';
-  document.getElementById('app').innerHTML = h;
+  var s = '';
+  s += '<div style="max-width:820px;margin:40px auto;padding:0 20px 60px;font-family:Inter,sans-serif;color:#1a1a2e;line-height:1.7;">';
+  s += '<a href="#/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:28px;">&larr; Ana Sayfaya Dön</a>';
+  s += '<h1 style="font-size:1.9rem;font-weight:800;border-bottom:2px solid #e8eaf0;padding-bottom:16px;margin-bottom:8px;">Kullanım Koşulları ve Üyelik Sözleşmesi</h1>';
+  s += '<p style="color:#888;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Haziran 2026</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">1. Taraflar ve Konu</h2>';
+  s += '<p>Bu Kullanım Koşulları ve Üyelik Sözleşmesi (&#34;Sözleşme&#34;), <strong>Ticarethane</strong> (&#34;Platform&#34;) ile Platform&#39;a üye olan gerçek veya tüzel kişi (&#34;Kullanıcı&#34;) arasında akdedilmektedir. Platform; kimya, hammadde, demir-çelik, tarım, plastik, tekstil ve inşaat malzemeleri kategorilerinde ticari mal alım-satım ilanı yayımlanan bir çevrimiçi pazar yeridir.</p>';
+  s += '<p>Kayıt işlemini tamamlayarak veya Platform&#39;u kullanmaya devam ederek bu Sözleşme&#39;nin tüm hükümlerini okuyup anladığınızı ve kabul ettiğinizi beyan etmiş olursunuz.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">2. Üyelik Şartları</h2>';
+  s += '<p>Platform&#39;a üye olabilmek için aşağıdaki şartların sağlanması gerekmektedir:</p>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li>18 yaşını doldurmuş olmak veya kanuni temsilci onayına sahip olmak,</li><li>Gerçek, doğru ve güncel bilgilerle kayıt olmak,</li><li>Geçerli bir e-posta adresine ve Türkiye’de kayıtlı bir GSM numarasına sahip olmak,</li><li>Daha önce Platform tarafından üyeliği askıya alınmamış ya da sona erdirilmemiş olmak.</li></ul>';
+  s += '<p>Platform, herhangi bir üyelik başvurusunu ge-rekçe göstermeksizin reddetme veya mevcut üyelikleri askıya alma hakkını saklı tutar.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">3. Hizmetin Kapsamı</h2>';
+  s += '<p>Ticarethane; üyelerine ilan oluşturma, düz-enleme, arama ve mesajlaşma hizmetleri sunmaktadır. Platform, alıcı ile satıcı arasındaki işlemlere doğrudan taraf olmaz ve herhangi bir ödeme işlemini gerçekleştirmez ya da garanti etmez.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">4. Kullanıcı Yükümlülüklerik</h2>';
+  s += '<p>Kullanıcı, Platform&#39;u kullanırken aşağıdaki yükümlülüklere uymayı kabul eder:</p>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li>Yayımladığı ilanların gerçek, doğru ve güncel bilgiler içermesini sağlamak,</li><li>Ürn fiyat, miktar ve özelliklerini eksiksiz ve dürüstçe belirtmek,</li><li>Yayımladığı görsellerin yalnızca ilgili ürüne ait olduğunu doğrulamak,</li><li>Yürürlükteki tüm kanun, yönetmelik ve mevzuata uymak,</li><li>Üçüncü kişilerin kişisel verilerini yetkisiz biçimde paylaşmamak,</li><li>Platform altyapısına zarar verecek yazılım, bot veya otomatik sistem kullanmamak.</li></ul>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">5. Yasaklı Faaliyetler ve İçerikler</h2>';
+  s += '<p>Aşağıdaki ürün ve içeriklerin Platform’da yayımlanması kesinlikle yasaktır:</p>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li>Yasadışı, çalıntı veya kaçak ürünler,</li><li>Silah, mühimmat veya patlayıcı maddeler,</li><li>Uyuşturucu ve bağımlılık yapıcı maddeler,</li><li>Sahte veya taklit ürünler,</li><li>Telif hakkı ihlali barındıran içerikler,</li><li>Yanıltıcı, hakaret içeren veya ayrımcı ifadeler.</li></ul>';
+  s += '<p>Bu kurallara aykırı ilanlar bildirim yapılmaksızın Platform&#39;dan kaldırılır; ilgili hesap askıya alınabilir veya kalıcı olarak kapatılabilir.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">6. Dolandırıcılık ve Güvenlik Uyarısı</h2>';
+  s += '<p>Platform, alıcı ile satıcı arasındaki ödeme işlemlere aracılık etmez. Tanımadığınız kişilere peşin ödeme yapmaktan kaçınınız; ürünü teslim almadan işlem gerçekleştirmeyiniz. Şüpheli ilanları ve kullanıcıları Platform&#39;a bildirmenizi öneririz. Ticarethane, Platform üzerindeki işlem-lerden doğan maddi kayıplardan sorumlu tutulamaz.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">7. Sorumluluk Sınırlaması</h2>';
+  s += '<p>Platform, kullanıcılar arasındaki işlemlerin hukuka uygunluğunu, ürünlerin kalitesini veya satıcıların güvenilirliğini garanti etmez. Teknik sorunlar, sunucu kesintileri veya üçüncü taraf kaynaklı aksaklıklar nedeniyle uğrlanılan zararlardan sorumlu değildir.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">8. Fikri Mülkiyet</h2>';
+  s += '<p>Platform’un tasarımı, logosu, yazılımı ve tüm içerikleri Ticarethane’ye aittir ve telif hakkı yasalarıyla korunmaktadır.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">9. Sözleşme Değişiklikleri</h2>';
+  s += '<p>Ticarethane, bu Sözleşme’yi dilediği zaman güncelleme hakkını saklı tutar. Değişiklikler Platform&#39;da yayımlandığı tarihten itibaren yürürlüye girer.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">10. Uygulanacak Hukuk</h2>';
+  s += '<p>Bu Sözleşme, Türkiye Cumhuriyeti kanunlarına tabidir. Sözleşme’den doğabilecek uyuşmazlıklarda İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">11. İletişim</h2>';
+  s += '<p>Soru ve talepleriniz için: <strong>destek@ticarethane.com</strong></p>';
+  s += '</div>';
+  document.getElementById('app').innerHTML = s;
 }
 
 function renderKvkk() {
-  var h = '<div style="max-width:820px;margin:40px auto;padding:0 20px 60px;">';
-  h += '<a href="#!/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:24px;">&larr; Ana Sayfa</a>';
-  h += '<h1 style="font-size:1.5rem;font-weight:700;margin-bottom:24px;">KVKK Aydinlatma Metni</h1>';
-  h += '<p>6698 sayili Kisisel Verilerin Korunmasi Kanunu kapsaminda hazirlanmistir.</p>';
-  h += '<p><strong>Veri Sorumlusu:</strong> Ticarethane.</p>';
-  h += '<p><strong>Islenen Veriler:</strong> Ad-soyad, e-posta, telefon, ilan bilgileri, konum (il), sunucu erisim gunlukleri.</p>';
-  h += '<p><strong>Islenme Amaci:</strong> Uyelik yonetimi, ilan hizmeti, platform guvenligi, yasal yukumlulukler.</p>';
-  h += '<p><strong>Veri Aktarimi:</strong> Yasal zorunluluklar disinda ucuncu taraflarla paylasilmaz.</p>';
-  h += '<p><strong>Haklariniz:</strong> Verilerinize erisim, duzeltme veya silme talep edebilirsiniz. Basvuru: iletisim@ticarethane.com</p>';
-  h += '</div>';
-  document.getElementById('app').innerHTML = h;
+  var s = '';
+  s += '<div style="max-width:820px;margin:40px auto;padding:0 20px 60px;font-family:Inter,sans-serif;color:#1a1a2e;line-height:1.7;">';
+  s += '<a href="#/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:28px;">&larr; Ana Sayfaya Dön</a>';
+  s += '<h1 style="font-size:1.9rem;font-weight:800;border-bottom:2px solid #e8eaf0;padding-bottom:16px;margin-bottom:8px;">KVKK Aydınlatma Metni</h1>';
+  s += '<p style="color:#888;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Haziran 2026</p>';
+  s += '<p>6698 sayılı Kişisel Verilerin Korunması Kanunu (&#34;KVKK&#34;) kapsamında veri sorumlusu sıfatıyla <strong>Ticarethane</strong>, kişisel verilerinizin işlenmesine ilişkin sizi bilgilendirmek amacıyla bu Aydınlatma Metnini hazırlamıştır.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">1. Veri Sorumlusu</h2>';
+  s += '<p>Ticarethane, 6698 sayılı KVKK uyarınca veri sorumlusu olarak faaliyet göstermektedir. İletişim: <strong>destek@ticarethane.com</strong></p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">2. İşlenen Kişisel Veriler</h2>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li><strong>Kimlik verileri:</strong> Ad, soyad, firma adı,</li><li><strong>İletişim verileri:</strong> E-posta adresi, telefon numarası, şehir bilgisi,</li><li><strong>Hesap verileri:</strong> Kullanıcı adı, şifreli hesap bilgileri,</li><li><strong>İlan verileri:</strong> Yayımladığınız ürün, fiyat, açıklama ve görsel bilgileri,</li><li><strong>Teknik veriler:</strong> IP adresi, tarayıcı bilgisi, oturum süresi, platform kullanım istatistikleri.</li></ul>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">3. Kişisel Verilerin İşlenme Amacı</h2>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li>Üyelik kaydının oluşturulması ve hesap yönetimi,</li><li>Platform hizmetlerinin sunulması ve iyileştirilmesi,</li><li>İlan yayımlama, güncelleme ve yönetim süreçleri,</li><li>Kullanıcılar arası iletişimin sağlanması,</li><li>Yasal yükümlülüklerin yerine getirilmesi,</li><li>Platform güvenliğinin sağlanması ve dolandırıcılığın önlenmesi,</li><li>Teknik destek ve müşteri hizmetlerinin sağlanması.</li></ul>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">4. Kişisel Verilerin Aktarıldığı Taraflar</h2>';
+  s += '<p>Kişisel verileriniz; yasal zorunluluklar kapsamında kamu kurum ve kuruluşlarıyla, Platform’un teknik altyapısını sağlayan bulut hizmeti sağlayıcılarıyla ve açık rızanızın bulunduğu üçüncü taraf iş ortaklarıyla KVKK’nın 8. ve 9. maddeleri çerçevesinde paylaşılabilir.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">5. Hukuki Sebep</h2>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li>Sözleşmenin kurulması ve ifası (KVKK md. 5/2-c),</li><li>Hukuki yükümlülüklerin yerine getirilmesi (KVKK md. 5/2-ç),</li><li>Meşru menfaat kapsamında zorunlu işlemler (KVKK md. 5/2-f),</li><li>Açık rızaya dayalı işlemler (KVKK md. 5/1).</li></ul>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">6. Haklarınız (KVKK Madde 11)</h2>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li><li>Verilerinize ilişkin bilgi talep etme,</li><li>İşlenme amacını öğrenme,</li><li>Verilerin aktarıldığı üçüncü kişileri öğrenme,</li><li>Eksik veya yanlış verilerin düzeltilmesini isteme,</li><li>Verilerin silinmesini veya yok edilmesini isteme,</li><li>Otomatik sistemler sonucu aleyhe kararınıza itiraz etme,</li><li>Kanuna aykırı işleme nedeniyle uğradığınız zararın tazminini talep etme.</li></ul>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">7. Başvuru Hakkı</h2>';
+  s += '<p>Haklarınızı kullanmak için <strong>destek@ticarethane.com</strong> adresine e-posta göndere-bilir ya da Platform’daki &#34;Hesabım&#34; sayfasından başvurabilirsiniz. Başvurularınız en geç 30 gün içinde yanıtlanacaktır.</p>';
+  s += '</div>';
+  document.getElementById('app').innerHTML = s;
 }
