@@ -7,10 +7,38 @@ const bcrypt    = require('bcryptjs');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ticarethane.db');
 
-let _db        = null;
-let _dirty     = false;
-let _saveTimer = null;
+let _db          = null;
+let _turso       = null;   // @libsql/client instance
+let _dirty       = false;
+let _saveTimer   = null;
 
+// ── Turso client (isteğe bağlı — TURSO_URL yoksa devre dışı) ──────────────
+function initTurso() {
+  if (!process.env.TURSO_URL || !process.env.TURSO_TOKEN) return;
+  try {
+    const { createClient } = require('@libsql/client');
+    _turso = createClient({
+      url:       process.env.TURSO_URL,
+      authToken: process.env.TURSO_TOKEN,
+    });
+    console.log('[DB] Turso bağlantısı hazır.');
+  } catch(e) {
+    console.error('[DB] Turso başlatma hatası:', e.message);
+  }
+}
+
+// Turso'ya fire-and-forget yazma (sadece DML sorgular)
+function tursoWrite(sql, params) {
+  if (!_turso) return;
+  const trimmed = sql.trim().toUpperCase();
+  if (trimmed.startsWith('SELECT') || trimmed.startsWith('PRAGMA') ||
+      trimmed.startsWith('CREATE') || trimmed.startsWith('DROP') ||
+      trimmed.startsWith('ALTER')) return;
+  _turso.execute({ sql, args: (params || []).map(a => a === undefined ? null : a) })
+    .catch(e => console.error('[TURSO] Yazma hatası:', e.message));
+}
+
+// ── sql.js kalıcı kayıt ─────────────────────────────────────────────────────
 function persistDb() {
   if (!_db || !_dirty) return;
   try {
@@ -28,6 +56,7 @@ function scheduleSave() {
   _saveTimer = setTimeout(() => { persistDb(); _saveTimer = null; }, 1000);
 }
 
+// ── Statement (sql.js üzerine ince sarmalayıcı) ────────────────────────────
 class Statement {
   constructor(sql) { this._sql = sql; }
 
@@ -67,6 +96,7 @@ class Statement {
     const res = _db.exec('SELECT last_insert_rowid() AS id');
     const lastInsertRowid = res[0]?.values[0][0] ?? 0;
     scheduleSave();
+    tursoWrite(this._sql, params);       // Turso'ya da yaz
     return { lastInsertRowid };
   }
 }
@@ -91,10 +121,154 @@ const dbProxy = {
   }
 };
 
-function getDb() {
-  return dbProxy;
+function getDb() { return dbProxy; }
+
+// ── Turso şema başlatma ─────────────────────────────────────────────────────
+async function initTursoSchema() {
+  if (!_turso) return;
+  const ddl = [
+    `CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, company_name TEXT,
+      email TEXT UNIQUE NOT NULL, phone TEXT, password_hash TEXT NOT NULL,
+      city TEXT, role TEXT DEFAULT 'user', is_active INTEGER DEFAULT 1,
+      is_verified INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL, description TEXT, sort_order INTEGER DEFAULT 0)`,
+    `CREATE TABLE IF NOT EXISTS subcategories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL,
+      slug TEXT NOT NULL, name TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`,
+    `CREATE TABLE IF NOT EXISTS listings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      category_id INTEGER NOT NULL, subcategory_id INTEGER, title TEXT NOT NULL,
+      description TEXT NOT NULL, listing_type TEXT NOT NULL DEFAULT 'sell',
+      price REAL, price_type TEXT DEFAULT 'negotiable', price_unit TEXT DEFAULT 'TRY',
+      price_basis TEXT DEFAULT 'per_unit', currency TEXT DEFAULT 'TRY',
+      quantity REAL, quantity_unit TEXT, lot_quantity INTEGER,
+      city TEXT NOT NULL, district TEXT, contact_phone TEXT, contact_email TEXT,
+      website TEXT, status TEXT DEFAULT 'pending', rejection_reason TEXT,
+      is_featured INTEGER DEFAULT 0, featured_until TEXT,
+      views INTEGER DEFAULT 0, expires_at TEXT, renewed_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS listing_images (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
+      filename TEXT NOT NULL, sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS conversations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER,
+      user1_id INTEGER NOT NULL, user2_id INTEGER NOT NULL,
+      last_message_at TEXT DEFAULT (datetime('now')),
+      created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER NOT NULL,
+      sender_id INTEGER NOT NULL, content TEXT NOT NULL,
+      is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS favorites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      listing_id INTEGER NOT NULL, created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, listing_id))`,
+    `CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      type TEXT NOT NULL, title TEXT NOT NULL, body TEXT, link TEXT,
+      is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS listing_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
+      reporter_id INTEGER, reason TEXT NOT NULL DEFAULT '', detail TEXT,
+      status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE, expires_at TEXT NOT NULL,
+      used INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS listing_tags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
+      tag TEXT NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS admin_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, listing_id INTEGER,
+      note TEXT NOT NULL, created_by INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')))`,
+    // İndeksler
+    `CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_listings_city     ON listings(city)`,
+    `CREATE INDEX IF NOT EXISTS idx_listings_status   ON listings(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_listings_user     ON listings(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_listing_images    ON listing_images(listing_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_messages_conv     ON messages(conversation_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_user1        ON conversations(user1_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_conv_user2        ON conversations(user2_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_notif_user        ON notifications(user_id, is_read, created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_favorites_user    ON favorites(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_favorites_listing ON favorites(listing_id)`,
+  ];
+
+  for (const sql of ddl) {
+    try { await _turso.execute(sql); } catch(e) {
+      if (!e.message.includes('already exists')) console.warn('[TURSO] DDL:', e.message);
+    }
+  }
+  console.log('[TURSO] Şema hazır.');
 }
 
+// ── Turso'dan sql.js'e restore ──────────────────────────────────────────────
+async function restoreFromTurso() {
+  if (!_turso) return false;
+
+  // Turso'da veri var mı?
+  let userCount = 0;
+  try {
+    const r = await _turso.execute('SELECT COUNT(*) AS c FROM users');
+    userCount = Number(r.rows[0]?.c || 0);
+  } catch(e) {
+    console.warn('[TURSO] Kullanıcı sayısı alınamadı:', e.message);
+    return false;
+  }
+
+  if (userCount === 0) {
+    console.log('[TURSO] Restore edilecek veri yok.');
+    return false;
+  }
+
+  console.log(`[TURSO] ${userCount} kullanıcı bulundu, restore başlıyor...`);
+  _db.run('PRAGMA foreign_keys = OFF');
+
+  const tables = [
+    'users', 'categories', 'subcategories', 'listings', 'listing_images',
+    'conversations', 'messages', 'favorites', 'notifications',
+    'listing_reports', 'password_reset_tokens', 'listing_tags', 'admin_notes'
+  ];
+
+  let totalRows = 0;
+  for (const table of tables) {
+    try {
+      const r = await _turso.execute(`SELECT * FROM ${table}`);
+      if (r.rows.length === 0) continue;
+
+      const cols = r.columns;
+      const placeholders = cols.map(() => '?').join(', ');
+      const insertSql = `INSERT OR REPLACE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`;
+
+      for (const row of r.rows) {
+        const vals = cols.map(c => {
+          const v = row[c];
+          return (v === undefined || v === null) ? null : v;
+        });
+        try { _db.run(insertSql, vals); } catch(e2) {
+          console.warn(`[TURSO] ${table} satır hatası:`, e2.message);
+        }
+      }
+      totalRows += r.rows.length;
+      console.log(`[TURSO] ${table}: ${r.rows.length} satır`);
+    } catch(e) {
+      console.warn(`[TURSO] ${table} restore hatası:`, e.message);
+    }
+  }
+
+  _db.run('PRAGMA foreign_keys = ON');
+  console.log(`[TURSO] Restore tamamlandı — toplam ${totalRows} satır.`);
+  return true;
+}
+
+// ── Ana başlatma fonksiyonu ─────────────────────────────────────────────────
 async function initDatabase() {
   const uploadsDir = path.join(__dirname, '..', 'uploads');
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -103,185 +277,107 @@ async function initDatabase() {
     locateFile: file => require.resolve(`sql.js/dist/${file}`)
   });
 
-  if (fs.existsSync(DB_PATH)) {
-    _db = new SQL.Database(fs.readFileSync(DB_PATH));
-  } else {
-    _db = new SQL.Database();
-  }
-
+  // Her zaman boş başlat (Turso'dan restore edeceğiz)
+  _db = new SQL.Database();
   _db.run('PRAGMA foreign_keys = ON');
 
-  const tables = [
+  // Turso bağlantısını kur
+  initTurso();
+
+  // sql.js şemasını oluştur (yerel)
+  const localTables = [
     `CREATE TABLE IF NOT EXISTS users (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      name          TEXT    NOT NULL,
-      company_name  TEXT,
-      email         TEXT    UNIQUE NOT NULL,
-      phone         TEXT,
-      password_hash TEXT    NOT NULL,
-      city          TEXT,
-      role          TEXT    DEFAULT 'user',
-      is_active     INTEGER DEFAULT 1,
-      created_at    TEXT    DEFAULT (datetime('now')),
-      updated_at    TEXT    DEFAULT (datetime('now'))
-    )`,
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, company_name TEXT,
+      email TEXT UNIQUE NOT NULL, phone TEXT, password_hash TEXT NOT NULL,
+      city TEXT, role TEXT DEFAULT 'user', is_active INTEGER DEFAULT 1,
+      is_verified INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS categories (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      slug        TEXT UNIQUE NOT NULL,
-      name        TEXT NOT NULL,
-      description TEXT,
-      sort_order  INTEGER DEFAULT 0
-    )`,
+      id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL, description TEXT, sort_order INTEGER DEFAULT 0)`,
     `CREATE TABLE IF NOT EXISTS subcategories (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      category_id INTEGER NOT NULL,
-      slug        TEXT    NOT NULL,
-      name        TEXT    NOT NULL
-    )`,
+      id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL,
+      slug TEXT NOT NULL, name TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`,
     `CREATE TABLE IF NOT EXISTS listings (
-      id               INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id          INTEGER NOT NULL,
-      category_id      INTEGER NOT NULL,
-      subcategory_id   INTEGER,
-      title            TEXT    NOT NULL,
-      description      TEXT    NOT NULL,
-      listing_type     TEXT    NOT NULL DEFAULT 'sell',
-      price            REAL,
-      price_type       TEXT    DEFAULT 'negotiable',
-      price_unit       TEXT    DEFAULT 'TRY',
-      quantity         REAL,
-      quantity_unit    TEXT,
-      city             TEXT    NOT NULL,
-      district         TEXT,
-      contact_phone    TEXT,
-      contact_email    TEXT,
-      website          TEXT,
-      status           TEXT    DEFAULT 'pending',
-      views            INTEGER DEFAULT 0,
-      created_at       TEXT    DEFAULT (datetime('now')),
-      updated_at       TEXT    DEFAULT (datetime('now'))
-    )`,
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      category_id INTEGER NOT NULL, subcategory_id INTEGER, title TEXT NOT NULL,
+      description TEXT NOT NULL, listing_type TEXT NOT NULL DEFAULT 'sell',
+      price REAL, price_type TEXT DEFAULT 'negotiable', price_unit TEXT DEFAULT 'TRY',
+      price_basis TEXT DEFAULT 'per_unit', currency TEXT DEFAULT 'TRY',
+      quantity REAL, quantity_unit TEXT, lot_quantity INTEGER,
+      city TEXT NOT NULL, district TEXT, contact_phone TEXT, contact_email TEXT,
+      website TEXT, status TEXT DEFAULT 'pending', rejection_reason TEXT,
+      is_featured INTEGER DEFAULT 0, featured_until TEXT,
+      views INTEGER DEFAULT 0, expires_at TEXT, renewed_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS listing_images (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      listing_id INTEGER NOT NULL,
-      filename   TEXT    NOT NULL,
-      sort_order INTEGER DEFAULT 0,
-      created_at TEXT    DEFAULT (datetime('now'))
-    )`,
+      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
+      filename TEXT NOT NULL, sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS conversations (
-      id               INTEGER PRIMARY KEY AUTOINCREMENT,
-      listing_id       INTEGER,
-      user1_id         INTEGER NOT NULL,
-      user2_id         INTEGER NOT NULL,
-      last_message_at  TEXT    DEFAULT (datetime('now')),
-      created_at       TEXT    DEFAULT (datetime('now'))
-    )`,
+      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER,
+      user1_id INTEGER NOT NULL, user2_id INTEGER NOT NULL,
+      last_message_at TEXT DEFAULT (datetime('now')),
+      created_at TEXT DEFAULT (datetime('now')))`,
     `CREATE TABLE IF NOT EXISTS messages (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      conversation_id INTEGER NOT NULL,
-      sender_id       INTEGER NOT NULL,
-      content         TEXT    NOT NULL,
-      is_read         INTEGER DEFAULT 0,
-      created_at      TEXT    DEFAULT (datetime('now'))
-    )`,
+      id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER NOT NULL,
+      sender_id INTEGER NOT NULL, content TEXT NOT NULL,
+      is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS favorites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      listing_id INTEGER NOT NULL, created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, listing_id))`,
+    `CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      type TEXT NOT NULL, title TEXT NOT NULL, body TEXT, link TEXT,
+      is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS listing_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
+      reporter_id INTEGER, reason TEXT NOT NULL DEFAULT '', detail TEXT,
+      status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE, expires_at TEXT NOT NULL,
+      used INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
+    `CREATE TABLE IF NOT EXISTS listing_tags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
+      tag TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS admin_notes (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id    INTEGER,
-      listing_id INTEGER,
-      note       TEXT NOT NULL,
-      created_by INTEGER NOT NULL,
-      created_at TEXT DEFAULT (datetime('now'))
-    )`,
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, listing_id INTEGER,
+      note TEXT NOT NULL, created_by INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')))`,
     `CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category_id)`,
     `CREATE INDEX IF NOT EXISTS idx_listings_city     ON listings(city)`,
     `CREATE INDEX IF NOT EXISTS idx_listings_status   ON listings(status)`,
     `CREATE INDEX IF NOT EXISTS idx_listings_user     ON listings(user_id)`,
     `CREATE INDEX IF NOT EXISTS idx_listing_images    ON listing_images(listing_id)`,
     `CREATE INDEX IF NOT EXISTS idx_messages_conv     ON messages(conversation_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_messages_sender   ON messages(sender_id)`,
-    `CREATE TABLE IF NOT EXISTS listing_tags (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-      tag        TEXT    NOT NULL
-    )`,
     `CREATE INDEX IF NOT EXISTS idx_conv_user1        ON conversations(user1_id)`,
     `CREATE INDEX IF NOT EXISTS idx_conv_user2        ON conversations(user2_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_notif_user        ON notifications(user_id, is_read, created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_favorites_user    ON favorites(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_favorites_listing ON favorites(listing_id)`,
   ];
 
-  tables.forEach(sql => _db.run(sql));
+  localTables.forEach(sql => _db.run(sql));
 
-  // Ek performans indexleri (IF NOT EXISTS = güvenli)
-  [
-    "CREATE INDEX IF NOT EXISTS idx_listings_cat      ON listings(category_id, status)",
-    "CREATE INDEX IF NOT EXISTS idx_listings_featured ON listings(is_featured, status)",
-    "CREATE INDEX IF NOT EXISTS idx_notif_user        ON notifications(user_id, is_read, created_at)",
-    "CREATE INDEX IF NOT EXISTS idx_favorites_user    ON favorites(user_id)",
-    "CREATE INDEX IF NOT EXISTS idx_favorites_listing ON favorites(listing_id)",
-    "CREATE INDEX IF NOT EXISTS idx_reports_status    ON listing_reports(status, created_at)",
-  ].forEach(sql => { try { _db.run(sql); } catch(e) {} });
+  // Turso şemasını da başlat
+  await initTursoSchema();
 
-  // Yeni tablolar (varsa atla)
-  [
-    `CREATE TABLE IF NOT EXISTS favorites (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-      created_at TEXT DEFAULT (datetime('now')),
-      UNIQUE(user_id, listing_id)
-    )`,
-    `CREATE TABLE IF NOT EXISTS listing_reports (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-      reporter_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      reason TEXT NOT NULL,
-      detail TEXT,
-      status TEXT DEFAULT 'pending',
-      created_at TEXT DEFAULT (datetime('now'))
-    )`,
-    `CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      type TEXT NOT NULL,
-      title TEXT NOT NULL,
-      body TEXT,
-      link TEXT,
-      is_read INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now'))
-    )`,
-    `CREATE TABLE IF NOT EXISTS password_reset_tokens (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      token TEXT NOT NULL UNIQUE,
-      expires_at TEXT NOT NULL,
-      used INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now'))
-    )`,
-  ].forEach(sql => _db.run(sql));
+  // Turso'dan restore et
+  const restored = await restoreFromTurso();
 
-  // Migrasyon — price_basis kolonu
-  try { _db.run("ALTER TABLE listings ADD COLUMN price_basis TEXT DEFAULT 'per_unit'"); } catch(e) {}
-  try { _db.run("ALTER TABLE listings ADD COLUMN currency TEXT DEFAULT 'TRY'"); } catch(e) {}
-  try { _db.run("ALTER TABLE listings ADD COLUMN is_featured INTEGER DEFAULT 0"); } catch(e) {}
-  try { _db.run("ALTER TABLE listings ADD COLUMN featured_until TEXT"); } catch(e) {}
-  try { _db.run("ALTER TABLE listings ADD COLUMN renewed_at TEXT"); } catch(e) {}
-  try { _db.run("ALTER TABLE listings ADD COLUMN lot_quantity INTEGER"); } catch(e) {}
-  try { _db.run("ALTER TABLE listings ADD COLUMN expires_at TEXT"); } catch(e) {}
-  try { _db.run("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0"); } catch(e) {}
-  try { _db.run("ALTER TABLE categories ADD COLUMN sort_order INTEGER DEFAULT 0"); } catch(e) {}
-  try { _db.run("ALTER TABLE subcategories ADD COLUMN sort_order INTEGER DEFAULT 0"); } catch(e) {}
-  try { _db.run("ALTER TABLE listing_reports ADD COLUMN reason TEXT NOT NULL DEFAULT ''"); } catch(e) {}
-  try { _db.run("ALTER TABLE listing_reports ADD COLUMN detail TEXT"); } catch(e) {}
-
-
-
-  const catCount = dbProxy.prepare('SELECT COUNT(*) AS c FROM categories').get().c;
-  if (!catCount) {
-    seedCategories();
-  } else {
-    migrateCategories();
+  if (!restored) {
+    // Yeni kurulum — seed kategoriler + admin
+    const catCount = dbProxy.prepare('SELECT COUNT(*) AS c FROM categories').get();
+    if (!catCount || !catCount.c) {
+      seedCategories();
+    } else {
+      migrateCategories();
+    }
   }
 
-  // Admin kullanicisi — .env degisince sifre guncellenir
+  // Admin kullanicisi (her zaman güncelle)
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@ticarethane.com';
   const adminPw    = process.env.ADMIN_PASSWORD || 'Admin123456!';
   const adminHash  = bcrypt.hashSync(adminPw, 12);
@@ -291,50 +387,39 @@ async function initDatabase() {
     dbProxy.prepare(
       `INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')`
     ).run('Yonetici', adminEmail, adminHash);
-    console.log(`[DB] Admin olusturuldu: ${adminEmail}`);
+    console.log(`[DB] Admin oluşturuldu: ${adminEmail}`);
   } else {
     dbProxy.prepare(
       `UPDATE users SET password_hash = ?, role = 'admin' WHERE email = ?`
     ).run(adminHash, adminEmail);
-    console.log(`[DB] Admin guncellendi: ${adminEmail}`);
+    console.log(`[DB] Admin güncellendi: ${adminEmail}`);
   }
 
   process.on('exit',    persistDb);
   process.on('SIGINT',  () => { persistDb(); process.exit(0); });
   process.on('SIGTERM', () => { persistDb(); process.exit(0); });
 
-  console.log('[DB] Veritabani hazir.');
+  console.log('[DB] Veritabanı hazır' + (_turso ? ' (Turso aktif)' : ' (yerel mod)') + '.');
 }
 
-// Mevcut DB icin migrasyon — imla duzeltmeleri + Diger alt kategorisi
+// ── Kategori yardımcıları (değişmedi) ──────────────────────────────────────
 function migrateCategories() {
-  const nameFixes = [
-    ['Tekstil & Ham Madde', 'Tekstil & Hammadde'],
-  ];
-  nameFixes.forEach(([old, neu]) => {
+  [['Tekstil & Ham Madde', 'Tekstil & Hammadde']].forEach(([old, neu]) => {
     dbProxy.prepare('UPDATE categories SET name = ? WHERE name = ?').run(neu, old);
   });
-
   const cats = dbProxy.prepare('SELECT id FROM categories').all();
   cats.forEach(cat => {
     const exists = dbProxy.prepare(
-      "SELECT id FROM subcategories WHERE category_id = ? AND (name = 'Diğer' OR name = 'Diğer')"
+      "SELECT id FROM subcategories WHERE category_id = ? AND name = 'Diğer'"
     ).get(cat.id);
-    if (!exists) {
-      dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)')
-        .run(cat.id, 'diger', 'Diğer');
-    }
+    if (!exists) dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)')
+      .run(cat.id, 'diger', 'Diğer');
   });
-
-  console.log('[DB] Kategori migrasyonu tamamlandi.');
+  console.log('[DB] Kategori migrasyonu tamamlandı.');
 }
 
 function slugify(str) {
-  return str.toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]/g, '')
-    .replace(/--+/g, '-')
-    .substring(0, 60);
+  return str.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '').replace(/--+/g, '-').substring(0, 60);
 }
 
 function seedCategories() {
@@ -379,26 +464,17 @@ function seedCategories() {
     const existing = dbProxy.prepare('SELECT id FROM categories WHERE slug = ?').get(cat.slug);
     let catId;
     if (!existing) {
-      const res = dbProxy.prepare(
-        'INSERT INTO categories (slug, name, description) VALUES (?, ?, ?)'
-      ).run(cat.slug, cat.name, cat.desc);
+      const res = dbProxy.prepare('INSERT INTO categories (slug, name, description) VALUES (?, ?, ?)').run(cat.slug, cat.name, cat.desc);
       catId = res.lastInsertRowid;
     } else {
       catId = existing.id;
     }
     cat.subs.forEach(subName => {
       const subSlug = slugify(subName);
-      const existSub = dbProxy.prepare(
-        'SELECT id FROM subcategories WHERE category_id = ? AND slug = ?'
-      ).get(catId, subSlug);
-      if (!existSub) {
-        dbProxy.prepare(
-          'INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)'
-        ).run(catId, subSlug, subName);
-      }
+      const existSub = dbProxy.prepare('SELECT id FROM subcategories WHERE category_id = ? AND slug = ?').get(catId, subSlug);
+      if (!existSub) dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)').run(catId, subSlug, subName);
     });
   });
-
   console.log('[DB] Kategoriler seed edildi.');
 }
 
