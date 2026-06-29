@@ -1,4 +1,4 @@
-/* ============================================================
+/* v2 =========================================================
    Ticarethane — Frontend SPA
    ============================================================ */
 
@@ -396,7 +396,7 @@ function validateTurkishPhone(val) {
   // Aynı rakamlardan oluşmamalı (5555555555 vb.)
   if (/^(.)\1{9}$/.test(digits)) return 'Geçerli bir telefon numarası giriniz.';
   return null;
-}}
+}
 
 function catSelectHTML(selected, name) {
   name = name || 'category_id';
