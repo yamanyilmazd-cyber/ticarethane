@@ -2491,6 +2491,23 @@ function renderForgotPassword() {
       }
       msg.style.display = 'block';
       btn.textContent = 'Gönderildi ✓';
+      if (!document.getElementById('resendWrap')) {
+        var resendWrap = document.createElement('div');
+        resendWrap.id = 'resendWrap';
+        resendWrap.style.marginTop = '12px';
+        msg.insertAdjacentElement('afterend', resendWrap);
+      }
+      document.getElementById('resendWrap').innerHTML = '<button type="button" class="btn btn-outline w-100" id="resendBtn">Link gelmedi mi? Tekrar gönder</button>';
+      document.getElementById('resendBtn').onclick = async function() {
+        var rb = this;
+        var emailVal = document.querySelector('#forgotForm [name="email"]').value;
+        rb.disabled = true; rb.textContent = 'Gönderiliyor...';
+        try {
+          await api('POST', '/auth/forgot-password', { email: emailVal });
+          rb.textContent = 'Tekrar gönderildi ✓';
+          setTimeout(function() { rb.disabled = false; rb.textContent = 'Link gelmedi mi? Tekrar gönder'; }, 30000);
+        } catch(e) { rb.disabled = false; rb.textContent = 'Link gelmedi mi? Tekrar gönder'; toast(e.message,'error'); }
+      };
     } catch(err) {
       msg.className = 'alert alert-error';
       msg.textContent = err.message;
