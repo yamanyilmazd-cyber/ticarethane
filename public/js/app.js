@@ -583,7 +583,16 @@ async function renderHome() {
           '<div class="section-header"><div><div class="section-title">Son İlanlar</div><div class="section-sub">Platforma yeni eklenen ilanlar</div></div><a href="#/ara" class="btn btn-ghost btn-sm">Tümünü Gör</a></div>' +
           listings +
         '</div>' +
-      '</section>';
+      '</section> +
+
+      '<section class="py-5" style="background:#f8f9fa">' +
+      '<div class="container text-center">' +
+      '<h2 class="mb-3">Destek</h2>' +
+      '<p class="lead mb-2">Sorular&#305;n&#305;z i&#231;in bizimle ileti&#351;ime ge&#231;ebilirsiniz:</p>' +
+      '<a href="mailto:destek@ticaret-hane.net" class="btn btn-primary btn-lg">&#128231; destek@ticaret-hane.net</a>' +
+      '</div>' +
+      '</section>' +
+      ';
 
     document.getElementById('heroSearchForm').addEventListener('submit', function(e) {
       e.preventDefault();
@@ -1436,7 +1445,7 @@ async function renderLogin() {
         '<p>Ticaret-hane hesabınıza giriş yapın.</p>' +
         '<form id="loginForm">' +
           '<div class="form-group mb-4"><label class="form-label">E-posta <span class="req">*</span></label><input type="email" name="email" class="form-control" placeholder="ornek@firma.com" required autofocus /></div>' +
-          '<div class="form-group mb-4"><label class="form-label">Şifre <span class="req">*</span></label><input type="password" name="password" class="form-control" placeholder="Şifreniz" required /></div>' +
+          '<div class="form-group mb-4"><label class="form-label">Şifre <span class="req">*</span></label><div style="position:relative;display:flex"><input type="password" name="password" class="form-control" placeholder="Şifreniz" required /><button type="button" onclick="var i=this.previousElementSibling;i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'Göster':'Gizle'" style="border:1px solid #ced4da;border-left:0;border-radius:0 4px 4px 0;background:#f8f9fa;cursor:pointer;padding:0 12px;white-space:nowrap;font-size:13px">Göster</button></div></div>' +
           '<div class="form-check mb-3">' +
             '<input type="checkbox" class="form-check-input" id="rememberMe" name="remember" value="1" checked />' +
             '<label class="form-check-label" for="rememberMe" style="cursor:pointer;"> Beni hatırla</label>' +
@@ -1493,7 +1502,7 @@ async function renderRegister() {
             '<div class="form-group mb-4"><label class="form-label">Telefon <span class="req">*</span></label><input type="tel" name="phone" class="form-control" value="+90 " placeholder="+90 5XX XXX XX XX" required /></div>' +
             '<div class="form-group mb-4"><label class="form-label">Şehir</label>' + citySelectHTML('city','') + '</div>' +
           '</div>' +
-          '<div class="form-group mb-4"><label class="form-label">Şifre <span class="req">*</span></label><input type="password" name="password" class="form-control" placeholder="En az 8 karakter" required minlength="8" /></div>' +
+          '<div class="form-group mb-4"><label class="form-label">Şifre <span class="req">*</span></label><div style="position:relative;display:flex"><input type="password" name="password" class="form-control" placeholder="En az 8 karakter" required minlength="8" /><button type="button" onclick="var i=this.previousElementSibling;i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'Göster':'Gizle'" style="border:1px solid #ced4da;border-left:0;border-radius:0 4px 4px 0;background:#f8f9fa;cursor:pointer;padding:0 12px;white-space:nowrap;font-size:13px">Göster</button></div></div>' +
           '<div class="form-check mb-3">' +
             '<input type="checkbox" class="form-check-input" id="rememberReg" name="remember" value="1" checked />' +
             '<label class="form-check-label" for="rememberReg" style="cursor:pointer;"> Beni hatırla</label>' +
