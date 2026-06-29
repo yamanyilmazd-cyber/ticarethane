@@ -1501,7 +1501,7 @@ async function renderRegister() {
           '<div style="background:#f8f9ff;border:1px solid #dde3f0;border-radius:8px;padding:12px 14px;margin-bottom:12px;">' +
           '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;color:#444;line-height:1.5;">' +
           '<input type="checkbox" id="termsCheck" name="termsCheck" required style="margin-top:3px;flex-shrink:0;cursor:pointer;" />' +
-          '<span><a href="#!/sozlesme" target="_blank" style="color:#2563eb;text-decoration:underline;">Kullanım Koşulları ve Üyelik Sözleşmesi</a>'ni ve <a href="#!/kvkk" target="_blank" style="color:#2563eb;text-decoration:underline;">KVKK Aydınlatma Metni</a>'ni okudum, kabul ediyorum.</span>' +
+          '<span><a href="#!/sozlesme" target="_blank" style="color:#2563eb;text-decoration:underline;">Kullanım Koşulları ve Üyelik Sözleşmesi</a> ile <a href="#!/kvkk" target="_blank" style="color:#2563eb;text-decoration:underline;">KVKK Aydınlatma Metni</a> kapsamında bilgilendirildim, kabul ediyorum.</span>' +
           '</label>' +
           '</div>' +
           '<div id="regError" class="alert alert-error" style="display:none;"></div>' +
