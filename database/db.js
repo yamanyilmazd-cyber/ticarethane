@@ -7,35 +7,78 @@ const bcrypt    = require('bcryptjs');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'ticarethane.db');
 
-let _db          = null;
-let _turso       = null;   // @libsql/client instance
-let _dirty       = false;
-let _saveTimer   = null;
+// Turso HTTP API (Node 18 built-in fetch — no native modules needed)
+const TURSO_URL   = (process.env.TURSO_URL || '').replace(/^libsql:\/\//, 'https://');
+const TURSO_TOKEN = process.env.TURSO_TOKEN || '';
 
-// ── Turso client (isteğe bağlı — TURSO_URL yoksa devre dışı) ──────────────
-function initTurso() {
-  if (!process.env.TURSO_URL || !process.env.TURSO_TOKEN) return;
+let _db           = null;
+let _dirty        = false;
+let _saveTimer    = null;
+let _tursoReady   = false;   // true after background restore completes
+
+// ── Turso HTTP yardımcıları ────────────────────────────────────────────────
+function buildArgs(params) {
+  return (params || []).map(a => {
+    if (a === null || a === undefined) return { type: 'null' };
+    if (typeof a === 'number') {
+      return Number.isInteger(a)
+        ? { type: 'integer', value: String(a) }
+        : { type: 'float',   value: String(a) };
+    }
+    return { type: 'text', value: String(a) };
+  });
+}
+
+async function tursoHttp(sql, params, timeoutMs) {
+  if (!TURSO_URL || !TURSO_TOKEN) return null;
   try {
-    const { createClient } = require('@libsql/client');
-    _turso = createClient({
-      url:       process.env.TURSO_URL,
-      authToken: process.env.TURSO_TOKEN,
+    const signal = AbortSignal.timeout(timeoutMs || 10000);
+    const res = await fetch(`${TURSO_URL}/v2/pipeline`, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + TURSO_TOKEN,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        requests: [
+          { type: 'execute', stmt: { sql, args: buildArgs(params) } },
+          { type: 'close' }
+        ]
+      }),
+      signal
     });
-    console.log('[DB] Turso bağlantısı hazır.');
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${txt.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    const result = data.results?.[0];
+    if (result?.type === 'error') throw new Error(result.error?.message || 'Turso error');
+    const cols = (result?.response?.result?.cols || []).map(c => c.name);
+    const rows = (result?.response?.result?.rows || []).map(row => {
+      const obj = {};
+      cols.forEach((col, i) => {
+        const v = row[i];
+        obj[col] = (v === null || v?.type === 'null') ? null : (v?.value ?? null);
+      });
+      return obj;
+    });
+    return { cols, rows };
   } catch(e) {
-    console.error('[DB] Turso başlatma hatası:', e.message);
+    console.error('[TURSO] HTTP hatası:', e.message);
+    return null;
   }
 }
 
-// Turso'ya fire-and-forget yazma (sadece DML sorgular)
+// fire-and-forget — sadece DML (INSERT/UPDATE/DELETE)
 function tursoWrite(sql, params) {
-  if (!_turso) return;
-  const trimmed = sql.trim().toUpperCase();
-  if (trimmed.startsWith('SELECT') || trimmed.startsWith('PRAGMA') ||
-      trimmed.startsWith('CREATE') || trimmed.startsWith('DROP') ||
-      trimmed.startsWith('ALTER')) return;
-  _turso.execute({ sql, args: (params || []).map(a => a === undefined ? null : a) })
-    .catch(e => console.error('[TURSO] Yazma hatası:', e.message));
+  if (!_tursoReady) return;
+  const t = sql.trim().toUpperCase();
+  if (t.startsWith('SELECT') || t.startsWith('PRAGMA') ||
+      t.startsWith('CREATE') || t.startsWith('DROP') ||
+      t.startsWith('ALTER')  || t.startsWith('BEGIN') ||
+      t.startsWith('COMMIT') || t.startsWith('ROLLBACK')) return;
+  tursoHttp(sql, params, 8000).catch(() => {});
 }
 
 // ── sql.js kalıcı kayıt ─────────────────────────────────────────────────────
@@ -96,7 +139,7 @@ class Statement {
     const res = _db.exec('SELECT last_insert_rowid() AS id');
     const lastInsertRowid = res[0]?.values[0][0] ?? 0;
     scheduleSave();
-    tursoWrite(this._sql, params);       // Turso'ya da yaz
+    tursoWrite(this._sql, params);
     return { lastInsertRowid };
   }
 }
@@ -123,149 +166,143 @@ const dbProxy = {
 
 function getDb() { return dbProxy; }
 
-// ── Turso şema başlatma ─────────────────────────────────────────────────────
-async function initTursoSchema() {
-  if (!_turso) return;
-  const ddl = [
-    `CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, company_name TEXT,
-      email TEXT UNIQUE NOT NULL, phone TEXT, password_hash TEXT NOT NULL,
-      city TEXT, role TEXT DEFAULT 'user', is_active INTEGER DEFAULT 1,
-      is_verified INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT UNIQUE NOT NULL,
-      name TEXT NOT NULL, description TEXT, sort_order INTEGER DEFAULT 0)`,
-    `CREATE TABLE IF NOT EXISTS subcategories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL,
-      slug TEXT NOT NULL, name TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`,
-    `CREATE TABLE IF NOT EXISTS listings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
-      category_id INTEGER NOT NULL, subcategory_id INTEGER, title TEXT NOT NULL,
-      description TEXT NOT NULL, listing_type TEXT NOT NULL DEFAULT 'sell',
-      price REAL, price_type TEXT DEFAULT 'negotiable', price_unit TEXT DEFAULT 'TRY',
-      price_basis TEXT DEFAULT 'per_unit', currency TEXT DEFAULT 'TRY',
-      quantity REAL, quantity_unit TEXT, lot_quantity INTEGER,
-      city TEXT NOT NULL, district TEXT, contact_phone TEXT, contact_email TEXT,
-      website TEXT, status TEXT DEFAULT 'pending', rejection_reason TEXT,
-      is_featured INTEGER DEFAULT 0, featured_until TEXT,
-      views INTEGER DEFAULT 0, expires_at TEXT, renewed_at TEXT,
-      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS listing_images (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
-      filename TEXT NOT NULL, sort_order INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS conversations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER,
-      user1_id INTEGER NOT NULL, user2_id INTEGER NOT NULL,
-      last_message_at TEXT DEFAULT (datetime('now')),
-      created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER NOT NULL,
-      sender_id INTEGER NOT NULL, content TEXT NOT NULL,
-      is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS favorites (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
-      listing_id INTEGER NOT NULL, created_at TEXT DEFAULT (datetime('now')),
-      UNIQUE(user_id, listing_id))`,
-    `CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
-      type TEXT NOT NULL, title TEXT NOT NULL, body TEXT, link TEXT,
-      is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS listing_reports (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
-      reporter_id INTEGER, reason TEXT NOT NULL DEFAULT '', detail TEXT,
-      status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS password_reset_tokens (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
-      token TEXT NOT NULL UNIQUE, expires_at TEXT NOT NULL,
-      used INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS listing_tags (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
-      tag TEXT NOT NULL)`,
-    `CREATE TABLE IF NOT EXISTS admin_notes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, listing_id INTEGER,
-      note TEXT NOT NULL, created_by INTEGER NOT NULL,
-      created_at TEXT DEFAULT (datetime('now')))`,
-    // İndeksler
-    `CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_listings_city     ON listings(city)`,
-    `CREATE INDEX IF NOT EXISTS idx_listings_status   ON listings(status)`,
-    `CREATE INDEX IF NOT EXISTS idx_listings_user     ON listings(user_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_listing_images    ON listing_images(listing_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_messages_conv     ON messages(conversation_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_conv_user1        ON conversations(user1_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_conv_user2        ON conversations(user2_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_notif_user        ON notifications(user_id, is_read, created_at)`,
-    `CREATE INDEX IF NOT EXISTS idx_favorites_user    ON favorites(user_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_favorites_listing ON favorites(listing_id)`,
-  ];
+// ── Yerel şema DDL ─────────────────────────────────────────────────────────
+const SCHEMA_DDL = [
+  `CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, company_name TEXT,
+    email TEXT UNIQUE NOT NULL, phone TEXT, password_hash TEXT NOT NULL,
+    city TEXT, role TEXT DEFAULT 'user', is_active INTEGER DEFAULT 1,
+    is_verified INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL, description TEXT, sort_order INTEGER DEFAULT 0)`,
+  `CREATE TABLE IF NOT EXISTS subcategories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL,
+    slug TEXT NOT NULL, name TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`,
+  `CREATE TABLE IF NOT EXISTS listings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+    category_id INTEGER NOT NULL, subcategory_id INTEGER, title TEXT NOT NULL,
+    description TEXT NOT NULL, listing_type TEXT NOT NULL DEFAULT 'sell',
+    price REAL, price_type TEXT DEFAULT 'negotiable', price_unit TEXT DEFAULT 'TRY',
+    price_basis TEXT DEFAULT 'per_unit', currency TEXT DEFAULT 'TRY',
+    quantity REAL, quantity_unit TEXT, lot_quantity INTEGER,
+    city TEXT NOT NULL, district TEXT, contact_phone TEXT, contact_email TEXT,
+    website TEXT, status TEXT DEFAULT 'pending', rejection_reason TEXT,
+    is_featured INTEGER DEFAULT 0, featured_until TEXT,
+    views INTEGER DEFAULT 0, expires_at TEXT, renewed_at TEXT,
+    created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS listing_images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
+    filename TEXT NOT NULL, sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS conversations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER,
+    user1_id INTEGER NOT NULL, user2_id INTEGER NOT NULL,
+    last_message_at TEXT DEFAULT (datetime('now')),
+    created_at TEXT DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL, content TEXT NOT NULL,
+    is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS favorites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+    listing_id INTEGER NOT NULL, created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, listing_id))`,
+  `CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+    type TEXT NOT NULL, title TEXT NOT NULL, body TEXT, link TEXT,
+    is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS listing_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
+    reporter_id INTEGER, reason TEXT NOT NULL DEFAULT '', detail TEXT,
+    status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+    token TEXT NOT NULL UNIQUE, expires_at TEXT NOT NULL,
+    used INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS listing_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
+    tag TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS admin_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, listing_id INTEGER,
+    note TEXT NOT NULL, created_by INTEGER NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')))`,
+  `CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_listings_city     ON listings(city)`,
+  `CREATE INDEX IF NOT EXISTS idx_listings_status   ON listings(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_listings_user     ON listings(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_listing_images    ON listing_images(listing_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_messages_conv     ON messages(conversation_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_conv_user1        ON conversations(user1_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_conv_user2        ON conversations(user2_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_notif_user        ON notifications(user_id, is_read, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_favorites_user    ON favorites(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_favorites_listing ON favorites(listing_id)`,
+];
 
-  for (const sql of ddl) {
-    try { await _turso.execute(sql); } catch(e) {
-      if (!e.message.includes('already exists')) console.warn('[TURSO] DDL:', e.message);
+// ── Turso arka plan başlatma (sunucu başladıktan sonra) ────────────────────
+async function initTursoBackground() {
+  if (!TURSO_URL || !TURSO_TOKEN) return;
+
+  // Sunucunun tamamen başlaması için kısa bekleme
+  await new Promise(r => setTimeout(r, 1500));
+
+  console.log('[TURSO] Arka plan başlatma başlıyor...');
+
+  // Şema
+  for (const sql of SCHEMA_DDL) {
+    if (sql.startsWith('CREATE INDEX') || sql.startsWith('CREATE TABLE')) {
+      const r = await tursoHttp(sql, [], 15000);
+      if (!r && sql.includes('TABLE')) console.warn('[TURSO] Tablo oluşturulamadı.');
     }
   }
   console.log('[TURSO] Şema hazır.');
-}
 
-// ── Turso'dan sql.js'e restore ──────────────────────────────────────────────
-async function restoreFromTurso() {
-  if (!_turso) return false;
-
-  // Turso'da veri var mı?
+  // Restore
   let userCount = 0;
   try {
-    const r = await _turso.execute('SELECT COUNT(*) AS c FROM users');
-    userCount = Number(r.rows[0]?.c || 0);
+    const r = await tursoHttp('SELECT COUNT(*) AS c FROM users', [], 10000);
+    userCount = Number(r?.rows?.[0]?.c || 0);
   } catch(e) {
-    console.warn('[TURSO] Kullanıcı sayısı alınamadı:', e.message);
-    return false;
+    console.warn('[TURSO] Kullanıcı sayısı alınamadı:', e?.message);
   }
 
-  if (userCount === 0) {
-    console.log('[TURSO] Restore edilecek veri yok.');
-    return false;
-  }
+  if (userCount > 0) {
+    console.log(`[TURSO] ${userCount} kullanıcı bulundu, restore başlıyor...`);
+    _db.run('PRAGMA foreign_keys = OFF');
 
-  console.log(`[TURSO] ${userCount} kullanıcı bulundu, restore başlıyor...`);
-  _db.run('PRAGMA foreign_keys = OFF');
+    const tables = [
+      'users', 'categories', 'subcategories', 'listings', 'listing_images',
+      'conversations', 'messages', 'favorites', 'notifications',
+      'listing_reports', 'password_reset_tokens', 'listing_tags', 'admin_notes'
+    ];
 
-  const tables = [
-    'users', 'categories', 'subcategories', 'listings', 'listing_images',
-    'conversations', 'messages', 'favorites', 'notifications',
-    'listing_reports', 'password_reset_tokens', 'listing_tags', 'admin_notes'
-  ];
-
-  let totalRows = 0;
-  for (const table of tables) {
-    try {
-      const r = await _turso.execute(`SELECT * FROM ${table}`);
-      if (r.rows.length === 0) continue;
-
-      const cols = r.columns;
+    let totalRows = 0;
+    for (const table of tables) {
+      const r = await tursoHttp(`SELECT * FROM ${table}`, [], 20000);
+      if (!r || r.rows.length === 0) continue;
+      const { cols, rows } = r;
       const placeholders = cols.map(() => '?').join(', ');
       const insertSql = `INSERT OR REPLACE INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`;
-
-      for (const row of r.rows) {
-        const vals = cols.map(c => {
-          const v = row[c];
-          return (v === undefined || v === null) ? null : v;
-        });
+      for (const row of rows) {
+        const vals = cols.map(c => row[c]);
         try { _db.run(insertSql, vals); } catch(e2) {
           console.warn(`[TURSO] ${table} satır hatası:`, e2.message);
         }
       }
-      totalRows += r.rows.length;
-      console.log(`[TURSO] ${table}: ${r.rows.length} satır`);
-    } catch(e) {
-      console.warn(`[TURSO] ${table} restore hatası:`, e.message);
+      totalRows += rows.length;
+      console.log(`[TURSO] ${table}: ${rows.length} satır`);
     }
+
+    _db.run('PRAGMA foreign_keys = ON');
+    console.log(`[TURSO] Restore tamamlandı — ${totalRows} satır.`);
+  } else {
+    console.log('[TURSO] Restore edilecek veri yok.');
   }
 
-  _db.run('PRAGMA foreign_keys = ON');
-  console.log(`[TURSO] Restore tamamlandı — toplam ${totalRows} satır.`);
-  return true;
+  _tursoReady = true;
+  console.log('[TURSO] Hazır. Çift yazma aktif.');
 }
 
 // ── Ana başlatma fonksiyonu ─────────────────────────────────────────────────
@@ -277,107 +314,21 @@ async function initDatabase() {
     locateFile: file => require.resolve(`sql.js/dist/${file}`)
   });
 
-  // Her zaman boş başlat (Turso'dan restore edeceğiz)
   _db = new SQL.Database();
   _db.run('PRAGMA foreign_keys = ON');
 
-  // Turso bağlantısını kur
-  initTurso();
+  // Yerel şema (senkron, hızlı)
+  SCHEMA_DDL.forEach(sql => _db.run(sql));
 
-  // sql.js şemasını oluştur (yerel)
-  const localTables = [
-    `CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, company_name TEXT,
-      email TEXT UNIQUE NOT NULL, phone TEXT, password_hash TEXT NOT NULL,
-      city TEXT, role TEXT DEFAULT 'user', is_active INTEGER DEFAULT 1,
-      is_verified INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT UNIQUE NOT NULL,
-      name TEXT NOT NULL, description TEXT, sort_order INTEGER DEFAULT 0)`,
-    `CREATE TABLE IF NOT EXISTS subcategories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL,
-      slug TEXT NOT NULL, name TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`,
-    `CREATE TABLE IF NOT EXISTS listings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
-      category_id INTEGER NOT NULL, subcategory_id INTEGER, title TEXT NOT NULL,
-      description TEXT NOT NULL, listing_type TEXT NOT NULL DEFAULT 'sell',
-      price REAL, price_type TEXT DEFAULT 'negotiable', price_unit TEXT DEFAULT 'TRY',
-      price_basis TEXT DEFAULT 'per_unit', currency TEXT DEFAULT 'TRY',
-      quantity REAL, quantity_unit TEXT, lot_quantity INTEGER,
-      city TEXT NOT NULL, district TEXT, contact_phone TEXT, contact_email TEXT,
-      website TEXT, status TEXT DEFAULT 'pending', rejection_reason TEXT,
-      is_featured INTEGER DEFAULT 0, featured_until TEXT,
-      views INTEGER DEFAULT 0, expires_at TEXT, renewed_at TEXT,
-      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS listing_images (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
-      filename TEXT NOT NULL, sort_order INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS conversations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER,
-      user1_id INTEGER NOT NULL, user2_id INTEGER NOT NULL,
-      last_message_at TEXT DEFAULT (datetime('now')),
-      created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER NOT NULL,
-      sender_id INTEGER NOT NULL, content TEXT NOT NULL,
-      is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS favorites (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
-      listing_id INTEGER NOT NULL, created_at TEXT DEFAULT (datetime('now')),
-      UNIQUE(user_id, listing_id))`,
-    `CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
-      type TEXT NOT NULL, title TEXT NOT NULL, body TEXT, link TEXT,
-      is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS listing_reports (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
-      reporter_id INTEGER, reason TEXT NOT NULL DEFAULT '', detail TEXT,
-      status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS password_reset_tokens (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
-      token TEXT NOT NULL UNIQUE, expires_at TEXT NOT NULL,
-      used INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE TABLE IF NOT EXISTS listing_tags (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL,
-      tag TEXT NOT NULL)`,
-    `CREATE TABLE IF NOT EXISTS admin_notes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, listing_id INTEGER,
-      note TEXT NOT NULL, created_by INTEGER NOT NULL,
-      created_at TEXT DEFAULT (datetime('now')))`,
-    `CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_listings_city     ON listings(city)`,
-    `CREATE INDEX IF NOT EXISTS idx_listings_status   ON listings(status)`,
-    `CREATE INDEX IF NOT EXISTS idx_listings_user     ON listings(user_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_listing_images    ON listing_images(listing_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_messages_conv     ON messages(conversation_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_conv_user1        ON conversations(user1_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_conv_user2        ON conversations(user2_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_notif_user        ON notifications(user_id, is_read, created_at)`,
-    `CREATE INDEX IF NOT EXISTS idx_favorites_user    ON favorites(user_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_favorites_listing ON favorites(listing_id)`,
-  ];
-
-  localTables.forEach(sql => _db.run(sql));
-
-  // Turso şemasını da başlat
-  await initTursoSchema();
-
-  // Turso'dan restore et
-  const restored = await restoreFromTurso();
-
-  if (!restored) {
-    // Yeni kurulum — seed kategoriler + admin
-    const catCount = dbProxy.prepare('SELECT COUNT(*) AS c FROM categories').get();
-    if (!catCount || !catCount.c) {
-      seedCategories();
-    } else {
-      migrateCategories();
-    }
+  // Kategorileri seed et
+  const catCount = dbProxy.prepare('SELECT COUNT(*) AS c FROM categories').get();
+  if (!catCount || !catCount.c) {
+    seedCategories();
+  } else {
+    migrateCategories();
   }
 
-  // Admin kullanicisi (her zaman güncelle)
+  // Admin kullanicisi
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@ticarethane.com';
   const adminPw    = process.env.ADMIN_PASSWORD || 'Admin123456!';
   const adminHash  = bcrypt.hashSync(adminPw, 12);
@@ -399,10 +350,16 @@ async function initDatabase() {
   process.on('SIGINT',  () => { persistDb(); process.exit(0); });
   process.on('SIGTERM', () => { persistDb(); process.exit(0); });
 
-  console.log('[DB] Veritabanı hazır' + (_turso ? ' (Turso aktif)' : ' (yerel mod)') + '.');
+  // Turso arka planda — sunucu önce başlasın
+  const tursoEnabled = !!(TURSO_URL && TURSO_TOKEN);
+  if (tursoEnabled) {
+    initTursoBackground().catch(e => console.error('[TURSO] Arka plan hatası:', e.message));
+  }
+
+  console.log('[DB] Veritabanı hazır' + (tursoEnabled ? ' (Turso arka planda)' : ' (yerel mod)') + '.');
 }
 
-// ── Kategori yardımcıları (değişmedi) ──────────────────────────────────────
+// ── Kategori yardımcıları ──────────────────────────────────────────────────
 function migrateCategories() {
   [['Tekstil & Ham Madde', 'Tekstil & Hammadde']].forEach(([old, neu]) => {
     dbProxy.prepare('UPDATE categories SET name = ? WHERE name = ?').run(neu, old);
@@ -425,38 +382,38 @@ function slugify(str) {
 function seedCategories() {
   const cats = [
     { slug: 'kimya', name: 'Kimya & Hammadde', desc: 'Soda külü, asit, solvent, boya hammaddesi ve kimyasal ürünler',
-      subs: ['Asit & Baz', 'Solvent & Thinner', 'Soda Külü & Sodyum Ürünleri', 'Klorlu Bileşikler', 'Boya Hammaddesi', 'Deterjan Hammaddesi', 'Gübre Kimyasalları', 'Diğer'] },
-    { slug: 'demir-celik', name: 'Demir, Çelik & Metal', desc: 'Profil, boru, sac, çelik, alüminyum ve metal ürünler',
-      subs: ['HEA/HEB Profil', 'Boru & Tüp', 'Sac & Levha', 'Filmaşin & Tel', 'İnşaat Demiri', 'Alüminyum', 'Bakır', 'Paslanmaz Çelik', 'Hurda Metal', 'Diğer'] },
-    { slug: 'tarim-gida', name: 'Tarım & Gıda Hammaddeleri', desc: 'Tahıl, bakliyat, gübre, zirai ilaç ve gıda hammaddeleri',
-      subs: ['Tahıl & Hububat', 'Bakliyat', 'Yağlı Tohumlar', 'Gübre', 'Zirai İlaç & Pestisit', 'Fide & Tohum', 'Hayvan Yemi', 'Meyve & Sebze (Toptan)', 'Diğer'] },
+      subs: ['Asit & Baz', 'Solvent & Thinner', 'Soda Külü & Sodyum Ürünleri', 'Klorlu Bileşikler', 'Boya Hammaddesi', 'Deterjan Hammaddesi', 'Gøbre Kimyasalları', 'Diğer'] },
+    { slug: 'demir-celik', name: 'Demir, Çelik & Metal', desc: 'Profil, boru, sac, çelik, aløminyum ve metal ørønler',
+      subs: ['HEA/HEB Profil', 'Boru & Tüp', 'Sac & Levha', 'Filmaşin & Tel', 'İnşaat Demiri', 'Aløminyum', 'Bakır', 'Paslanmaz Çelik', 'Hurda Metal', 'Diğer'] },
+    { slug: 'tarim-gida', name: 'Tarım & Gıda Hammaddeleri', desc: 'Tahıl, bakliyat, gøbre, zirai ilaç ve gıda hammaddeleri',
+      subs: ['Tahıl & Hububat', 'Bakliyat', 'Yağlı Tohumlar', 'Gøbre', 'Zirai İlaç & Pestisit', 'Fide & Tohum', 'Hayvan Yemi', 'Meyve & Sebze (Toptan)', 'Diğer'] },
     { slug: 'plastik-polimer', name: 'Plastik & Polimer', desc: 'PP, PE, PVC, PET ve diğer plastik hammaddeler',
       subs: ['Polipropilen (PP)', 'Polietilen (PE)', 'PVC', 'PET', 'Polistiren (PS)', 'ABS', 'Naylon & Poliamid', 'Plastik Hurda & Regrind', 'Diğer'] },
     { slug: 'insaat', name: 'İnşaat & Yapı Malzemeleri', desc: 'Çimento, tuğla, seramik, yalıtım ve yapı malzemeleri',
       subs: ['Çimento & Beton', 'Tuğla & Kiremit', 'Yalıtım Malzemeleri', 'Seramik & Fayans', 'Alçıpan & Alçı', 'Dekoratif Malzeme', 'Su Yalıtımı', 'Zemin Malzemeleri', 'Diğer'] },
     { slug: 'tekstil', name: 'Tekstil & Hammadde', desc: 'İplik, kumaş, elyaf ve tekstil hammaddeleri',
       subs: ['Pamuk İpliği', 'Polyester İpliği', 'Viskon & Lyocell', 'Örme Kumaş', 'Dokuma Kumaş', 'Nonwoven', 'Elyaf & Vatka', 'Tekstil Kimyasalları', 'Diğer'] },
-    { slug: 'kagit-ambalaj', name: 'Kağıt, Karton & Ambalaj', desc: 'Kraft, karton, ambalaj malzemeleri ve kağıt ürünler',
+    { slug: 'kagit-ambalaj', name: 'Kağıt, Karton & Ambalaj', desc: 'Kraft, karton, ambalaj malzemeleri ve kağıt ørønler',
       subs: ['Oluklu Mukavva', 'Kraft Kağıt', 'Ambalaj Filmi', 'Streç Film', 'Torba & Çuval', 'Etiket & Baskı', 'Beyaz Kağıt', 'Kağıt Hurda', 'Diğer'] },
-    { slug: 'enerji-yakit', name: 'Enerji & Yakıt', desc: 'Akaryakıt, doğal gaz, kömür, biyoyakıt ve enerji ürünleri',
+    { slug: 'enerji-yakit', name: 'Enerji & Yakıt', desc: 'Akaryakıt, doğal gaz, kömür, biyoyakıt ve enerji ørønleri',
       subs: ['Motorin & Mazot', 'Fuel Oil', 'LPG', 'Doğal Gaz', 'Kömür', 'Biyodizel', 'Madeni Yağ', 'Solvent & Nafta', 'Diğer'] },
-    { slug: 'maden-mineral', name: 'Maden & Mineral', desc: 'Bor, krom, mermer, kum, çakıl ve mineral ürünler',
-      subs: ['Bor Mineralleri', 'Krom Cevheri', 'Mermer & Taş', 'Kum & Çakıl', 'Barit', 'Perlit & Vermikülit', 'Kil & Kaolin', 'Bentonit', 'Diğer'] },
+    { slug: 'maden-mineral', name: 'Maden & Mineral', desc: 'Bor, krom, mermer, kum, çakıl ve mineral ørønler',
+      subs: ['Bor Mineralleri', 'Krom Cevheri', 'Mermer & Taş', 'Kum & Çakıl', 'Barit', 'Perlit & Vermikølit', 'Kil & Kaolin', 'Bentonit', 'Diğer'] },
     { slug: 'makina-ekipman', name: 'Makina & Sanayi Ekipmanı', desc: 'Üretim makineleri, sanayi ekipmanları ve yedek parçalar',
       subs: ['Üretim Makinaları', 'Kompresör & Pompa', 'Vinç & Yükleme', 'Jeneratör', 'İsı Değiştirici', 'Filtre Sistemleri', 'CNC & İşleme', 'Yedek Parça', 'Diğer'] },
     { slug: 'elektrik-elektronik', name: 'Elektrik & Elektronik Malzeme', desc: 'Kablo, pano, trafo ve elektrik malzemeleri',
-      subs: ['Güç Kablosu', 'Trafo & Kompanzasyon', 'Pano & Şalter', 'Aydınlatma', 'Motor & Sürücü', 'Otomasyon', 'Kablo Raf & Kanal', 'Topraklama', 'Diğer'] },
-    { slug: 'ahsap-orman', name: 'Ahşap & Orman Ürünleri', desc: 'Kereste, kontrplak, sunta ve ahşap ürünler',
+      subs: ['Güç Kablosu', 'Trafo & Kompanzasyon', 'Pano & Şalter', 'Aydınlatma', 'Motor & Sørøcø', 'Otomasyon', 'Kablo Raf & Kanal', 'Topraklama', 'Diğer'] },
+    { slug: 'ahsap-orman', name: 'Ahşap & Orman Ürünleri', desc: 'Kereste, kontrplak, sunta ve ahşap ørønler',
       subs: ['Kereste', 'Kontrplak', 'Sunta & MDF', 'OSB', 'Parke', 'Mobilya Levhası', 'Yonga & Talaş', 'Orman Ürünleri', 'Diğer'] },
     { slug: 'deri', name: 'Deri & Ham Deri', desc: 'Ham deri, işlenmiş deri ve deri hammaddeleri',
-      subs: ['Büyükbaş Ham Deri', 'Küçükbaş Ham Deri', 'Wet-Blue', 'Crust Deri', 'Bitirilmiş Deri', 'Deri Kimyasalları', 'Diğer'] },
-    { slug: 'cam-seramik', name: 'Cam & Seramik', desc: 'Düz cam, cam elyaf, seramik hammadde ve ürünler',
-      subs: ['Düz Cam', 'Cam Elyaf', 'Seramik Hammadde', 'Refrakter Malzeme', 'Cam Ambalaj', 'Seramik Ürünler', 'Diğer'] },
-    { slug: 'lastik-kaucuk', name: 'Lastik & Kauçuk', desc: 'Ham kauçuk, sentetik kauçuk ve lastik ürünler',
-      subs: ['Doğal Kauçuk', 'Sentetik Kauçuk', 'Lastik Hurda', 'Kauçuk Profil', 'Köpük & Sünger', 'Silikon Ürünler', 'Diğer'] },
-    { slug: 'boya-kaplama', name: 'Boya, Vernik & Kaplama', desc: 'Sanayi boyası, vernik, toz boya ve yüzey kaplama ürünleri',
+      subs: ['Bøyøkbaş Ham Deri', 'Køçøkbaş Ham Deri', 'Wet-Blue', 'Crust Deri', 'Bitirilmiş Deri', 'Deri Kimyasalları', 'Diğer'] },
+    { slug: 'cam-seramik', name: 'Cam & Seramik', desc: 'Døz cam, cam elyaf, seramik hammadde ve ørønler',
+      subs: ['Døz Cam', 'Cam Elyaf', 'Seramik Hammadde', 'Refrakter Malzeme', 'Cam Ambalaj', 'Seramik Ürünler', 'Diğer'] },
+    { slug: 'lastik-kaucuk', name: 'Lastik & Kauçuk', desc: 'Ham kauçuk, sentetik kauçuk ve lastik ørønler',
+      subs: ['Doğal Kauçuk', 'Sentetik Kauçuk', 'Lastik Hurda', 'Kauçuk Profil', 'Köpøk & Sønger', 'Silikon Ürünler', 'Diğer'] },
+    { slug: 'boya-kaplama', name: 'Boya, Vernik & Kaplama', desc: 'Sanayi boyası, vernik, toz boya ve yøzey kaplama ørønleri',
       subs: ['Sanayi Boyası', 'Toz Boya', 'Vernik & Lake', 'Epoksi Kaplama', 'Astar & Boya Hammaddesi', 'Pigment & Boya Kimyasalları', 'Diğer'] },
-    { slug: 'saglik-kimya', name: 'Sağlık & Hijyen Kimyasalları', desc: 'Dezenfektan, sterilizasyon, ilaç hammaddeleri ve hijyen ürünleri',
+    { slug: 'saglik-kimya', name: 'Sağlık & Hijyen Kimyasalları', desc: 'Dezenfektan, sterilizasyon, ilaç hammaddeleri ve hijyen ørønleri',
       subs: ['Dezenfektan & Antiseptik', 'İlaç Hammaddeleri (API)', 'Tıbbi Sarf Malzeme', 'Laboratuvar Kimyasalları', 'Kozmetik Hammadde', 'Diğer'] },
   ];
 
