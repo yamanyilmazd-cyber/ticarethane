@@ -72,7 +72,6 @@ async function tursoHttp(sql, params, timeoutMs) {
 
 // fire-and-forget — sadece DML (INSERT/UPDATE/DELETE)
 function tursoWrite(sql, params) {
-  if (!_tursoReady) return;
   const t = sql.trim().toUpperCase();
   if (t.startsWith('SELECT') || t.startsWith('PRAGMA') ||
       t.startsWith('CREATE') || t.startsWith('DROP') ||
