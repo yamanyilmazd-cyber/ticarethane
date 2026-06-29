@@ -2495,7 +2495,7 @@ function renderForgotPassword() {
         var resendWrap = document.createElement('div');
         resendWrap.id = 'resendWrap';
         resendWrap.style.marginTop = '12px';
-        msg.insertAdjacentElement('afterend', resendWrap);
+        btn.insertAdjacentElement('afterend', resendWrap);
       }
       document.getElementById('resendWrap').innerHTML = '<button type="button" class="btn btn-outline w-100" id="resendBtn">Link gelmedi mi? Tekrar gönder</button>';
       document.getElementById('resendBtn').onclick = async function() {
