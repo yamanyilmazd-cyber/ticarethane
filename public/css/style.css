@@ -921,3 +921,106 @@ tbody td { padding: 11px 14px; color: var(--text); }
 }
 
 .btn-nav svg { display: block; }
+
+
+/* ================================================================
+   MOBİL DÜZELTMELER
+   ================================================================ */
+
+/* iOS input zoom önleme (font-size 16px altı = otomatik zoom) */
+@media (max-width: 768px) {
+  .form-control,
+  .navbar-search input,
+  .hero-search input,
+  .chat-input {
+    font-size: 1rem;
+  }
+
+  /* Hero daha kompakt */
+  .hero { padding: 32px 0 24px; }
+  .hero p { font-size: .9rem; margin-bottom: 18px; }
+  .hero-stats { gap: 16px; margin-top: 18px; }
+  .hero-stat-val { font-size: 1.2rem; }
+  .hero-search { max-width: 100%; }
+  .hero-search input { padding: 13px 14px; }
+  .hero-search button { padding: 13px 18px; }
+
+  /* Navbar biraz sıkıştır */
+  .navbar-inner { gap: 8px; }
+  .navbar-logo { font-size: 1.2rem; }
+  .btn-nav { padding: 7px 12px; font-size: .82rem; }
+
+  /* Modal — mobilde alttan açılan sheet */
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal {
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    max-height: 92vh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Toast üstte değil, klavye safe zone dışında */
+  .toast-container { bottom: 80px; right: 16px; left: 16px; }
+  .toast { max-width: 100%; text-align: center; }
+
+  /* Dashboard tabları kaydırılabilir */
+  .dash-tabs {
+    overflow-x: auto; white-space: nowrap;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .dash-tabs::-webkit-scrollbar { display: none; }
+  .dash-tab { flex-shrink: 0; padding: 12px 14px; }
+
+  /* Admin içerik padding */
+  .admin-content { padding: 16px; }
+
+  /* Filtre sidebar — mobilde sabit değil */
+  .filter-sidebar { position: static !important; top: auto !important; }
+
+  /* Chat — klavye açıldığında input görünür kalır */
+  .chat-messages-wrap { padding-bottom: 80px; }
+  .chat-input-bar { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+
+  /* Tablo yatay kaydırma */
+  .table-wrapper { -webkit-overflow-scrolling: touch; }
+
+  /* Hesap sekmeleri kaydırılabilir */
+  .dash-tabs { -webkit-overflow-scrolling: touch; }
+
+  /* Section padding azalt */
+  .section { padding: 32px 0; }
+}
+
+@media (max-width: 480px) {
+  .hero h1 { font-size: 1.45rem; }
+  .hero-label { font-size: .7rem; padding: 3px 10px; }
+  .hero-stats { gap: 12px; }
+
+  /* Giriş/kayıt kart */
+  .auth-card { padding: 24px 18px; }
+  .auth-card h2 { font-size: 1.25rem; }
+
+  /* Buton dokunma hedefi */
+  .btn { min-height: 42px; }
+  .btn-sm { padding: 8px 12px; min-height: 36px; }
+
+  /* İlan detay alt alta geçişte boşluk */
+  .listing-detail-grid { gap: 14px; }
+  .listing-price-box { padding: 14px; }
+
+  /* Breadcrumb küçük */
+  .breadcrumb { font-size: .75rem; padding: 10px 0; }
+
+  /* Stat grid 2 kolon */
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Footer */
+  .footer { padding: 28px 0 16px; margin-top: 40px; }
+  .footer-bottom { flex-direction: column; text-align: center; }
+}
+
+@media (max-width: 360px) {
+  .hero h1 { font-size: 1.25rem; }
+  .navbar-logo { font-size: 1.05rem; }
+  .btn-nav-accent { padding: 7px 10px; font-size: .78rem; }
+  .hero-stats { flex-direction: column; gap: 8px; }
+}
