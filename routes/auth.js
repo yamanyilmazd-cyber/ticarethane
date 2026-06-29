@@ -291,10 +291,12 @@ router.post('/forgot-password', async (req, res) => {
     const resetLink = base + '/#/sifre-sifirla?token=' + token;
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
+    console.info('[MAIL] KEY mevcut:', !!RESEND_API_KEY, '| FROM:', process.env.SMTP_FROM || '(YOK)');
     if (RESEND_API_KEY) {
       // Resend HTTP API (SMTP port bloklarina takilmaz)
       try {
         const fromAddr = process.env.SMTP_FROM || 'Ticarethane <onboarding@resend.dev>';
+        console.info('[MAIL] Gonderiliyor:', email, '| FROM:', fromAddr);
         const resp = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
