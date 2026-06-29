@@ -562,7 +562,7 @@ async function renderHome() {
             '<div class="hero-stats">' +
               '<div><em class="hero-stat-val">' + (data.pagination ? data.pagination.total : (data.total || 0)) + '</em><span class="hero-stat-lbl">Aktif İlan</span></div>' +
               '<div><em class="hero-stat-val">' + State.categories.length + '</em><span class="hero-stat-lbl">Sektör</span></div>' +
-              '<div><em class="hero-stat-val">5 İl</em><span class="hero-stat-lbl">Hizmet Bölgesi</span></div>' +
+              '<div><em class="hero-stat-val">81 İl</em><span class="hero-stat-lbl">Hizmet Bölgesi</span></div>' +
             '</div>' +
           '</div>' +
         '</div>' +
