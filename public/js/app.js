@@ -388,7 +388,7 @@ function validateTurkishPhone(val) {
   if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
   if (digits.length !== 10) return 'Geçerli bir telefon numarası giriniz (+90 5XX XXX XX XX).';
   if (!digits.startsWith('5')) return 'Cep telefonu numarası 5 ile başlamalıdır.';
-  if (parseInt(digits[1]) > 7) return 'Geçersiz GSM numarası. Lütfen gerçek numaranızı giriniz.';
+
   if (/^(.)\1{9}$/.test(digits)) return 'Geçerli bir telefon numarası giriniz.';
   if (digits === '5000000000' || digits === '5111111111' || digits === '5123456789') return 'Geçerli bir telefon numarası giriniz.';
   return null;
