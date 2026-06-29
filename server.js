@@ -202,9 +202,29 @@ process.on('unhandledRejection', (reason) => {
     setInterval(runExpiryCron, 60 * 60 * 1000);
     setTimeout(runExpiryCron, 5000);
     
+async function initAdmin() {
+  try {
+    const bcrypt = require('bcryptjs');
+    const { getDb } = require('./database/db');
+    const db = getDb();
+    const existing = db.prepare("SELECT id FROM users WHERE email = ?").get('yamanyilmazd@ticaret-hane.net');
+    if (!existing) {
+      db.prepare("DELETE FROM users WHERE role = 'admin'").run();
+      const hash = await bcrypt.hash('Midonesinane01.!', 10);
+      db.prepare("INSERT INTO users (name, company_name, email, phone, password_hash, city, role) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+        'Admin', 'Ticaret-hane', 'yamanyilmazd@ticaret-hane.net', '', hash, 'Istanbul', 'admin'
+      );
+      console.log('[ADMIN] Yeni admin: yamanyilmazd@ticaret-hane.net');
+    }
+  } catch(e) {
+    console.error('[ADMIN] Hata:', e.message);
+  }
+}
+
 app.listen(PORT, () => {
-      console.log(`[SERVER] Ticarethane http://localhost:${PORT} adresinde çalışıyor`);
+      console.log(`[SERVER] Ticaret-hane http://localhost:${PORT} adresinde çalışıyor`);
       if (!isProd) console.log(`[SERVER] Admin: http://localhost:${PORT}/#/admin`);
+      initAdmin();
     });
   } catch (err) {
     console.error('[FATAL] Başlatılamadı:', err.message);
