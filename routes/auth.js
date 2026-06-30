@@ -20,6 +20,40 @@ function sanitize(str) {
   return str.replace(/<[^>]*>/g, '').trim().substring(0, 500);
 }
 
+// Geçici/sahte e-posta domain kara listesi
+const BLOCKED_DOMAINS = new Set([
+  'mailinator.com','guerrillamail.com','guerrillamail.net','guerrillamail.org',
+  'guerrillamail.biz','guerrillamail.de','guerrillamail.info',
+  'tempmail.com','temp-mail.org','temp-mail.io','tmpmail.net','tmpmail.org',
+  'throwam.com','throwaway.email','dispostable.com','sharklasers.com',
+  'guerrillamailblock.com','grr.la','guerrillamail.biz','spam4.me',
+  'yopmail.com','yopmail.fr','cool.fr.nf','jetable.fr.nf','nospam.ze.tc',
+  'nomail.xl.cx','mega.zik.dj','speed.1s.fr','courriel.fr.nf',
+  'moncourrier.fr.nf','monemail.fr.nf','monmail.fr.nf',
+  'maildrop.cc','trashmail.com','trashmail.at','trashmail.io',
+  'trashmail.me','trashmail.net','trashmail.org','wegwerfmail.de',
+  'trash-mail.at','discard.email','fakeinbox.com','mailnull.com',
+  'mailnew.com','mailscrap.com','mailsiphon.com','mailzilla.com',
+  'spamgourmet.com','spamgourmet.net','spamgourmet.org',
+  'spamgourmet.com','getairmail.com','spamoff.de',
+  'filzmail.com','einrot.com','coroborner.com','temporaryemail.net',
+  'throwam.com','spamcorpse.com','mailboxy.fun','dropmail.me',
+  'mohmal.com','spamtrap.ro','mailforspam.com','spam.la',
+  'spamthisplease.com','spamhereplease.com','tempinbox.com',
+  'spamavert.com','10minutemail.com','10minutemail.net','10minutemail.org',
+  '10minemail.com','10mail.org','minuteemails.com','email60.com',
+  '20minutemail.com','25minutemail.com','30minutemail.com',
+  'filzmail.de','mailnesia.com','mailnull.com','spamslicer.com',
+  'spamspot.com','spamstack.net','spamtrail.com',
+  'jetable.com','jetable.net','jetable.org','netzidiot.de',
+  'urfunktion.de','pookmail.com','spamfree24.org','spamfree24.de',
+  'kasmail.com','spammotel.com','ieatspam.eu','ieatspam.info',
+  'inboxalias.com','fakemailgenerator.com','mailexpire.com',
+  'throwam.com','spamgourmet.com','noclickemail.com',
+  'emailondeck.com','33mail.com','spamgob.com',
+  'dispostable.com','spambox.us','spambox.info','mailbucket.org',
+]);
+
 // ---- Kayıt ----
 router.post('/register', async (req, res) => {
   try {
@@ -48,6 +82,11 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Geçerli bir e-posta adresi giriniz.' });
     if (email.length > 254)
       return res.status(400).json({ error: 'E-posta adresi çok uzun.' });
+
+    // Geçici/sahte e-posta domain engeli
+    const emailDomain = email.split('@')[1];
+    if (BLOCKED_DOMAINS.has(emailDomain))
+      return res.status(400).json({ error: 'Bu e-posta adresi ile kayıt olunamamaktadır. Lütfen kurumsal veya kalıcı bir e-posta adresi kullanın.' });
 
     const db = getDb();
 
