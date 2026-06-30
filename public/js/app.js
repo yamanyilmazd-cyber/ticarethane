@@ -153,6 +153,8 @@ var routes = {
   '/sifremi-unuttum':      renderForgotPassword,
   '/sozlesme':            renderSozlesme,
   '/kvkk':               renderKvkk,
+  '/iletisim':        renderIletisim,
+  '/ilan-kurallari':   renderIlanKurallari,
 };
 
 function getHash() {
@@ -582,16 +584,7 @@ async function renderHome() {
         '<div class="container">' +
           '<div class="section-header"><div><div class="section-title">Son İlanlar</div><div class="section-sub">Platforma yeni eklenen ilanlar</div></div><a href="#/ara" class="btn btn-ghost btn-sm">Tümünü Gör</a></div>' +
           listings +
-        '</div>' +
-      '</section> '+
-
-      '<section class="py-5" style="background:#f8f9fa">' +
-      '<div class="container text-center">' +
-      '<h2 class="mb-3">Destek</h2>' +
-      '<p class="lead mb-2">Sorular&#305;n&#305;z i&#231;in bizimle ileti&#351;ime ge&#231;ebilirsiniz:</p>' +
-      '<a href="mailto:destek@ticaret-hane.net" class="btn btn-primary btn-lg">&#128231; destek@ticaret-hane.net</a>' +
-      '</div>' +
-      '</section>';
+        '</div>';
 
     document.getElementById('heroSearchForm').addEventListener('submit', function(e) {
       e.preventDefault();
@@ -2672,7 +2665,7 @@ function renderSozlesme() {
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">10. Uygulanacak Hukuk</h2>';
   s += '<p>Bu Sözleşme, Türkiye Cumhuriyeti kanunlarına tabidir. Sözleşme’den doğabilecek uyuşmazlıklarda İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">11. İletişim</h2>';
-  s += '<p>Soru ve talepleriniz için: <strong>destek@ticaret-hane.netticaret-hane</strong></p>';
+  s += '<p>Soru ve talepleriniz için: <strong>destek@ticaret-hane.net</strong></p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
 }
@@ -2700,4 +2693,34 @@ function renderKvkk() {
   s += '<p>Haklarınızı kullanmak için <strong>destek@ticaret-hane.netticaret-hane</strong> adresine e-posta göndere-bilir ya da Platform’daki &#34;Hesabım&#34; sayfasından başvurabilirsiniz. Başvurularınız en geç 30 gün içinde yanıtlanacaktır.</p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
+}
+
+function renderIletisim() {
+  document.title = 'İletişim - Ticaret-hane';
+  var s = '<div class="container" style="padding:60px 15px;max-width:700px;margin:0 auto">';
+  s += '<h1 class="mb-4">İletişim</h1>';
+  s += '<p>Ticaret-hane platformu hakkında sorularınız, önerileriniz veya şikayetleriniz için bizimle iletişime geçebilirsiniz.</p>';
+  s += '<div style="background:#f8f9fa;border-radius:8px;padding:24px;margin-top:20px">';
+  s += '<p><strong>Destek E-postası:</strong><br><a href="mailto:destek@ticaret-hane.net">destek@ticaret-hane.net</a></p>';
+  s += '<p class="mb-0"><strong>Çalışma Saatleri:</strong><br>Pazartesi - Cuma, 09:00 - 18:00</p>';
+  s += '</div></div>';
+  return s;
+}
+
+function renderIlanKurallari() {
+  document.title = 'İlan Kuralları - Ticaret-hane';
+  var s = '<div class="container" style="padding:60px 15px;max-width:800px;margin:0 auto">';
+  s += '<h1 class="mb-4">İlan Kuralları</h1>';
+  s += '<p>Ticaret-hane&#39;de ilan vermek için aşağıdaki kurallara uymanız gerekmektedir.</p>';
+  s += '<h4>1. Genel Kurallar</h4>';
+  s += '<p>Yalnızca gerçek ticari mal ve hammadde ilanları yayınlanabilir. Hizmet, kişisel eşya veya yasadışı ürün ilanları kabul edilmez.</p>';
+  s += '<h4>2. İlan İçeriği</h4>';
+  s += '<p>İlanlar doğru, eksiksiz ve yanıltıcı olmayan bilgiler içermelidir. Ürün adı, fiyat, miktar ve iletişim bilgileri açıkça belirtilmelidir.</p>';
+  s += '<h4>3. Yasaklı İçerikler</h4>';
+  s += '<p>Sahte ürünler, kopyalar, sağlık/güvenlik açısından tehlikeli maddeler ve kanunen yasaklı ürünlerin ilanı kesinlikle yasaktır.</p>';
+  s += '<h4>4. Kural İhlali</h4>';
+  s += '<p>Kurallara aykırı ilanlar yönetim tarafından kaldırılır. Tekrarlayan ihlallerde hesap askıya alınabilir.</p>';
+  s += '<p>Sorularınız için: <a href="mailto:destek@ticaret-hane.net">destek@ticaret-hane.net</a></p>';
+  s += '</div>';
+  return s;
 }
