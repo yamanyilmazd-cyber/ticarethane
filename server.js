@@ -97,10 +97,10 @@ app.use('/api/', rateLimit({
   message: { error: 'Çok fazla istek gönderildi. Lütfen 15 dakika sonra tekrar deneyin.' },
 }));
 
-// Giriş: 15 dk'da 10 deneme (IP bazlı)
+// Giriş: 15 dk'da 5 deneme (IP bazlı)
 app.use('/api/auth/login', rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 5,
   message: { error: 'Çok fazla giriş denemesi. Lütfen 15 dakika sonra tekrar deneyin.' },
   skipSuccessfulRequests: true,
 }));
