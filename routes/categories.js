@@ -10,7 +10,7 @@ router.get('/', (_req, res) => {
     const db   = getDb();
     const cats = db.prepare('SELECT * FROM categories ORDER BY sort_order ASC').all();
     res.json(cats);
-  } catch(err) { res.status(500).json({ error: err.message }); }
+  } catch(err) { res.status(500).json({ error: 'Sunucu hatasi.' }); }
 });
 
 router.get('/:slug', (req, res) => {
@@ -20,7 +20,7 @@ router.get('/:slug', (req, res) => {
     if (!cat) return res.status(404).json({ error: 'Kategori bulunamadi.' });
     const subs = db.prepare('SELECT * FROM subcategories WHERE category_id = ? ORDER BY sort_order ASC').all(cat.id);
     res.json({ ...cat, subcategories: subs });
-  } catch(err) { res.status(500).json({ error: err.message }); }
+  } catch(err) { res.status(500).json({ error: 'Sunucu hatasi.' }); }
 });
 
 module.exports = router;
