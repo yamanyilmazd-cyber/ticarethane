@@ -317,6 +317,7 @@ async function initTursoBackground() {
     }
     _tursoQueue = [];
   }
+  fixTurkishText();
   console.log('[TURSO] Hazır. Çift yazma aktif.');
 }
 
@@ -389,9 +390,16 @@ function migrateCategories() {
     if (!exists) dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)')
       .run(cat.id, 'diger', 'Diğer');
   });
-  // Fix existing misspelled subcategory names
-  dbProxy.prepare("UPDATE subcategories SET name='Gübre', slug='gubre' WHERE name='Gøbre'").run();
+  fixTurkishText();
   console.log('[DB] Kategori migrasyonu tamamlandı.');
+}
+
+// Bozuk Türkçe karakterleri düzelt (ü yerine ø yazılmış eski kayıtlar)
+function fixTurkishText() {
+  try {
+    dbProxy.prepare("UPDATE categories SET name = REPLACE(REPLACE(name,'ø','ü'),'Ø','Ü'), description = REPLACE(REPLACE(description,'ø','ü'),'Ø','Ü') WHERE name LIKE '%ø%' OR description LIKE '%ø%'").run();
+    dbProxy.prepare("UPDATE subcategories SET name = REPLACE(REPLACE(name,'ø','ü'),'Ø','Ü') WHERE name LIKE '%ø%'").run();
+  } catch(e) { console.warn('[DB] Karakter düzeltme hatası:', e.message); }
 }
 
 function slugify(str) {
@@ -402,8 +410,8 @@ function seedCategories() {
   const cats = [
     { slug: 'kimya', name: 'Kimya & Hammadde', desc: 'Soda külü, asit, solvent, boya hammaddesi ve kimyasal ürünler',
       subs: ['Asit & Baz', 'Solvent & Thinner', 'Soda Külü & Sodyum Ürünleri', 'Klorlu Bileşikler', 'Boya Hammaddesi', 'Deterjan Hammaddesi', 'Gübre Kimyasalları', 'Diğer'] },
-    { slug: 'demir-celik', name: 'Demir, Çelik & Metal', desc: 'Profil, boru, sac, çelik, aløminyum ve metal ørønler',
-      subs: ['HEA/HEB Profil', 'Boru & Tüp', 'Sac & Levha', 'Filmaşin & Tel', 'İnşaat Demiri', 'Aløminyum', 'Bakır', 'Paslanmaz Çelik', 'Hurda Metal', 'Diğer'] },
+    { slug: 'demir-celik', name: 'Demir, Çelik & Metal', desc: 'Profil, boru, sac, çelik, alüminyum ve metal ürünler',
+      subs: ['HEA/HEB Profil', 'Boru & Tüp', 'Sac & Levha', 'Filmaşin & Tel', 'İnşaat Demiri', 'Alüminyum', 'Bakır', 'Paslanmaz Çelik', 'Hurda Metal', 'Diğer'] },
     { slug: 'tarim-gida', name: 'Tarım & Gıda Hammaddeleri', desc: 'Tahıl, bakliyat, gübre, zirai ilaç ve gıda hammaddeleri',
       subs: ['Tahıl & Hububat', 'Bakliyat', 'Yağlı Tohumlar', 'Gübre', 'Zirai İlaç & Pestisit', 'Fide & Tohum', 'Hayvan Yemi', 'Meyve & Sebze (Toptan)', 'Diğer'] },
     { slug: 'plastik-polimer', name: 'Plastik & Polimer', desc: 'PP, PE, PVC, PET ve diğer plastik hammaddeler',
@@ -412,27 +420,27 @@ function seedCategories() {
       subs: ['Çimento & Beton', 'Tuğla & Kiremit', 'Yalıtım Malzemeleri', 'Seramik & Fayans', 'Alçıpan & Alçı', 'Dekoratif Malzeme', 'Su Yalıtımı', 'Zemin Malzemeleri', 'Diğer'] },
     { slug: 'tekstil', name: 'Tekstil & Hammadde', desc: 'İplik, kumaş, elyaf ve tekstil hammaddeleri',
       subs: ['Pamuk İpliği', 'Polyester İpliği', 'Viskon & Lyocell', 'Örme Kumaş', 'Dokuma Kumaş', 'Nonwoven', 'Elyaf & Vatka', 'Tekstil Kimyasalları', 'Diğer'] },
-    { slug: 'kagit-ambalaj', name: 'Kağıt, Karton & Ambalaj', desc: 'Kraft, karton, ambalaj malzemeleri ve kağıt ørønler',
+    { slug: 'kagit-ambalaj', name: 'Kağıt, Karton & Ambalaj', desc: 'Kraft, karton, ambalaj malzemeleri ve kağıt ürünler',
       subs: ['Oluklu Mukavva', 'Kraft Kağıt', 'Ambalaj Filmi', 'Streç Film', 'Torba & Çuval', 'Etiket & Baskı', 'Beyaz Kağıt', 'Kağıt Hurda', 'Diğer'] },
-    { slug: 'enerji-yakit', name: 'Enerji & Yakıt', desc: 'Akaryakıt, doğal gaz, kömür, biyoyakıt ve enerji ørønleri',
+    { slug: 'enerji-yakit', name: 'Enerji & Yakıt', desc: 'Akaryakıt, doğal gaz, kömür, biyoyakıt ve enerji ürünleri',
       subs: ['Motorin & Mazot', 'Fuel Oil', 'LPG', 'Doğal Gaz', 'Kömür', 'Biyodizel', 'Madeni Yağ', 'Solvent & Nafta', 'Diğer'] },
-    { slug: 'maden-mineral', name: 'Maden & Mineral', desc: 'Bor, krom, mermer, kum, çakıl ve mineral ørønler',
-      subs: ['Bor Mineralleri', 'Krom Cevheri', 'Mermer & Taş', 'Kum & Çakıl', 'Barit', 'Perlit & Vermikølit', 'Kil & Kaolin', 'Bentonit', 'Diğer'] },
+    { slug: 'maden-mineral', name: 'Maden & Mineral', desc: 'Bor, krom, mermer, kum, çakıl ve mineral ürünler',
+      subs: ['Bor Mineralleri', 'Krom Cevheri', 'Mermer & Taş', 'Kum & Çakıl', 'Barit', 'Perlit & Vermikülit', 'Kil & Kaolin', 'Bentonit', 'Diğer'] },
     { slug: 'makina-ekipman', name: 'Makina & Sanayi Ekipmanı', desc: 'Üretim makineleri, sanayi ekipmanları ve yedek parçalar',
       subs: ['Üretim Makinaları', 'Kompresör & Pompa', 'Vinç & Yükleme', 'Jeneratör', 'İsı Değiştirici', 'Filtre Sistemleri', 'CNC & İşleme', 'Yedek Parça', 'Diğer'] },
     { slug: 'elektrik-elektronik', name: 'Elektrik & Elektronik Malzeme', desc: 'Kablo, pano, trafo ve elektrik malzemeleri',
-      subs: ['Güç Kablosu', 'Trafo & Kompanzasyon', 'Pano & Şalter', 'Aydınlatma', 'Motor & Sørøcø', 'Otomasyon', 'Kablo Raf & Kanal', 'Topraklama', 'Diğer'] },
-    { slug: 'ahsap-orman', name: 'Ahşap & Orman Ürünleri', desc: 'Kereste, kontrplak, sunta ve ahşap ørønler',
+      subs: ['Güç Kablosu', 'Trafo & Kompanzasyon', 'Pano & Şalter', 'Aydınlatma', 'Motor & Sürücü', 'Otomasyon', 'Kablo Raf & Kanal', 'Topraklama', 'Diğer'] },
+    { slug: 'ahsap-orman', name: 'Ahşap & Orman Ürünleri', desc: 'Kereste, kontrplak, sunta ve ahşap ürünler',
       subs: ['Kereste', 'Kontrplak', 'Sunta & MDF', 'OSB', 'Parke', 'Mobilya Levhası', 'Yonga & Talaş', 'Orman Ürünleri', 'Diğer'] },
     { slug: 'deri', name: 'Deri & Ham Deri', desc: 'Ham deri, işlenmiş deri ve deri hammaddeleri',
-      subs: ['Bøyøkbaş Ham Deri', 'Køçøkbaş Ham Deri', 'Wet-Blue', 'Crust Deri', 'Bitirilmiş Deri', 'Deri Kimyasalları', 'Diğer'] },
-    { slug: 'cam-seramik', name: 'Cam & Seramik', desc: 'Døz cam, cam elyaf, seramik hammadde ve ørønler',
-      subs: ['Døz Cam', 'Cam Elyaf', 'Seramik Hammadde', 'Refrakter Malzeme', 'Cam Ambalaj', 'Seramik Ürünler', 'Diğer'] },
-    { slug: 'lastik-kaucuk', name: 'Lastik & Kauçuk', desc: 'Ham kauçuk, sentetik kauçuk ve lastik ørønler',
-      subs: ['Doğal Kauçuk', 'Sentetik Kauçuk', 'Lastik Hurda', 'Kauçuk Profil', 'Köpøk & Sønger', 'Silikon Ürünler', 'Diğer'] },
-    { slug: 'boya-kaplama', name: 'Boya, Vernik & Kaplama', desc: 'Sanayi boyası, vernik, toz boya ve yøzey kaplama ørønleri',
+      subs: ['Büyükbaş Ham Deri', 'Küçükbaş Ham Deri', 'Wet-Blue', 'Crust Deri', 'Bitirilmiş Deri', 'Deri Kimyasalları', 'Diğer'] },
+    { slug: 'cam-seramik', name: 'Cam & Seramik', desc: 'Düz cam, cam elyaf, seramik hammadde ve ürünler',
+      subs: ['Düz Cam', 'Cam Elyaf', 'Seramik Hammadde', 'Refrakter Malzeme', 'Cam Ambalaj', 'Seramik Ürünler', 'Diğer'] },
+    { slug: 'lastik-kaucuk', name: 'Lastik & Kauçuk', desc: 'Ham kauçuk, sentetik kauçuk ve lastik ürünler',
+      subs: ['Doğal Kauçuk', 'Sentetik Kauçuk', 'Lastik Hurda', 'Kauçuk Profil', 'Köpük & Sünger', 'Silikon Ürünler', 'Diğer'] },
+    { slug: 'boya-kaplama', name: 'Boya, Vernik & Kaplama', desc: 'Sanayi boyası, vernik, toz boya ve yüzey kaplama ürünleri',
       subs: ['Sanayi Boyası', 'Toz Boya', 'Vernik & Lake', 'Epoksi Kaplama', 'Astar & Boya Hammaddesi', 'Pigment & Boya Kimyasalları', 'Diğer'] },
-    { slug: 'saglik-kimya', name: 'Sağlık & Hijyen Kimyasalları', desc: 'Dezenfektan, sterilizasyon, ilaç hammaddeleri ve hijyen ørønleri',
+    { slug: 'saglik-kimya', name: 'Sağlık & Hijyen Kimyasalları', desc: 'Dezenfektan, sterilizasyon, ilaç hammaddeleri ve hijyen ürünleri',
       subs: ['Dezenfektan & Antiseptik', 'İlaç Hammaddeleri (API)', 'Tıbbi Sarf Malzeme', 'Laboratuvar Kimyasalları', 'Kozmetik Hammadde', 'Diğer'] },
   ];
 
