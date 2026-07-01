@@ -7,7 +7,8 @@ const { getDb }        = require('../database/db');
 const { authenticate } = require('../middleware/auth');
 
 const router     = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'ticarethane-gizli-anahtar-uretimde-degistirin';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('[FATAL] JWT_SECRET environment variable is not set.');
 const JWT_EXP    = '30d';
 
 function signToken(userId, role) {
@@ -53,6 +54,29 @@ const BLOCKED_DOMAINS = new Set([
   'emailondeck.com','33mail.com','spamgob.com',
   'dispostable.com','spambox.us','spambox.info','mailbucket.org',
 ]);
+
+// ---- Engellenen geçici e-posta domainleri ----
+const BLOCKED_DOMAINS = new Set([
+  'mailinator.com','guerrillamail.com','guerrillamail.info','guerrillamail.biz',
+  'guerrillamail.de','guerrillamail.net','guerrillamail.org','guerrillamailblock.com',
+  'grr.la','sharklasers.com','guerrillamailblock.com','spam4.me','trashmail.com',
+  'trashmail.at','trashmail.io','trashmail.me','trashmail.net','trashmail.org',
+  'yopmail.com','yopmail.fr','cool.fr.nf','jetable.fr.nf','nospam.ze.tc',
+  'nomail.xl.cx','mega.zik.dj','speed.1s.fr','courriel.fr.nf','moncourrier.fr.nf',
+  'monemail.fr.nf','monmail.fr.nf','dispostable.com','maildrop.cc','mailnull.com',
+  'spamgourmet.com','spamgourmet.net','spamgourmet.org','tempr.email','discard.email',
+  'fakeinbox.com','mailnesia.com','spamfree24.org','spamfree24.de','spamfree24.eu',
+  'spamfree24.info','spamfree24.biz','spamfree24.com','spamfree.eu','mytrashmail.com',
+  'throwam.com','throwam.net','discardmail.com','discardmail.de','spamspot.com',
+  'spamthisplease.com','binkmail.com','mailexpire.com','spammotel.com','spamovore.com',
+  'spamhereplease.com','spamherelots.com','getairmail.com','filzmail.com',
+  'throwaway.email','wegwerfmail.de','wegwerfmail.net','wegwerfmail.org',
+  'trash-mail.at','spamslicer.com','spaml.com','spaml.de','hol.es',
+  'armyspy.com','cuvox.de','dayrep.com','einrot.com','fleckens.hu',
+  'gustr.com','jourrapide.com','rhyta.com','superrito.com','teleworm.us',
+  'tempmail.com','temp-mail.org','tempemail.com','tempmail.net','10minutemail.com',
+]);
+
 
 // ---- Kayıt ----
 router.post('/register', async (req, res) => {
@@ -225,7 +249,7 @@ router.get('/me', authenticate, (req, res) => {
   ).get(req.userId);
   if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
   res.json(user);
-  } catch(err) { res.status(500).json({ error: err.message }); }
+  } catch(err) { res.status(500).json({ error: 'Sunucu hatasi.' }); }
 });
 
 // ---- Profil güncelleme ----
@@ -246,6 +270,8 @@ router.put('/profile', authenticate, async (req, res) => {
     if (new_pw) {
       if (new_pw.length < 8)
         return res.status(400).json({ error: 'Yeni şifre en az 8 karakter olmalıdır.' });
+      if (new_pw.length > 128)
+        return res.status(400).json({ error: 'Yeni şifre en fazla 128 karakter olabilir.' });
       const user  = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.userId);
       const valid = await bcrypt.compare(current_pw || '', user.password_hash);
       if (!valid)
@@ -395,6 +421,7 @@ router.post('/reset-password', async (req, res) => {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ error: 'Token ve sifre zorunludur.' });
     if (password.length < 8) return res.status(400).json({ error: 'Sifre en az 8 karakter olmalidir.' });
+    if (password.length > 128) return res.status(400).json({ error: 'Sifre en fazla 128 karakter olabilir.' });
 
     const db  = getDb();
     const row = db.prepare('SELECT * FROM password_reset_tokens WHERE token=? AND used=0').get(token);
