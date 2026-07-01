@@ -344,9 +344,9 @@ async function initDatabase() {
   }
 
   // Admin kullanicisi
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@ticarethane.com';
-  const adminPw    = process.env.ADMIN_PASSWORD || 'Admin123456!';
-  const adminHash  = bcrypt.hashSync(adminPw, 12);
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPw    = process.env.ADMIN_PASSWORD;
+  if (!adminEmail || !adminPw) throw new Error('[FATAL] ADMIN_EMAIL and ADMIN_PASSWORD must be set.');
 
   const existingAdmin = dbProxy.prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
   if (!existingAdmin) {
