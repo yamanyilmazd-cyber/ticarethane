@@ -346,19 +346,20 @@ async function initDatabase() {
   // Admin kullanicisi
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPw    = process.env.ADMIN_PASSWORD;
-  if (!adminEmail || !adminPw) throw new Error('[FATAL] ADMIN_EMAIL and ADMIN_PASSWORD must be set.');
-
-  const existingAdmin = dbProxy.prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
-  if (!existingAdmin) {
-    dbProxy.prepare(
-      `INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')`
-    ).run('Yonetici', adminEmail, adminHash);
-    console.log(`[DB] Admin oluşturuldu: ${adminEmail}`);
+  if (adminEmail && adminPw) {
+    const adminHash = bcrypt.hashSync(adminPw, 12);
+    const existingAdmin = dbProxy.prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
+    if (!existingAdmin) {
+      dbProxy.prepare(`INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')`)
+        .run('Yonetici', adminEmail, adminHash);
+      console.log(`[DB] Admin oluşturuldu: ${adminEmail}`);
+    } else {
+      dbProxy.prepare(`UPDATE users SET password_hash = ?, role = 'admin' WHERE email = ?`)
+        .run(adminHash, adminEmail);
+      console.log(`[DB] Admin güncellendi: ${adminEmail}`);
+    }
   } else {
-    dbProxy.prepare(
-      `UPDATE users SET password_hash = ?, role = 'admin' WHERE email = ?`
-    ).run(adminHash, adminEmail);
-    console.log(`[DB] Admin güncellendi: ${adminEmail}`);
+    console.warn('[DB] ADMIN_EMAIL/ADMIN_PASSWORD ayarli degil, admin atlandı.');
   }
 
   process.on('exit',    persistDb);
