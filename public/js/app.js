@@ -386,17 +386,13 @@ function citySelectHTML(name, selected) {
 
 // Türk GSM numarası doğrulama
 function validateTurkishPhone(val) {
-  if (!val) return 'Telefon numarısı zorunludur.';
+  if (!val || !val.trim()) return null;
   var digits = val.replace(/\D/g, '');
-  // Ülke kodu normalizasyonu
-  if (digits.length === 12 && digits.startsWith('90')) digits = digits.slice(2);
-  if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
-  // Tam 10 hane olmalı
-  if (digits.length !== 10) return 'Geçerli bir Türk cep telefonu numarası giriniz.';
-  // 5 ile başlamalı
+  if (digits.startsWith('90') && digits.length > 10) digits = digits.slice(2);
+  if (digits.startsWith('0') && digits.length >= 10) digits = digits.slice(1);
+  if (digits.length < 10 || digits.length > 11) return 'Geçerli bir telefon numarası giriniz (+90 5XX XXX XX XX).';
   if (!digits.startsWith('5')) return 'Cep telefonu numarası 5 ile başlamalıdır.';
-  // Aynı rakamlardan oluşmamalı (5555555555 vb.)
-  if (/^(.)\1{9}$/.test(digits)) return 'Geçerli bir telefon numarası giriniz.';
+  if (/^(.)\1+$/.test(digits)) return 'Geçerli bir telefon numarası giriniz.';
   return null;
 }
 
@@ -2687,7 +2683,7 @@ function renderKvkk() {
   s += '<p style="color:#888;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Haziran 2026</p>';
   s += '<p>6698 sayılı Kişisel Verilerin Korunması Kanunu (&#34;KVKK&#34;) kapsamında veri sorumlusu sıfatıyla <strong>Ticaret-hane</strong>, kişisel verilerinizin işlenmesine ilişkin sizi bilgilendirmek amacıyla bu Aydınlatma Metnini hazırlamıştır.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">1. Veri Sorumlusu</h2>';
-  s += '<p>Ticaret-hane, 6698 sayılı KVKK uyarınca veri sorumlusu olarak faaliyet göstermektedir. İletişim: <strong>destek@ticaret-hane.netticaret-hane</strong></p>';
+  s += '<p>Ticaret-hane, 6698 sayılı KVKK uyarınca veri sorumlusu olarak faaliyet göstermektedir. İletişim: <strong>destek@ticaret-hane.net</strong></p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">2. İşlenen Kişisel Veriler</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li><strong>Kimlik verileri:</strong> Ad, soyad, firma adı,</li><li><strong>İletişim verileri:</strong> E-posta adresi, telefon numarası, şehir bilgisi,</li><li><strong>Hesap verileri:</strong> Kullanıcı adı, şifreli hesap bilgileri,</li><li><strong>İlan verileri:</strong> Yayımladığınız ürün, fiyat, açıklama ve görsel bilgileri,</li><li><strong>Teknik veriler:</strong> IP adresi, tarayıcı bilgisi, oturum süresi, platform kullanım istatistikleri.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">3. Kişisel Verilerin İşlenme Amacı</h2>';
@@ -2699,7 +2695,7 @@ function renderKvkk() {
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">6. Haklarınız (KVKK Madde 11)</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li><li>Verilerinize ilişkin bilgi talep etme,</li><li>İşlenme amacını öğrenme,</li><li>Verilerin aktarıldığı üçüncü kişileri öğrenme,</li><li>Eksik veya yanlış verilerin düzeltilmesini isteme,</li><li>Verilerin silinmesini veya yok edilmesini isteme,</li><li>Otomatik sistemler sonucu aleyhe kararınıza itiraz etme,</li><li>Kanuna aykırı işleme nedeniyle uğradığınız zararın tazminini talep etme.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">7. Başvuru Hakkı</h2>';
-  s += '<p>Haklarınızı kullanmak için <strong>destek@ticaret-hane.netticaret-hane</strong> adresine e-posta göndere-bilir ya da Platform’daki &#34;Hesabım&#34; sayfasından başvurabilirsiniz. Başvurularınız en geç 30 gün içinde yanıtlanacaktır.</p>';
+  s += '<p>Haklarınızı kullanmak için <strong>destek@ticaret-hane.net</strong> adresine e-posta göndere-bilir ya da Platform’daki &#34;Hesabım&#34; sayfasından başvurabilirsiniz. Başvurularınız en geç 30 gün içinde yanıtlanacaktır.</p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
 }
