@@ -205,7 +205,8 @@ router.post('/', authenticate, upload.array('images', 8), (req, res) => {
       title, description, category_id, subcategory_id,
       price, price_type, quantity, quantity_unit,
       city, district, listing_type,
-      contact_phone, contact_email, website, tags
+      contact_phone, contact_email, website, tags,
+      price_basis, currency, lot_quantity
     } = req.body;
 
     if (!title || !description || !category_id || !city) {
@@ -253,8 +254,6 @@ router.post('/', authenticate, upload.array('images', 8), (req, res) => {
 
     const expires = new Date();
     expires.setDate(expires.getDate() + 60);
-
-    const { price_basis, currency, lot_quantity } = req.body;
 
     const r = db.prepare(
       `INSERT INTO listings
