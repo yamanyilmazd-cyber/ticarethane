@@ -214,6 +214,8 @@ function router() {
   _pendingFiles = [];
   _toDeleteImgs = new Set();
 
+  document.title = 'Ticaret-hane | Ticari Mal Platformu';
+
   var app = document.getElementById('app');
   app.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
 
@@ -564,7 +566,7 @@ async function renderHome() {
           '<div class="hero-inner">' +
             '<div class="hero-label">Ticari Mal Platformu</div>' +
             '<h1>Türkiye Ticari Mal<br><span>İlan Merkezi</span></h1>' +
-            '<p>Kimyadan demire, tarımdan plastige — alıcı ve satıcıları sektörel kategorilerle buluşturuyoruz.</p>' +
+            '<p>Kimyadan demire, tarımdan plastiğe — alıcı ve satıcıları sektörel kategorilerle buluşturuyoruz.</p>' +
             '<form class="hero-search" id="heroSearchForm">' +
               '<input type="text" id="heroSearchInput" placeholder="Ürün, hammadde veya sektör arayın..." />' +
               '<button type="submit">Ara</button>' +
@@ -2759,7 +2761,7 @@ function renderIletisim() {
   s += '<p><strong>Destek E-postası:</strong><br><a href="mailto:destek@ticaret-hane.net">destek@ticaret-hane.net</a></p>';
   s += '<p class="mb-0"><strong>Çalışma Saatleri:</strong><br>Pazartesi - Cuma, 09:00 - 18:00</p>';
   s += '</div></div>';
-  return s;
+  document.getElementById('app').innerHTML = s;
 }
 
 function renderIlanKurallari() {
@@ -2777,5 +2779,5 @@ function renderIlanKurallari() {
   s += '<p>Kurallara aykırı ilanlar yönetim tarafından kaldırılır. Tekrarlayan ihlallerde hesap askıya alınabilir.</p>';
   s += '<p>Sorularınız için: <a href="mailto:destek@ticaret-hane.net">destek@ticaret-hane.net</a></p>';
   s += '</div>';
-  return s;
+  document.getElementById('app').innerHTML = s;
 }
