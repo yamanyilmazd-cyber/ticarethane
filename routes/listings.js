@@ -231,6 +231,26 @@ router.post('/', authenticate, upload.array('images', 8), (req, res) => {
       return res.status(400).json({ error: 'Web sitesi http:// veya https:// ile baslamalidir.' });
     }
 
+    // Enum ve e-posta validasyonlari
+    const VALID_LISTING_TYPES = ['sell', 'buy', 'rent', 'service'];
+    const VALID_PRICE_TYPES   = ['fixed', 'negotiable', 'exchange', 'free'];
+    const VALID_CURRENCIES    = ['TRY', 'USD', 'EUR'];
+    if (listing_type && !VALID_LISTING_TYPES.includes(listing_type)) {
+      cleanupFiles(req.files); return res.status(400).json({ error: 'Gecersiz ilan turu.' });
+    }
+    if (price_type && !VALID_PRICE_TYPES.includes(price_type)) {
+      cleanupFiles(req.files); return res.status(400).json({ error: 'Gecersiz fiyat turu.' });
+    }
+    if (currency && !VALID_CURRENCIES.includes(currency)) {
+      cleanupFiles(req.files); return res.status(400).json({ error: 'Gecersiz para birimi.' });
+    }
+    if (contact_email && contact_email.trim()) {
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+      if (!emailRe.test(contact_email.trim())) {
+        cleanupFiles(req.files); return res.status(400).json({ error: 'Gecersiz iletisim e-postasi.' });
+      }
+    }
+
     const expires = new Date();
     expires.setDate(expires.getDate() + 60);
 
@@ -441,8 +461,9 @@ router.patch('/:id/renew', authenticate, (req, res) => {
     if (!['active','rejected'].includes(listing.status))
       return res.status(400).json({ error: 'Sadece aktif veya reddedilmis ilanlar yenilenebilir.' });
     const newExp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    db.prepare('UPDATE listings SET expires_at=?, renewed_at=datetime("now"), status="active", updated_at=datetime("now") WHERE id=?')
-      .run(newExp, req.params.id);
+    const newStatus = listing.status === 'rejected' ? 'pending' : 'active';
+    db.prepare('UPDATE listings SET expires_at=?, renewed_at=datetime("now"), status=?, updated_at=datetime("now") WHERE id=?')
+      .run(newExp, newStatus, req.params.id);
     res.json({ message: 'İlan yenilendi.', expires_at: newExp });
   } catch (err) {
     console.error('[LISTINGS] renew:', err.message);
