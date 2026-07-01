@@ -1154,7 +1154,7 @@ function listingFormHTML(l) {
     '<div class="form-group"><label class="form-label">İlçe</label><input type="text" name="district" class="form-control" value="' + esc(l.district||'') + '" placeholder="Örn: Pendik" /></div>' +
     '<div class="form-group"><label class="form-label">İletişim Telefonu <span class="req">*</span></label><input type="tel" name="contact_phone" class="form-control" value="' + esc(l.contact_phone||'+90 ') + '" placeholder="+90 5XX XXX XX XX" required /></div>' +
     '<div class="form-group"><label class="form-label">İletişim E-postası</label><input type="email" name="contact_email" class="form-control" value="' + esc(l.contact_email||'') + '" placeholder="firma@ornek.com" /></div>' +
-    '<div class="form-group" style="grid-column:1/-1;"><label class="form-label">Web Sitesi</label><input type="url" name="website" class="form-control" value="' + esc(l.website||'') + '" placeholder="https://www.firma.com" /></div>' +
+    '<div class="form-group" style="grid-column:1/-1;"><label class="form-label">Web Sitesi</label><input type="text" name="website" autocomplete="off" class="form-control" value="' + esc(l.website||'') + '" placeholder="https://www.firma.com" /></div>' +
     '<div class="form-group" style="grid-column:1/-1;"><label class="form-label">Açıklama <span class="req">*</span></label><textarea name="description" class="form-control" rows="7" placeholder="Ürün özellikleri, kalite standardı, ambalaj türü, teslimat koşulları..." required>' + esc(l.description||'') + '</textarea></div>' +
     '<div class="form-group" style="grid-column:1/-1;">' +
       '<label class="form-label">Görseller (en fazla 8, her biri 5 MB)</label>' +
@@ -1217,8 +1217,7 @@ async function renderCreateListing() {
   setupFormListeners();
   togglePriceInput();
 
-  document.getElementById('createForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
+  document.getElementById('createForm').onsubmit = async function(e) {    e.preventDefault();
     var btn = document.getElementById('createBtn');
     btn.disabled = true; btn.textContent = 'Gönderiliyor...';
     try {
@@ -1233,7 +1232,7 @@ async function renderCreateListing() {
       toast(err.message, 'error');
       btn.disabled = false; btn.textContent = 'İlanı Gönder';
     }
-  });
+  };
 }
 
 // ================================================================
