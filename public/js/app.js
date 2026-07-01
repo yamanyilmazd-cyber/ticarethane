@@ -392,7 +392,6 @@ function validateTurkishPhone(val) {
   if (digits.startsWith('0') && digits.length >= 10) digits = digits.slice(1);
   if (digits.length < 10 || digits.length > 11) return 'Geçerli bir telefon numarası giriniz (+90 5XX XXX XX XX).';
   if (!digits.startsWith('5')) return 'Cep telefonu numarası 5 ile başlamalıdır.';
-  if (/^(.)\1+$/.test(digits)) return 'Geçerli bir telefon numarası giriniz.';
   return null;
 }
 
