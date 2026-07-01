@@ -25,7 +25,7 @@ router.get('/', (req, res) => {
     `).all(req.userId);
     res.json({ favorites: rows });
   } catch(err) {
-    res.status(500).json({ error: 'Favoriler yuklenemedi.' });
+    res.status(500).json({ error: 'Favoriler yüklenemedi.' });
   }
 });
 
@@ -33,8 +33,8 @@ router.post('/:listingId', (req, res) => {
   try {
     const db = getDb();
     const listing = db.prepare('SELECT id, user_id, title FROM listings WHERE id=? AND status="active"').get(req.params.listingId);
-    if (!listing) return res.status(404).json({ error: 'Ilan bulunamadi.' });
-    if (listing.user_id === req.userId) return res.status(400).json({ error: 'Kendi ilaninizi favorilere ekleyemezsiniz.' });
+    if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
+    if (listing.user_id === req.userId) return res.status(400).json({ error: 'Kendi ilanınızı favorilere ekleyemezsiniz.' });
     try {
       db.prepare('INSERT INTO favorites (user_id, listing_id) VALUES (?,?)').run(req.userId, req.params.listingId);
     } catch(e) {
@@ -64,9 +64,9 @@ router.delete('/:listingId', (req, res) => {
   try {
     const db = getDb();
     db.prepare('DELETE FROM favorites WHERE user_id=? AND listing_id=?').run(req.userId, req.params.listingId);
-    res.json({ message: 'Favorilerden kaldirildi.' });
+    res.json({ message: 'Favorilerden kaldırıldı.' });
   } catch(err) {
-    res.status(500).json({ error: 'Favori kaldirilirken hata olustu.' });
+    res.status(500).json({ error: 'Favori kaldırılırken hata oluştu.' });
   }
 });
 

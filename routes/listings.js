@@ -117,7 +117,7 @@ router.get('/', (req, res) => {
     });
   } catch (err) {
     console.error('[LISTINGS] get:', err.message);
-    res.status(500).json({ error: 'Ilanlar yuklenirken hata olustu.' });
+    res.status(500).json({ error: 'İlanlar yüklenirken hata oluştu.' });
   }
 });
 
@@ -137,7 +137,7 @@ router.get('/my/listings', authenticate, (req, res) => {
     ).all(req.userId);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Ilanlar yuklenirken hata olustu.' });
+    res.status(500).json({ error: 'İlanlar yüklenirken hata oluştu.' });
   }
 });
 
@@ -181,7 +181,7 @@ router.get('/:id', optionalAuth, (req, res) => {
     res.json({ ...listing, views: actualViews, images, tags });
   } catch (err) {
     console.error('[LISTINGS] get one:', err.message);
-    res.status(500).json({ error: 'Ilan yuklenirken hata olustu.' });
+    res.status(500).json({ error: 'İlan yüklenirken hata oluştu.' });
   }
 });
 
@@ -201,20 +201,20 @@ router.post('/', authenticate, upload.array('images', 8), (req, res) => {
 
     if (!title || !description || !category_id || !city) {
       cleanupFiles(req.files);
-      return res.status(400).json({ error: 'Baslik, aciklama, kategori ve sehir zorunludur.' });
+      return res.status(400).json({ error: 'Başlık, açıklama, kategori ve şehir zorunludur.' });
     }
     if (title.trim().length < 5 || title.trim().length > 150) {
       cleanupFiles(req.files);
-      return res.status(400).json({ error: 'Baslik 5-150 karakter arasinda olmalidir.' });
+      return res.status(400).json({ error: 'Başlık 5-150 karakter arasında olmalıdır.' });
     }
     if (description.trim().length < 20 || description.trim().length > 5000) {
       cleanupFiles(req.files);
-      return res.status(400).json({ error: 'Aciklama 20-5000 karakter arasinda olmalidir.' });
+      return res.status(400).json({ error: 'Açıklama 20-5000 karakter arasında olmalıdır.' });
     }
 
     if (!db.prepare('SELECT id FROM categories WHERE id = ?').get(parseInt(category_id))) {
       cleanupFiles(req.files);
-      return res.status(400).json({ error: 'Gecersiz kategori.' });
+      return res.status(400).json({ error: 'Geçersiz kategori.' });
     }
 
     // Enum ve e-posta validasyonlari
@@ -222,18 +222,18 @@ router.post('/', authenticate, upload.array('images', 8), (req, res) => {
     const VALID_PRICE_TYPES   = ['fixed', 'negotiable', 'exchange', 'free'];
     const VALID_CURRENCIES    = ['TRY', 'USD', 'EUR'];
     if (listing_type && !VALID_LISTING_TYPES.includes(listing_type)) {
-      cleanupFiles(req.files); return res.status(400).json({ error: 'Gecersiz ilan turu.' });
+      cleanupFiles(req.files); return res.status(400).json({ error: 'Geçersiz ilan türü.' });
     }
     if (price_type && !VALID_PRICE_TYPES.includes(price_type)) {
-      cleanupFiles(req.files); return res.status(400).json({ error: 'Gecersiz fiyat turu.' });
+      cleanupFiles(req.files); return res.status(400).json({ error: 'Geçersiz fiyat türü.' });
     }
     if (currency && !VALID_CURRENCIES.includes(currency)) {
-      cleanupFiles(req.files); return res.status(400).json({ error: 'Gecersiz para birimi.' });
+      cleanupFiles(req.files); return res.status(400).json({ error: 'Geçersiz para birimi.' });
     }
     if (contact_email && contact_email.trim()) {
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
       if (!emailRe.test(contact_email.trim())) {
-        cleanupFiles(req.files); return res.status(400).json({ error: 'Gecersiz iletisim e-postasi.' });
+        cleanupFiles(req.files); return res.status(400).json({ error: 'Geçersiz iletişim e-postası.' });
       }
     }
 
@@ -285,11 +285,11 @@ router.post('/', authenticate, upload.array('images', 8), (req, res) => {
       } catch(tagErr) { console.error('[LISTINGS] tag insert:', tagErr.message); }
     }
 
-    res.status(201).json({ message: 'Ilaniniz moderasyon onayina gonderildi.', listing_id: lid });
+    res.status(201).json({ message: 'İlanınız moderasyon onayına gönderildi.', listing_id: lid });
   } catch (err) {
     cleanupFiles(req.files);
     console.error('[LISTINGS] create:', err.message);
-    res.status(500).json({ error: err.message || 'Ilan olusturulurken hata olustu.' });
+    res.status(500).json({ error: err.message || 'İlan oluşturulurken hata oluştu.' });
   }
 });
 
@@ -302,7 +302,7 @@ router.put('/:id', authenticate, upload.array('images', 8), (req, res) => {
     const listing = db.prepare('SELECT * FROM listings WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
 
     if (!listing) { cleanupFiles(req.files); return res.status(404).json({ error: 'İlan bulunamadı.' }); }
-    if (listing.status === 'sold') { cleanupFiles(req.files); return res.status(400).json({ error: 'Satilmis ilan duzenlenemez.' }); }
+    if (listing.status === 'sold') { cleanupFiles(req.files); return res.status(400).json({ error: 'Satılmış ilan düzenlenemez.' }); }
 
     const {
       title, description, category_id, subcategory_id,
@@ -389,11 +389,11 @@ router.put('/:id', authenticate, upload.array('images', 8), (req, res) => {
       } catch(notifErr) { /* bildirim hatasi kritik degil */ }
     }
 
-    res.json({ message: 'Ilan guncellendi ve onay icin tekrar gonderildi.' });
+    res.json({ message: 'İlan güncellendi ve onay için tekrar gönderildi.' });
   } catch (err) {
     cleanupFiles(req.files);
     console.error('[LISTINGS] update:', err.message);
-    res.status(500).json({ error: 'Ilan guncellenirken hata olustu.' });
+    res.status(500).json({ error: 'İlan güncellenirken hata oluştu.' });
   }
 });
 
@@ -438,9 +438,9 @@ router.patch('/:id/renew', authenticate, (req, res) => {
   try {
     const db      = getDb();
     const listing = db.prepare('SELECT * FROM listings WHERE id=? AND user_id=?').get(req.params.id, req.userId);
-    if (!listing) return res.status(404).json({ error: 'Ilan bulunamadi.' });
+    if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
     if (!['active','rejected'].includes(listing.status))
-      return res.status(400).json({ error: 'Sadece aktif veya reddedilmis ilanlar yenilenebilir.' });
+      return res.status(400).json({ error: 'Sadece aktif veya reddedilmiş ilanlar yenilenebilir.' });
     const newExp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const newStatus = listing.status === 'rejected' ? 'pending' : 'active';
     db.prepare('UPDATE listings SET expires_at=?, renewed_at=datetime("now"), status=?, updated_at=datetime("now") WHERE id=?')
@@ -448,7 +448,7 @@ router.patch('/:id/renew', authenticate, (req, res) => {
     res.json({ message: 'İlan yenilendi.', expires_at: newExp });
   } catch (err) {
     console.error('[LISTINGS] renew:', err.message);
-    res.status(500).json({ error: 'Yenileme sirasinda hata olustu.' });
+    res.status(500).json({ error: 'Yenileme sırasında hata oluştu.' });
   }
 });
 

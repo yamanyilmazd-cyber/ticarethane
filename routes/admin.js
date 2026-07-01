@@ -386,7 +386,7 @@ router.patch('/listings/:id/approve', (req, res) => {
       );
     } catch(e) {}
     res.json({ message: 'İlan onaylandı.' });
-  } catch(err) { res.status(500).json({ error: "Islem basarisiz." }); }
+  } catch(err) { res.status(500).json({ error: "İşlem başarısız." }); }
 });
 
 // ---- Reddet ----
@@ -405,7 +405,7 @@ router.patch('/listings/:id/reject', (req, res) => {
     );
   } catch(e) {}
   res.json({ message: 'İlan reddedildi.' });
-  } catch(err) { res.status(500).json({ error: "Islem basarisiz." }); }
+  } catch(err) { res.status(500).json({ error: "İşlem başarısız." }); }
 });
 
 // ---- Toplu onayla ----
@@ -415,7 +415,7 @@ router.post('/listings/bulk-approve', (req, res) => {
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ID listesi gerekli.' });
   if (ids.length > 100) return res.status(400).json({ error: 'En fazla 100 ilan onaylanabilir.' });
   const validIds = ids.map(Number).filter(id => Number.isInteger(id) && id > 0);
-  if (!validIds.length) return res.status(400).json({ error: 'Gecersiz ID listesi.' });
+  if (!validIds.length) return res.status(400).json({ error: 'Geçersiz ID listesi.' });
   validIds.forEach(id => {
     db.prepare('UPDATE listings SET status="active", updated_at=datetime("now") WHERE id=? AND status="pending"').run(id);
   });
@@ -654,13 +654,13 @@ router.patch('/listings/:id/feature', (req, res) => {
   try {
     const db = getDb();
     const listing = db.prepare('SELECT id, is_featured FROM listings WHERE id=?').get(req.params.id);
-    if (!listing) return res.status(404).json({ error: 'Ilan bulunamadi.' });
+    if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
     const newState = listing.is_featured ? 0 : 1;
     const until = newState ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
     db.prepare('UPDATE listings SET is_featured=?, featured_until=? WHERE id=?').run(newState, until, req.params.id);
     res.json({ message: newState ? 'Ilan one cikartildi.' : 'One cikartma kaldirildi.', is_featured: newState });
   } catch(err) {
-    res.status(500).json({ error: 'Islem basarisiz.' });
+    res.status(500).json({ error: 'İşlem başarısız.' });
   }
 });
 
@@ -671,12 +671,12 @@ router.patch('/users/:id/verify', (req, res) => {
   try {
     const db = getDb();
     const user = db.prepare('SELECT id, is_verified FROM users WHERE id=? AND role!="admin"').get(req.params.id);
-    if (!user) return res.status(404).json({ error: 'Kullanici bulunamadi.' });
+    if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
     const newState = user.is_verified ? 0 : 1;
     db.prepare('UPDATE users SET is_verified=? WHERE id=?').run(newState, user.id);
     res.json({ message: newState ? 'Firma dogrulandi.' : 'Dogrulama kaldirildi.', is_verified: newState });
   } catch(err) {
-    res.status(500).json({ error: 'Islem basarisiz.' });
+    res.status(500).json({ error: 'İşlem başarısız.' });
   }
 });
 
@@ -698,7 +698,7 @@ router.get('/reports', (req, res) => {
     const pending = db.prepare("SELECT COUNT(*) AS n FROM listing_reports WHERE status='pending'").get().n;
     res.json({ reports: rows, pending });
   } catch(err) {
-    res.status(500).json({ error: 'Raporlar yuklenemedi.' });
+    res.status(500).json({ error: 'Raporlar yüklenemedi.' });
   }
 });
 
@@ -706,9 +706,9 @@ router.patch('/reports/:id/resolve', (req, res) => {
   try {
     const db = getDb();
     db.prepare("UPDATE listing_reports SET status='resolved' WHERE id=?").run(req.params.id);
-    res.json({ message: 'Rapor kapatildi.' });
+    res.json({ message: 'Rapor kapatıldı.' });
   } catch(err) {
-    res.status(500).json({ error: 'Guncelleme basarisiz.' });
+    res.status(500).json({ error: 'Güncelleme başarısız.' });
   }
 });
 
@@ -716,7 +716,7 @@ router.patch('/reports/:id/resolve', (req, res) => {
 // Global hata yakalayici
 router.use(function(err, req, res, _next) {
   console.error("[ADMIN] route error:", err.message);
-  res.status(500).json({ error: "Sunucu hatasi." });
+  res.status(500).json({ error: "Sunucu hatası." });
 });
 
 module.exports = router;

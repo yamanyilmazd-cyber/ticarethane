@@ -226,7 +226,7 @@ router.get('/me', authenticate, (req, res) => {
   ).get(req.userId);
   if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
   res.json(user);
-  } catch(err) { res.status(500).json({ error: 'Sunucu hatasi.' }); }
+  } catch(err) { res.status(500).json({ error: 'Sunucu hatası.' }); }
 });
 
 // ---- Profil güncelleme ----
@@ -318,7 +318,7 @@ router.post('/forgot-password', async (req, res) => {
     const db   = getDb();
     const user = db.prepare('SELECT id, name FROM users WHERE email=?').get(email);
     // Her durumda 200 don (kullanici varligini gizle)
-    if (!user) return res.json({ message: 'Sifre sifirlama linki gonderildi.' });
+    if (!user) return res.json({ message: 'Şifre sıfırlama linki gönderildi.' });
 
     const crypto = require('crypto');
     const token  = crypto.randomBytes(32).toString('hex');
@@ -381,14 +381,14 @@ router.post('/forgot-password', async (req, res) => {
       // Yapilandirilmamis — dev modda linki don
       console.info('[AUTH] Sifre sifirlama linki (MAIL YOK):', resetLink);
       if (process.env.NODE_ENV !== 'production') {
-        return res.json({ message: 'Mail yapilandirilmamis. Asagidaki linki kullanin:', dev_link: resetLink });
+        return res.json({ message: 'Mail yapılandırılmamış. Aşağıdaki linki kullanın:', dev_link: resetLink });
       }
     }
 
-    res.json({ message: 'Sifre sifirlama linki gonderildi.' });
+    res.json({ message: 'Şifre sıfırlama linki gönderildi.' });
   } catch(err) {
     console.error('[AUTH] forgot-password:', err.message);
-    res.status(500).json({ error: 'Islem sirasinda hata olustu.' });
+    res.status(500).json({ error: 'İşlem sırasında hata oluştu.' });
   }
 });
 
@@ -396,16 +396,16 @@ router.post('/forgot-password', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
   try {
     const { token, password } = req.body;
-    if (!token || !password) return res.status(400).json({ error: 'Token ve sifre zorunludur.' });
-    if (password.length < 8) return res.status(400).json({ error: 'Sifre en az 8 karakter olmalidir.' });
-    if (password.length > 128) return res.status(400).json({ error: 'Sifre en fazla 128 karakter olabilir.' });
+    if (!token || !password) return res.status(400).json({ error: 'Token ve şifre zorunludur.' });
+    if (password.length < 8) return res.status(400).json({ error: 'Şifre en az 8 karakter olmalıdır.' });
+    if (password.length > 128) return res.status(400).json({ error: 'Şifre en fazla 128 karakter olabilir.' });
 
     const db  = getDb();
     const row = db.prepare('SELECT * FROM password_reset_tokens WHERE token=? AND used=0').get(token);
-    if (!row) return res.status(400).json({ error: 'Gecersiz veya kullanilmis sifirlama linki.' });
+    if (!row) return res.status(400).json({ error: 'Geçersiz veya kullanılmış sıfırlama linki.' });
     if (new Date(row.expires_at) < new Date()) {
       db.prepare('DELETE FROM password_reset_tokens WHERE id=?').run(row.id);
-      return res.status(400).json({ error: 'Sifirlama linkinin suresi dolmus. Lutfen tekrar talep edin.' });
+      return res.status(400).json({ error: 'Sıfırlama linkinin süresi dolmuş. Lütfen tekrar talep edin.' });
     }
 
     const hash = await bcrypt.hash(password, 12);
@@ -414,10 +414,10 @@ router.post('/reset-password', async (req, res) => {
     // Diger aktif tokenlari da iptal et
     db.prepare('DELETE FROM password_reset_tokens WHERE user_id=? AND id!=?').run(row.user_id, row.id);
 
-    res.json({ message: 'Sifreniz basariyla guncellendi. Giris yapabilirsiniz.' });
+    res.json({ message: 'Şifreniz başarıyla güncellendi. Giriş yapabilirsiniz.' });
   } catch(err) {
     console.error('[AUTH] reset-password:', err.message);
-    res.status(500).json({ error: 'Sifre sifirlanamadi.' });
+    res.status(500).json({ error: 'Şifre sıfırlanamadı.' });
   }
 });
 

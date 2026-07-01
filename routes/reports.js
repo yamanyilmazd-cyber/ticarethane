@@ -11,17 +11,17 @@ router.post('/:listingId', authenticate, (req, res) => {
     const { reason, detail } = req.body;
     if (!reason || !String(reason).trim()) return res.status(400).json({ error: 'Sebep belirtmeniz gerekiyor.' });
     const listing = db.prepare('SELECT id, user_id FROM listings WHERE id=?').get(req.params.listingId);
-    if (!listing) return res.status(404).json({ error: 'Ilan bulunamadi.' });
+    if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
     // Kendi ilanini sikayet edemezsini
-    if (listing.user_id === req.userId) return res.status(400).json({ error: 'Kendi ilaninizi sikayet edemezsiniz.' });
+    if (listing.user_id === req.userId) return res.status(400).json({ error: 'Kendi ilanınızı şikayet edemezsiniz.' });
     // Daha once rapor ettiyse tekrar gondertme
     const existing = db.prepare('SELECT id FROM listing_reports WHERE listing_id=? AND reporter_id=?').get(req.params.listingId, req.userId);
-    if (existing) return res.status(409).json({ error: 'Bu ilani daha once raporladiniz.' });
+    if (existing) return res.status(409).json({ error: 'Bu ilanı daha önce raporladınız.' });
     db.prepare('INSERT INTO listing_reports (listing_id, reporter_id, reason, detail) VALUES (?,?,?,?)')
       .run(req.params.listingId, req.userId, String(reason).trim(), detail ? String(detail).trim().substring(0, 500) : null);
-    res.json({ message: 'Rapor gonderildi. Inceleme yapilacaktir.' });
+    res.json({ message: 'Rapor gönderildi. İnceleme yapılacaktır.' });
   } catch(err) {
-    res.status(500).json({ error: 'Rapor gonderilemedi.' });
+    res.status(500).json({ error: 'Rapor gönderilemedi.' });
   }
 });
 
@@ -41,7 +41,7 @@ router.get('/', authenticate, requireAdmin, (req, res) => {
     `).all();
     res.json({ reports: rows });
   } catch(err) {
-    res.status(500).json({ error: 'Raporlar yuklenemedi.' });
+    res.status(500).json({ error: 'Raporlar yüklenemedi.' });
   }
 });
 
@@ -50,9 +50,9 @@ router.patch('/:id/resolve', authenticate, requireAdmin, (req, res) => {
   try {
     const db = getDb();
     db.prepare("UPDATE listing_reports SET status='resolved' WHERE id=?").run(req.params.id);
-    res.json({ message: 'Rapor kapatildi.' });
+    res.json({ message: 'Rapor kapatıldı.' });
   } catch(err) {
-    res.status(500).json({ error: 'Guncelleme basarisiz.' });
+    res.status(500).json({ error: 'Güncelleme başarısız.' });
   }
 });
 

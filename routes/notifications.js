@@ -15,7 +15,7 @@ router.get('/', (req, res) => {
     const unread = db.prepare('SELECT COUNT(*) AS n FROM notifications WHERE user_id=? AND is_read=0').get(req.userId).n;
     res.json({ notifications: rows, unread });
   } catch(err) {
-    res.status(500).json({ error: 'Bildirimler yuklenemedi.' });
+    res.status(500).json({ error: 'Bildirimler yüklenemedi.' });
   }
 });
 
@@ -24,9 +24,9 @@ router.patch('/read-all', (req, res) => {
   try {
     const db = getDb();
     db.prepare('UPDATE notifications SET is_read=1 WHERE user_id=?').run(req.userId);
-    res.json({ message: 'Tumu okundu.' });
+    res.json({ message: 'Tümü okundu.' });
   } catch(err) {
-    res.status(500).json({ error: 'Guncelleme basarisiz.' });
+    res.status(500).json({ error: 'Güncelleme başarısız.' });
   }
 });
 
@@ -37,7 +37,7 @@ router.patch('/:id/read', (req, res) => {
     db.prepare('UPDATE notifications SET is_read=1 WHERE id=? AND user_id=?').run(req.params.id, req.userId);
     res.json({ message: 'Okundu.' });
   } catch(err) {
-    res.status(500).json({ error: 'Guncelleme basarisiz.' });
+    res.status(500).json({ error: 'Güncelleme başarısız.' });
   }
 });
 
