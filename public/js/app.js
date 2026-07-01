@@ -605,75 +605,116 @@ async function renderHome() {
 async function renderSearch() {
   try {
     var qs     = new URLSearchParams((getHash().split('?')[1]) || '');
-    var search = qs.get('search')       || '';
-    var city   = qs.get('city')         || '';
-    var type   = qs.get('listing_type') || '';
-    var cat    = qs.get('category')     || '';
+    var search = qs.get('search') || '';
+    function csv(k) { return (qs.get(k) || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean); }
+    var cities     = csv('city');
+    var types      = csv('listing_type');
+    var cats       = csv('category');
+    var subs       = csv('subcategory');
+    var ptypes     = csv('price_type');
+    var pbases     = csv('price_basis');
+    var currencies = csv('currency');
+    var qunits     = csv('quantity_unit');
     var sort   = qs.get('sort')         || 'newest';
     var page   = parseInt(qs.get('page') || '1') || 1;
-  
+
     var priceMin  = qs.get('price_min') || '';
     var priceMax  = qs.get('price_max') || '';
-    var ptype     = qs.get('price_type') || '';
-    var pbasis    = qs.get('price_basis') || '';
-    var currency  = qs.get('currency') || '';
-    var qunit     = qs.get('quantity_unit') || '';
     var lotMin    = qs.get('lot_min') || '';
     var lotMax    = qs.get('lot_max') || '';
-  
+
     var q = new URLSearchParams();
-    if (search)   q.set('search', search);
-    if (city)     q.set('city', city);
-    if (type)     q.set('listing_type', type);
-    if (cat)      q.set('category', cat);
-    if (priceMin) q.set('price_min', priceMin);
-    if (priceMax) q.set('price_max', priceMax);
-    if (ptype)    q.set('price_type', ptype);
-    if (pbasis)   q.set('price_basis', pbasis);
-    if (currency) q.set('currency', currency);
-    if (qunit)    q.set('quantity_unit', qunit);
-    if (lotMin)   q.set('lot_qty_min', lotMin);
-    if (lotMax)   q.set('lot_qty_max', lotMax);
+    if (search)            q.set('search', search);
+    if (cities.length)     q.set('city', cities.join(','));
+    if (types.length)      q.set('listing_type', types.join(','));
+    if (cats.length)       q.set('category', cats.join(','));
+    if (subs.length)       q.set('subcategory', subs.join(','));
+    if (priceMin)          q.set('price_min', priceMin);
+    if (priceMax)          q.set('price_max', priceMax);
+    if (ptypes.length)     q.set('price_type', ptypes.join(','));
+    if (pbases.length)     q.set('price_basis', pbases.join(','));
+    if (currencies.length) q.set('currency', currencies.join(','));
+    if (qunits.length)     q.set('quantity_unit', qunits.join(','));
+    if (lotMin)            q.set('lot_qty_min', lotMin);
+    if (lotMax)            q.set('lot_qty_max', lotMax);
     q.set('sort', sort); q.set('page', page);
-  
-    var data = await api('GET', '/listings?' + q.toString());
+
+    var fetches = [api('GET', '/listings?' + q.toString())];
+    cats.forEach(function(slug) {
+      fetches.push(api('GET', '/categories/' + slug).catch(function() { return null; }));
+    });
+    var fetched  = await Promise.all(fetches);
+    var data     = fetched[0];
+    var catInfos = fetched.slice(1).filter(Boolean);
+
+    var subOwner = {};
+    var subOptions = [];
+    catInfos.forEach(function(ci) {
+      (ci.subcategories || []).forEach(function(s) {
+        subOwner[String(s.id)] = ci.slug;
+        subOptions.push([String(s.id), (catInfos.length > 1 ? ci.name + ' — ' : '') + s.name]);
+      });
+    });
+    subs = subs.filter(function(id) { return subOwner[id]; });
+
     var app  = document.getElementById('app');
-  
+
     function aLink(overrides) {
       var p = {};
-      if (search)   p.search        = search;
-      if (city)     p.city          = city;
-      if (type)     p.listing_type  = type;
-      if (cat)      p.category      = cat;
-      if (priceMin) p.price_min     = priceMin;
-      if (priceMax) p.price_max     = priceMax;
-      if (ptype)    p.price_type    = ptype;
-      if (pbasis)   p.price_basis   = pbasis;
-      if (currency) p.currency      = currency;
-      if (qunit)    p.quantity_unit = qunit;
-      if (lotMin)   p.lot_min       = lotMin;
-      if (lotMax)   p.lot_max       = lotMax;
+      if (search)            p.search        = search;
+      if (cities.length)     p.city          = cities.join(',');
+      if (types.length)      p.listing_type  = types.join(',');
+      if (cats.length)       p.category      = cats.join(',');
+      if (subs.length)       p.subcategory   = subs.join(',');
+      if (priceMin)          p.price_min     = priceMin;
+      if (priceMax)          p.price_max     = priceMax;
+      if (ptypes.length)     p.price_type    = ptypes.join(',');
+      if (pbases.length)     p.price_basis   = pbases.join(',');
+      if (currencies.length) p.currency      = currencies.join(',');
+      if (qunits.length)     p.quantity_unit = qunits.join(',');
+      if (lotMin)            p.lot_min       = lotMin;
+      if (lotMax)            p.lot_max       = lotMax;
       p.sort = sort;
       Object.assign(p, overrides);
       Object.keys(p).forEach(function(k) { if (!p[k]) delete p[k]; });
       return '#/ara?' + new URLSearchParams(p).toString();
     }
-  
-    var activeCount = [search,city,type,cat,priceMin,priceMax,ptype,pbasis,currency,qunit,lotMin,lotMax].filter(Boolean).length;
-  
+
+    function toggled(list, v) {
+      var out = list.slice(); var i = out.indexOf(v);
+      if (i === -1) out.push(v); else out.splice(i, 1);
+      return out.join(',');
+    }
+    function multiLink(list, key) {
+      return function(v) {
+        var o = { page: 1 };
+        o[key] = (v === '') ? '' : toggled(list, String(v));
+        if (key === 'category') {
+          var newCats = (o[key] || '').split(',').filter(Boolean);
+          o.subcategory = subs.filter(function(id) { return newCats.indexOf(subOwner[id]) !== -1; }).join(',');
+        }
+        return aLink(o);
+      };
+    }
+
+    var activeCount = [search,cities.length,types.length,cats.length,subs.length,priceMin,priceMax,ptypes.length,pbases.length,currencies.length,qunits.length,lotMin,lotMax].filter(Boolean).length;
+
     var priceFormId = 'priceRangeForm_' + Date.now();
     var sidebar =
       (activeCount > 0 ? '<a href="#/ara' + (search?'?search='+encodeURIComponent(search):'') + '" class="btn btn-ghost btn-sm w-100" style="margin-bottom:10px;">Filtreleri Temizle (' + activeCount + ')</a>' : '') +
       filterSidebar([
-        { title:'İlan Türü', name:'f_type', current:type, options:[['','Tümü'],['sell','Satılır'],['buy','Alınır']], linkFn: function(v){ return aLink({listing_type:v, page:1}); } },
+        { title:'İlan Türü', name:'f_type', multi:true, current:types, options:[['','Tümü'],['sell','Satılır'],['buy','Alınır']], linkFn: multiLink(types, 'listing_type') },
         { title:'Sıralama',  name:'f_sort', current:sort, options:[['newest','En Yeni'],['oldest','En Eski'],['price_asc','Ucuzdan Pahalıya'],['price_desc','Pahalıdan Ucuza'],['views','En Çok Görüntülenen']], linkFn: function(v){ return aLink({sort:v}); } },
-        { title:'Sektör', name:'f_cat', current:cat, options:[['','Tümü']].concat(State.categories.map(function(c){ return [c.slug, c.name]; })), linkFn: function(v){ return aLink({category:v, page:1}); } },
-        { title:'Şehir',    name:'f_city', current:city, options:[['','Tümü']].concat(CITIES.map(function(c){return[c,c];})), linkFn: function(v){ return aLink({city:v, page:1}); } },
-        { title:'Fiyat Bazı', name:'f_pbasis', current:qs.get('price_basis')||'', options:[['','Tümü'],['per_unit','Lot Başı'],['total','Toplam Fiyat']], linkFn: function(v){ return aLink({price_basis:v, page:1}); } },
-        { title:'Fiyat Türü', name:'f_ptype', current:ptype, options:[['','Tümü'],['fixed','Sabit Fiyat'],['negotiable','Pazarlık Usulü'],['on_request','Fiyat Sorunuz']], linkFn: function(v){ return aLink({price_type:v, page:1}); } },
-        { title:'Para Birimi', name:'f_cur', current:qs.get('currency')||'', options:[['','Tümü'],['TRY','₺ TRY'],['USD','$ USD'],['EUR','€ EUR']], linkFn: function(v){ return aLink({currency:v, page:1}); } },
-        { title:'Miktar Birimi', name:'f_qunit', current:qunit, options:[['','Tümü'],['Ton','Ton'],['Kg','Kg'],['Litre','Litre'],['m³','m³'],['Adet','Adet'],['Palet','Palet'],['Lot','Lot'],['Konteyner','Konteyner']], linkFn: function(v){ return aLink({quantity_unit:v, page:1}); } },
-      ]) +
+        { title:'Sektör', name:'f_cat', multi:true, current:cats, options:[['','Tümü']].concat(State.categories.map(function(c){ return [c.slug, c.name]; })), linkFn: multiLink(cats, 'category') },
+      ].concat(subOptions.length ? [
+        { title:'Alt Sektör', name:'f_sub', multi:true, current:subs, options:[['','Tümü']].concat(subOptions), linkFn: multiLink(subs, 'subcategory') },
+      ] : []).concat([
+        { title:'Şehir', name:'f_city', multi:true, current:cities, options:[['','Tümü']].concat(CITIES.map(function(c){return[c,c];})), linkFn: multiLink(cities, 'city') },
+        { title:'Fiyat Bazı', name:'f_pbasis', multi:true, current:pbases, options:[['','Tümü'],['per_unit','Lot Başı'],['total','Toplam Fiyat']], linkFn: multiLink(pbases, 'price_basis') },
+        { title:'Fiyat Türü', name:'f_ptype', multi:true, current:ptypes, options:[['','Tümü'],['fixed','Sabit Fiyat'],['negotiable','Pazarlık Usulü'],['on_request','Fiyat Sorunuz']], linkFn: multiLink(ptypes, 'price_type') },
+        { title:'Para Birimi', name:'f_cur', multi:true, current:currencies, options:[['','Tümü'],['TRY','₺ TRY'],['USD','$ USD'],['EUR','€ EUR']], linkFn: multiLink(currencies, 'currency') },
+        { title:'Miktar Birimi', name:'f_qunit', multi:true, current:qunits, options:[['','Tümü'],['Ton','Ton'],['Kg','Kg'],['Litre','Litre'],['m³','m³'],['Adet','Adet'],['Palet','Palet'],['Lot','Lot'],['Konteyner','Konteyner']], linkFn: multiLink(qunits, 'quantity_unit') },
+      ])) +
       '<div class="filter-block"><div class="filter-block-title">Fiyat Aralığı</div><div class="filter-block-body">' +
         '<form id="' + priceFormId + '" style="display:flex;flex-direction:column;gap:8px;">' +
           '<input type="number" placeholder="Min ₺" value="' + priceMin + '" id="pMin" class="form-control" style="font-size:.82rem;padding:6px 10px;" min="0" />' +
@@ -690,7 +731,7 @@ async function renderSearch() {
           (lotMin||lotMax ? '<a href="' + aLink({lot_min:'',lot_max:''}) + '" class="btn btn-ghost btn-sm w-100">Temizle</a>' : '') +
         '</form>' +
       '</div></div>';
-  
+
     app.innerHTML =
       '<div class="container">' +
         '<div class="breadcrumb"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>' + (search ? '"'+esc(search)+'"' : 'Tüm İlanlar') + '</span></div>' +
@@ -708,7 +749,7 @@ async function renderSearch() {
           '</div>' +
         '</div>' +
       '</div>';
-  
+
     var pf = document.getElementById(priceFormId);
     if (pf) pf.addEventListener('submit', function(e) {
       e.preventDefault();
@@ -724,7 +765,7 @@ async function renderSearch() {
       var lmx = document.getElementById('lMax').value.trim();
       window.location.hash = aLink({lot_min: lmn, lot_max: lmx, page: 1});
     });
-  
+
     updateFxCards(data.listings);
   } catch(err) {
     console.error('[renderSearch]', err);
@@ -737,17 +778,20 @@ async function renderCategory(params) {
     var slug = params.slug;
     var qs   = new URLSearchParams((getHash().split('?')[1]) || '');
     var page = parseInt(qs.get('page') || '1') || 1;
-    var type = qs.get('listing_type') || '';
-    var city = qs.get('city')         || '';
-    var sub  = qs.get('subcategory')  || '';
+    function csv(k) { return (qs.get(k) || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean); }
+    var types  = csv('listing_type');
+    var cities = csv('city');
+    var subs   = csv('subcategory');
+    var ptypes = csv('price_type');
+    var curs   = csv('currency');
     var sort = qs.get('sort')         || 'newest';
 
-    var cur  = qs.get('currency') || '';
     var q = new URLSearchParams({ category: slug, page: page, sort: sort });
-    if (type) q.set('listing_type', type);
-    if (city) q.set('city', city);
-    if (sub)  q.set('subcategory', sub);
-    if (cur)  q.set('currency', cur);
+    if (types.length)  q.set('listing_type', types.join(','));
+    if (cities.length) q.set('city', cities.join(','));
+    if (subs.length)   q.set('subcategory', subs.join(','));
+    if (ptypes.length) q.set('price_type', ptypes.join(','));
+    if (curs.length)   q.set('currency', curs.join(','));
 
     var results = await Promise.all([
       api('GET', '/categories/' + slug),
@@ -764,21 +808,36 @@ async function renderCategory(params) {
 
     function catLink(overrides) {
       var p = { sort: sort };
-      if (type) p.listing_type = type;
-      if (city) p.city         = city;
-      if (sub)  p.subcategory  = sub;
-      if (cur)  p.currency     = cur;
+      if (types.length)  p.listing_type = types.join(',');
+      if (cities.length) p.city         = cities.join(',');
+      if (subs.length)   p.subcategory  = subs.join(',');
+      if (ptypes.length) p.price_type   = ptypes.join(',');
+      if (curs.length)   p.currency     = curs.join(',');
       Object.assign(p, overrides);
       Object.keys(p).forEach(function(k) { if (!p[k]) delete p[k]; });
       return '#/kategori/' + slug + '?' + new URLSearchParams(p).toString();
     }
+    function toggled(list, v) {
+      var out = list.slice(); var i = out.indexOf(v);
+      if (i === -1) out.push(v); else out.splice(i, 1);
+      return out.join(',');
+    }
+    function multiLink(list, key) {
+      return function(v) {
+        var o = { page: 1 };
+        o[key] = (v === '') ? '' : toggled(list, String(v));
+        return catLink(o);
+      };
+    }
 
-    var activeFilters = [type, city, sub, cur].filter(Boolean).length;
+    var activeFilters = [types.length, cities.length, subs.length, ptypes.length, curs.length].filter(Boolean).length;
 
+    var subLink = multiLink(subs, 'subcategory');
     var subSidebar = '<div class="filter-block"><div class="filter-block-title">Alt Kategori</div><div class="filter-block-body">' +
-      '<a class="filter-radio' + (!sub?' active':'') + '" href="' + catLink({subcategory:''}) + '"><span class="radio-dot' + (!sub?' checked':'') + '"></span> Tümü</a>' +
+      '<a class="filter-radio' + (!subs.length?' active':'') + '" href="' + subLink('') + '"><span class="radio-dot' + (!subs.length?' checked':'') + '"></span> Tümü</a>' +
       (cat.subcategories || []).map(function(s) {
-        return '<a class="filter-radio' + (sub==s.id?' active':'') + '" href="' + catLink({subcategory:s.id}) + '"><span class="radio-dot' + (sub==s.id?' checked':'') + '"></span> ' + esc(s.name) + '</a>';
+        var on = subs.indexOf(String(s.id)) !== -1;
+        return '<a class="filter-radio' + (on?' active':'') + '" href="' + subLink(String(s.id)) + '"><span class="radio-dot' + (on?' checked':'') + '"></span> ' + esc(s.name) + '</a>';
       }).join('') +
       '</div></div>';
 
@@ -786,11 +845,11 @@ async function renderCategory(params) {
       (activeFilters > 0 ? '<a href="#/kategori/' + slug + '" class="btn btn-ghost btn-sm w-100" style="margin-bottom:10px;">Filtreleri Temizle (' + activeFilters + ')</a>' : '') +
       subSidebar +
       filterSidebar([
-        { title:'İlan Türü',   name:'f_type', current:type, options:[['','Tümü'],['sell','Satılır'],['buy','Alınır']], linkFn: function(v){ return catLink({listing_type:v}); } },
+        { title:'İlan Türü',   name:'f_type', multi:true, current:types, options:[['','Tümü'],['sell','Satılır'],['buy','Alınır']], linkFn: multiLink(types, 'listing_type') },
         { title:'Sıralama',    name:'f_sort', current:sort, options:[['newest','En Yeni'],['oldest','En Eski'],['price_asc','Ucuzdan Pahalıya'],['price_desc','Pahalıdan Ucuza'],['views','En Çok Görüntülenen']], linkFn: function(v){ return catLink({sort:v}); } },
-        { title:'Şehir',       name:'f_city', current:city, options:[['','Tümü']].concat(CITIES.map(function(c){return[c,c];})), linkFn: function(v){ return catLink({city:v}); } },
-        { title:'Fiyat Türü',  name:'f_ptype', current:'',  options:[['','Tümü'],['fixed','Sabit Fiyat'],['negotiable','Pazarlık Usulü'],['on_request','Fiyat Sorunuz']], linkFn: function(v){ return catLink({price_type:v}); } },
-        { title:'Para Birimi', name:'f_cur',  current:cur,  options:[['','Tümü'],['TRY','₺ TRY'],['USD','$ USD'],['EUR','€ EUR']], linkFn: function(v){ return catLink({currency:v}); } },
+        { title:'Şehir',       name:'f_city', multi:true, current:cities, options:[['','Tümü']].concat(CITIES.map(function(c){return[c,c];})), linkFn: multiLink(cities, 'city') },
+        { title:'Fiyat Türü',  name:'f_ptype', multi:true, current:ptypes, options:[['','Tümü'],['fixed','Sabit Fiyat'],['negotiable','Pazarlık Usulü'],['on_request','Fiyat Sorunuz']], linkFn: multiLink(ptypes, 'price_type') },
+        { title:'Para Birimi', name:'f_cur',  multi:true, current:curs, options:[['','Tümü'],['TRY','₺ TRY'],['USD','$ USD'],['EUR','€ EUR']], linkFn: multiLink(curs, 'currency') },
       ]);
 
     var emptyState = '<div class="empty-state">' +
@@ -841,7 +900,7 @@ function filterSidebar(blocks) {
     return '<div class="filter-block"><div class="filter-block-title">' + b.title + '</div><div class="filter-block-body"' + bodyStyle + '>' +
       opts.map(function(opt) {
         var v = opt[0]; var l = opt[1];
-        var active = b.current === v;
+        var active = b.multi ? (v === '' ? b.current.length === 0 : b.current.indexOf(String(v)) !== -1) : b.current === v;
         return '<a class="filter-radio' + (active?' active':'') + '" href="' + b.linkFn(v) + '">' +
           '<span class="radio-dot' + (active?' checked':'') + '"></span> ' + esc(l) +
           '</a>';
