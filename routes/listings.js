@@ -227,11 +227,6 @@ router.post('/', authenticate, upload.array('images', 8), (req, res) => {
       return res.status(400).json({ error: 'Gecersiz kategori.' });
     }
 
-    if (website && website.trim() && !/^https?:\/\//i.test(website.trim())) {
-      cleanupFiles(req.files);
-      return res.status(400).json({ error: 'Web sitesi http:// veya https:// ile baslamalidir.' });
-    }
-
     // Enum ve e-posta validasyonlari
     const VALID_LISTING_TYPES = ['sell', 'buy', 'rent', 'service'];
     const VALID_PRICE_TYPES   = ['fixed', 'negotiable', 'exchange', 'free'];
@@ -281,7 +276,7 @@ router.post('/', authenticate, upload.array('images', 8), (req, res) => {
       listing_type || 'sell',
       contact_phone?.trim() || null,
       contact_email?.trim() || null,
-      website?.trim()       || null,
+      (website?.trim() && !/^https?:\/\//i.test(website.trim()) ? 'https://' + website.trim() : website?.trim() || null),
       expires.toISOString()
     );
 
@@ -293,9 +288,11 @@ router.post('/', authenticate, upload.array('images', 8), (req, res) => {
     }
 
     if (tags) {
-      const tagList = (Array.isArray(tags) ? tags : tags.split(',')).map(t => t.trim().toLowerCase()).filter(Boolean).slice(0, 10);
-      const ins = db.prepare('INSERT INTO listing_tags (listing_id, tag) VALUES (?,?)');
-      tagList.forEach(tag => ins.run(lid, tag));
+      try {
+        const tagList = (Array.isArray(tags) ? tags : tags.split(',')).map(t => t.trim().toLowerCase()).filter(Boolean).slice(0, 10);
+        const ins = db.prepare('INSERT INTO listing_tags (listing_id, tag) VALUES (?,?)');
+        tagList.forEach(tag => ins.run(lid, tag));
+      } catch(tagErr) { console.error('[LISTINGS] tag insert:', tagErr.message); }
     }
 
     res.status(201).json({ message: 'Ilaniniz moderasyon onayina gonderildi.', listing_id: lid });
@@ -323,11 +320,6 @@ router.put('/:id', authenticate, upload.array('images', 8), (req, res) => {
       city, district, listing_type,
       contact_phone, contact_email, website, delete_images
     } = req.body;
-
-    if (website && website.trim() && !/^https?:\/\//i.test(website.trim())) {
-      cleanupFiles(req.files);
-      return res.status(400).json({ error: 'Web sitesi http:// veya https:// ile baslamalidir.' });
-    }
 
     db.prepare(
       `UPDATE listings SET
