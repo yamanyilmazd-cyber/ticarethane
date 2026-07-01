@@ -389,6 +389,8 @@ function migrateCategories() {
     if (!exists) dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)')
       .run(cat.id, 'diger', 'Diğer');
   });
+  // Fix existing misspelled subcategory names
+  dbProxy.prepare("UPDATE subcategories SET name='Gübre', slug='gubre' WHERE name='Gøbre'").run();
   console.log('[DB] Kategori migrasyonu tamamlandı.');
 }
 
