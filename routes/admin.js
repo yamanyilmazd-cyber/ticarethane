@@ -386,7 +386,7 @@ router.patch('/listings/:id/approve', (req, res) => {
       );
     } catch(e) {}
     res.json({ message: 'İlan onaylandı.' });
-  } catch(err) { res.status(500).json({ error: err.message }); }
+  } catch(err) { res.status(500).json({ error: "Islem basarisiz." }); }
 });
 
 // ---- Reddet ----
@@ -405,7 +405,7 @@ router.patch('/listings/:id/reject', (req, res) => {
     );
   } catch(e) {}
   res.json({ message: 'İlan reddedildi.' });
-  } catch(err) { res.status(500).json({ error: err.message }); }
+  } catch(err) { res.status(500).json({ error: "Islem basarisiz." }); }
 });
 
 // ---- Toplu onayla ----
@@ -413,10 +413,13 @@ router.post('/listings/bulk-approve', (req, res) => {
   const db  = getDb();
   const ids = req.body.ids;
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ID listesi gerekli.' });
-  ids.forEach(id => {
+  if (ids.length > 100) return res.status(400).json({ error: 'En fazla 100 ilan onaylanabilir.' });
+  const validIds = ids.map(Number).filter(id => Number.isInteger(id) && id > 0);
+  if (!validIds.length) return res.status(400).json({ error: 'Gecersiz ID listesi.' });
+  validIds.forEach(id => {
     db.prepare('UPDATE listings SET status="active", updated_at=datetime("now") WHERE id=? AND status="pending"').run(id);
   });
-  res.json({ message: `${ids.length} ilan onaylandı.` });
+  res.json({ message: `${validIds.length} ilan onaylandı.` });
 });
 
 // ---- Sil ----
@@ -441,7 +444,8 @@ router.get('/users', (req, res) => {
   const limitNum = parseInt(limit);
   const offset   = (pageNum - 1) * limitNum;
 
-  const conds = [`u.role='${role === 'admin' ? 'admin' : 'user'}'`]; const params = [];
+  const safeRole = role === 'admin' ? 'admin' : 'user';
+  const conds = ['u.role=?']; const params = [safeRole];
   if (search)    { conds.push('(u.name LIKE ? OR u.email LIKE ? OR u.company_name LIKE ?)'); params.push(`%${search}%`, `%${search}%`, `%${search}%`); }
   if (is_active !== undefined && is_active !== '') { conds.push('u.is_active=?'); params.push(parseInt(is_active)); }
   const WHERE = 'WHERE ' + conds.join(' AND ');
@@ -712,7 +716,7 @@ router.patch('/reports/:id/resolve', (req, res) => {
 // Global hata yakalayici
 router.use(function(err, req, res, _next) {
   console.error("[ADMIN] route error:", err.message);
-  res.status(500).json({ error: "Sunucu hatasi: " + err.message });
+  res.status(500).json({ error: "Sunucu hatasi." });
 });
 
 module.exports = router;
