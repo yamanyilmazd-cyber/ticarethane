@@ -55,29 +55,6 @@ const BLOCKED_DOMAINS = new Set([
   'dispostable.com','spambox.us','spambox.info','mailbucket.org',
 ]);
 
-// ---- Engellenen geçici e-posta domainleri ----
-const BLOCKED_DOMAINS = new Set([
-  'mailinator.com','guerrillamail.com','guerrillamail.info','guerrillamail.biz',
-  'guerrillamail.de','guerrillamail.net','guerrillamail.org','guerrillamailblock.com',
-  'grr.la','sharklasers.com','guerrillamailblock.com','spam4.me','trashmail.com',
-  'trashmail.at','trashmail.io','trashmail.me','trashmail.net','trashmail.org',
-  'yopmail.com','yopmail.fr','cool.fr.nf','jetable.fr.nf','nospam.ze.tc',
-  'nomail.xl.cx','mega.zik.dj','speed.1s.fr','courriel.fr.nf','moncourrier.fr.nf',
-  'monemail.fr.nf','monmail.fr.nf','dispostable.com','maildrop.cc','mailnull.com',
-  'spamgourmet.com','spamgourmet.net','spamgourmet.org','tempr.email','discard.email',
-  'fakeinbox.com','mailnesia.com','spamfree24.org','spamfree24.de','spamfree24.eu',
-  'spamfree24.info','spamfree24.biz','spamfree24.com','spamfree.eu','mytrashmail.com',
-  'throwam.com','throwam.net','discardmail.com','discardmail.de','spamspot.com',
-  'spamthisplease.com','binkmail.com','mailexpire.com','spammotel.com','spamovore.com',
-  'spamhereplease.com','spamherelots.com','getairmail.com','filzmail.com',
-  'throwaway.email','wegwerfmail.de','wegwerfmail.net','wegwerfmail.org',
-  'trash-mail.at','spamslicer.com','spaml.com','spaml.de','hol.es',
-  'armyspy.com','cuvox.de','dayrep.com','einrot.com','fleckens.hu',
-  'gustr.com','jourrapide.com','rhyta.com','superrito.com','teleworm.us',
-  'tempmail.com','temp-mail.org','tempemail.com','tempmail.net','10minutemail.com',
-]);
-
-
 // ---- Kayıt ----
 router.post('/register', async (req, res) => {
   try {
