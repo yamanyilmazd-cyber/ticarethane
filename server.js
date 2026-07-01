@@ -93,7 +93,6 @@ app.use('/api/', rateLimit({
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.method === 'GET',
   message: { error: 'Çok fazla istek gönderildi. Lütfen 15 dakika sonra tekrar deneyin.' },
 }));
 
@@ -126,6 +125,12 @@ app.use('/api/auth/profile', rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: 'Çok fazla güncelleme denemesi. Lütfen 15 dakika sonra tekrar deneyin.' },
+}));
+// Sifremi unuttum: 1 saatte en fazla 5 deneme (aynı IP'den)
+app.use('/api/auth/forgot-password', rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: 'Çok fazla şifre sıfırlama talebi. Lütfen 1 saat sonra tekrar deneyin.' },
 }));
 app.use('/api/auth',       authRoutes);
 app.use('/api/listings',   listingRoutes);
