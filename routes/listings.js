@@ -41,22 +41,18 @@ router.get('/', (req, res) => {
     if (featured === '1') {
       conditions.push('l.is_featured = 1');
     }
-    if (category) {
-      conditions.push('c.slug = ?');
-      params.push(category);
-    }
-    if (subcategory) {
-      conditions.push('l.subcategory_id = ?');
-      params.push(parseInt(subcategory));
-    }
-    if (city) {
-      conditions.push('l.city = ?');
-      params.push(city);
-    }
-    if (listing_type) {
-      conditions.push('l.listing_type = ?');
-      params.push(listing_type);
-    }
+    // Coklu deger destegi: "a,b,c" -> IN (?,?,?)
+    const addMulti = (raw, col, isInt) => {
+      let vals = String(raw).split(',').map(s => s.trim()).filter(Boolean);
+      if (isInt) vals = vals.map(v => parseInt(v)).filter(v => Number.isInteger(v));
+      if (!vals.length) return;
+      conditions.push(`${col} IN (${vals.map(() => '?').join(',')})`);
+      params.push(...vals);
+    };
+    if (category)    addMulti(category, 'c.slug');
+    if (subcategory) addMulti(subcategory, 'l.subcategory_id', true);
+    if (city)        addMulti(city, 'l.city');
+    if (listing_type) addMulti(listing_type, 'l.listing_type');
     if (price_min) {
       conditions.push('l.price >= ?');
       params.push(parseFloat(price_min));
@@ -65,12 +61,9 @@ router.get('/', (req, res) => {
       conditions.push('l.price <= ?');
       params.push(parseFloat(price_max));
     }
-    if (price_type)  { conditions.push('l.price_type=?');  params.push(price_type); }
-    if (price_basis) { conditions.push('l.price_basis=?'); params.push(price_basis); }
-    if (quantity_unit) {
-      conditions.push('l.quantity_unit=?');
-      params.push(quantity_unit);
-    }
+    if (price_type)  addMulti(price_type, 'l.price_type');
+    if (price_basis) addMulti(price_basis, 'l.price_basis');
+    if (quantity_unit) addMulti(quantity_unit, 'l.quantity_unit');
     if (lot_qty_min) { conditions.push('l.lot_quantity >= ?'); params.push(parseInt(lot_qty_min)); }
     if (lot_qty_max) { conditions.push('l.lot_quantity <= ?'); params.push(parseInt(lot_qty_max)); }
     if (search) {
@@ -81,10 +74,7 @@ router.get('/', (req, res) => {
       conditions.push('l.user_id = ?');
       params.push(parseInt(seller_id));
     }
-    if (req.query.currency) {
-      conditions.push('l.currency = ?');
-      params.push(req.query.currency);
-    }
+    if (req.query.currency) addMulti(req.query.currency, 'l.currency');
 
     const WHERE = conditions.join(' AND ');
 
