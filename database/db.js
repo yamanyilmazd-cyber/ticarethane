@@ -399,11 +399,11 @@ function slugify(str) {
 function seedCategories() {
   const cats = [
     { slug: 'kimya', name: 'Kimya & Hammadde', desc: 'Soda külü, asit, solvent, boya hammaddesi ve kimyasal ürünler',
-      subs: ['Asit & Baz', 'Solvent & Thinner', 'Soda Külü & Sodyum Ürünleri', 'Klorlu Bileşikler', 'Boya Hammaddesi', 'Deterjan Hammaddesi', 'Gøbre Kimyasalları', 'Diğer'] },
+      subs: ['Asit & Baz', 'Solvent & Thinner', 'Soda Külü & Sodyum Ürünleri', 'Klorlu Bileşikler', 'Boya Hammaddesi', 'Deterjan Hammaddesi', 'Gübre Kimyasalları', 'Diğer'] },
     { slug: 'demir-celik', name: 'Demir, Çelik & Metal', desc: 'Profil, boru, sac, çelik, aløminyum ve metal ørønler',
       subs: ['HEA/HEB Profil', 'Boru & Tüp', 'Sac & Levha', 'Filmaşin & Tel', 'İnşaat Demiri', 'Aløminyum', 'Bakır', 'Paslanmaz Çelik', 'Hurda Metal', 'Diğer'] },
-    { slug: 'tarim-gida', name: 'Tarım & Gıda Hammaddeleri', desc: 'Tahıl, bakliyat, gøbre, zirai ilaç ve gıda hammaddeleri',
-      subs: ['Tahıl & Hububat', 'Bakliyat', 'Yağlı Tohumlar', 'Gøbre', 'Zirai İlaç & Pestisit', 'Fide & Tohum', 'Hayvan Yemi', 'Meyve & Sebze (Toptan)', 'Diğer'] },
+    { slug: 'tarim-gida', name: 'Tarım & Gıda Hammaddeleri', desc: 'Tahıl, bakliyat, gübre, zirai ilaç ve gıda hammaddeleri',
+      subs: ['Tahıl & Hububat', 'Bakliyat', 'Yağlı Tohumlar', 'Gübre', 'Zirai İlaç & Pestisit', 'Fide & Tohum', 'Hayvan Yemi', 'Meyve & Sebze (Toptan)', 'Diğer'] },
     { slug: 'plastik-polimer', name: 'Plastik & Polimer', desc: 'PP, PE, PVC, PET ve diğer plastik hammaddeler',
       subs: ['Polipropilen (PP)', 'Polietilen (PE)', 'PVC', 'PET', 'Polistiren (PS)', 'ABS', 'Naylon & Poliamid', 'Plastik Hurda & Regrind', 'Diğer'] },
     { slug: 'insaat', name: 'İnşaat & Yapı Malzemeleri', desc: 'Çimento, tuğla, seramik, yalıtım ve yapı malzemeleri',
