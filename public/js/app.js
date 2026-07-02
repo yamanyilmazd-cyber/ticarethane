@@ -2704,7 +2704,7 @@ function renderSozlesme() {
   s += '<p>Platform, herhangi bir üyelik başvurusunu ge-rekçe göstermeksizin reddetme veya mevcut üyelikleri askıya alma hakkını saklı tutar.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">3. Hizmetin Kapsamı</h2>';
   s += '<p>Ticaret-hane; üyelerine ilan oluşturma, düz-enleme, arama ve mesajlaşma hizmetleri sunmaktadır. Platform, alıcı ile satıcı arasındaki işlemlere doğrudan taraf olmaz ve herhangi bir ödeme işlemini gerçekleştirmez ya da garanti etmez.</p>';
-  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">4. Kullanıcı Yükümlülüklerik</h2>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">4. Kullanıcı Yükümlülükleri</h2>';
   s += '<p>Kullanıcı, Platform&#39;u kullanırken aşağıdaki yükümlülüklere uymayı kabul eder:</p>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Yayımladığı ilanların gerçek, doğru ve güncel bilgiler içermesini sağlamak,</li><li>Ürn fiyat, miktar ve özelliklerini eksiksiz ve dürüstçe belirtmek,</li><li>Yayımladığı görsellerin yalnızca ilgili ürüne ait olduğunu doğrulamak,</li><li>Yürürlükteki tüm kanun, yönetmelik ve mevzuata uymak,</li><li>Üçüncü kişilerin kişisel verilerini yetkisiz biçimde paylaşmamak,</li><li>Platform altyapısına zarar verecek yazılım, bot veya otomatik sistem kullanmamak.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">5. Yasaklı Faaliyetler ve İçerikler</h2>';
@@ -2715,13 +2715,11 @@ function renderSozlesme() {
   s += '<p>Platform, alıcı ile satıcı arasındaki ödeme işlemlere aracılık etmez. Tanımadığınız kişilere peşin ödeme yapmaktan kaçınınız; ürünü teslim almadan işlem gerçekleştirmeyiniz. Şüpheli ilanları ve kullanıcıları Platform&#39;a bildirmenizi öneririz. Ticaret-hane, Platform üzerindeki işlem-lerden doğan maddi kayıplardan sorumlu tutulamaz.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">7. Sorumluluk Sınırlaması</h2>';
   s += '<p>Platform, kullanıcılar arasındaki işlemlerin hukuka uygunluğunu, ürünlerin kalitesini veya satıcıların güvenilirliğini garanti etmez. Teknik sorunlar, sunucu kesintileri veya üçüncü taraf kaynaklı aksaklıklar nedeniyle uğrlanılan zararlardan sorumlu değildir.</p>';
-  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">8. Fikri Mülkiyet</h2>';
-  s += '<p>Platform’un tasarımı, logosu, yazılımı ve tüm içerikleri Ticaret-hane’ye aittir ve telif hakkı yasalarıyla korunmaktadır.</p>';
-  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">9. Sözleşme Değişiklikleri</h2>';
-  s += '<p>Ticaret-hane, bu Sözleşme’yi dilediği zaman güncelleme hakkını saklı tutar. Değişiklikler Platform&#39;da yayımlandığı tarihten itibaren yürürlüye girer.</p>';
-  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">10. Uygulanacak Hukuk</h2>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">8. Sözleşme Değişiklikleri</h2>';
+  s += '<p>Ticaret-hane, bu Sözleşme’yi dilediği zaman güncelleme hakkını saklı tutar. Değişiklikler Platform&#39;da yayımlandığı tarihten itibaren yürürlüğe girer.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">9. Uygulanacak Hukuk</h2>';
   s += '<p>Bu Sözleşme, Türkiye Cumhuriyeti kanunlarına tabidir. Sözleşme’den doğabilecek uyuşmazlıklarda İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.</p>';
-  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">11. İletişim</h2>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">10. İletişim</h2>';
   s += '<p>Soru ve talepleriniz için: <strong>destek@ticaret-hane.net</strong></p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
