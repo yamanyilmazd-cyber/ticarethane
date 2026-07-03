@@ -949,9 +949,9 @@ tbody td { padding: 11px 14px; color: var(--text); }
   .hero-search button { padding: 13px 18px; }
 
   /* Navbar biraz sıkıştır — butonlar sığmazsa alt satıra insin */
-  .navbar-inner { gap: 8px; flex-wrap: wrap; height: auto; min-height: 56px; padding: 8px 0; }
+  .navbar-inner { gap: 8px; flex-wrap: wrap; height: auto; min-height: 56px; padding: 8px 16px; }
   .navbar-logo { font-size: 1.2rem; }
-  .navbar-actions { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; margin-left: auto; }
+  .navbar-actions { flex-wrap: wrap; justify-content: center; row-gap: 6px; flex-grow: 1; }
   .btn-nav { padding: 6px 10px; font-size: .78rem; }
 
   /* Modal — mobilde alttan açılan sheet */
