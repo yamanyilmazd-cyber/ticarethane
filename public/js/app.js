@@ -226,6 +226,14 @@ function router() {
 }
 
 window.addEventListener('hashchange', router);
+
+// Hesabım sayfası Çıkış Yap butonu (delegasyon)
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.id === 'dashLogoutBtn') {
+    clearAuth(); goTo('/'); toast('Çıkış yapıldı.', 'success');
+  }
+});
+
 window.addEventListener('load', function() {
   document.getElementById('footerYear').textContent = new Date().getFullYear();
   loadCategories().then(function() {
@@ -1392,7 +1400,7 @@ async function renderDashboard() {
   }).join('');
 
   app.innerHTML =
-    '<div class="dash-header"><div class="container"><h1>Hesabım</h1><p>Hoş geldiniz, ' + esc(me.name) + (me.company_name ? ' · ' + esc(me.company_name) : '') + '</p></div></div>' +
+    '<div class="dash-header"><div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><h1>Hesabım</h1><p>Hoş geldiniz, ' + esc(me.name) + (me.company_name ? ' · ' + esc(me.company_name) : '') + '</p></div><button class="btn btn-danger btn-sm" id="dashLogoutBtn">Çıkış Yap</button></div></div>' +
     '<div class="container" style="padding:28px 24px;">' +
       '<div class="dash-tabs"><button class="dash-tab active" data-tab="ilanlar">İlanlarım</button><button class="dash-tab" data-tab="profil">Profilim</button></div>' +
       '<div id="tab_ilanlar" class="tab-content active">' +
