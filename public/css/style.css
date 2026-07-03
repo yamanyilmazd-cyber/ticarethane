@@ -40,7 +40,9 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
-html { overflow-x: hidden; }
+html { overflow-x: hidden; overflow-x: clip; }
+body { overflow-x: clip; }
+img, svg, video { max-width: 100%; }
 a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
 button { cursor: pointer; font-family: inherit; }
@@ -102,7 +104,7 @@ ul, ol { list-style: none; }
 .btn-nav-accent:hover { background: var(--amber-lt); }
 
 /* Kategori şeridi */
-.cat-bar { background: var(--navy-mid); overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid rgba(255,255,255,.05); }
+.cat-bar { background: var(--navy-mid); overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scrollbar-width: none; border-bottom: 1px solid rgba(255,255,255,.05); }
 .cat-bar::-webkit-scrollbar { display: none; }
 .cat-bar-inner { display: flex; min-width: max-content; padding: 0 12px; }
 .cat-bar-item {
