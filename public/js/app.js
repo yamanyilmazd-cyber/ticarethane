@@ -310,6 +310,7 @@ async function fetchNotifCount() {
 
 function updateNavbar() {
   var el = document.getElementById('navActions');
+  el.classList.toggle('nav-guest', !isLoggedIn());
   if (isLoggedIn()) {
     var name = (State.user && State.user.name) ? State.user.name.split(' ')[0] : 'Hesabım';
     el.innerHTML =
