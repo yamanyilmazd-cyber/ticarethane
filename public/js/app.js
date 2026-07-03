@@ -230,7 +230,7 @@ window.addEventListener('hashchange', router);
 // Hesabım sayfası Çıkış Yap butonu (delegasyon)
 document.addEventListener('click', function(e) {
   if (e.target && e.target.id === 'dashLogoutBtn') {
-    clearAuth(); goTo('/'); toast('Çıkış yapıldı.', 'success');
+    clearAuth(); if ((location.hash || '#/') === '#/' ) { updateNavbar(); router(); } else { goTo('/'); } toast('Çıkış yapıldı.', 'success');
   }
 });
 
@@ -329,7 +329,7 @@ function updateNavbar() {
       '<button class="btn-nav btn-nav-ghost" id="logoutBtn">Çıkış</button>';
     var lb = document.getElementById('logoutBtn');
     if (lb) lb.addEventListener('click', function() {
-      clearAuth(); goTo('/'); toast('Çıkış yapıldı.', 'success');
+      clearAuth(); if ((location.hash || '#/') === '#/' ) { updateNavbar(); router(); } else { goTo('/'); } toast('Çıkış yapıldı.', 'success');
     });
     // Bildirim sayısı
     fetchNotifCount();
