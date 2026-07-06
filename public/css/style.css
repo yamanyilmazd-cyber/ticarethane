@@ -663,6 +663,13 @@ tbody td { padding: 11px 14px; color: var(--text); }
   .admin-sidebar { display: flex; overflow-x: auto; }
   .admin-sidebar-item { white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; }
   .admin-sidebar-item.active { border-bottom-color: var(--amber-lt); }
+  /* Admin panel mobil */
+  .admin-content { padding: 16px 10px; }
+  .admin-content h2 { font-size: 1.05rem; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .table-wrapper { font-size: .78rem; }
+  .table-wrapper th, .table-wrapper td { padding: 8px 6px; white-space: nowrap; }
+  .admin-sidebar-item { padding: 10px 12px; font-size: .82rem; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 480px) {
@@ -949,10 +956,11 @@ tbody td { padding: 11px 14px; color: var(--text); }
   .hero-search button { padding: 13px 18px; }
 
   /* Navbar biraz sıkıştır — butonlar sığmazsa alt satıra insin */
-  .navbar-inner { gap: 8px; flex-wrap: wrap; height: auto; min-height: 56px; padding: 8px 46px 8px 14px; }
+  /* Otomatik simetri: iki yanda esit 16px, butonlar satira esit dagilir */
+  .navbar-inner { gap: 8px; flex-wrap: wrap; height: auto; min-height: 56px; padding: 8px 16px; justify-content: space-between; }
   .navbar-logo { font-size: 1.2rem; }
-  .navbar-actions { flex-wrap: wrap; justify-content: center; row-gap: 6px; flex-grow: 1; }
-  .navbar-actions.nav-guest { justify-content: flex-end; margin-right: -32px; }
+  .navbar-actions { flex-wrap: wrap; row-gap: 6px; width: 100%; justify-content: space-evenly; }
+  .navbar-actions.nav-guest { width: auto; justify-content: flex-end; margin-left: auto; }
   .btn-nav { padding: 9px 14px; font-size: .88rem; }
 
   /* Modal — mobilde alttan açılan sheet */

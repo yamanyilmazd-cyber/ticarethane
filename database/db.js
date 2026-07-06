@@ -73,14 +73,24 @@ async function tursoHttp(sql, params, timeoutMs) {
 }
 
 // fire-and-forget — sadece DML (INSERT/UPDATE/DELETE)
-function tursoWrite(sql, params) {
+function tursoWrite(sql, params, attempt) {
   const t = sql.trim().toUpperCase();
   if (t.startsWith('SELECT') || t.startsWith('PRAGMA') ||
       t.startsWith('CREATE') || t.startsWith('DROP') ||
       t.startsWith('ALTER')  || t.startsWith('BEGIN') ||
       t.startsWith('COMMIT') || t.startsWith('ROLLBACK')) return;
   if (_tursoReady) {
-    tursoHttp(sql, params, 8000).catch(() => {});
+    const deneme = attempt || 0;
+    tursoHttp(sql, params, 8000).then(r => {
+      if (r === null) throw new Error('Turso yaniti yok');
+    }).catch(() => {
+      if (deneme < 5) {
+        // Basarisiz yazma sessizce KAYBOLMASIN — artan araliklarla tekrar dene
+        setTimeout(() => tursoWrite(sql, params, deneme + 1), 10000 * (deneme + 1));
+      } else {
+        console.error('[TURSO] KRITIK: yazma 5 denemede basarisiz, veri kaybi riski:', sql.slice(0, 80));
+      }
+    });
   } else if (_initComplete) {
     // Runtime write during Turso restore window — queue for later
     _tursoQueue.push({ sql, params });
@@ -146,6 +156,23 @@ class Statement {
     const res = _db.exec('SELECT last_insert_rowid() AS id');
     const lastInsertRowid = res[0]?.values[0][0] ?? 0;
     scheduleSave();
+    // INSERT ise tam satiri ID dahil aynala — yerel ve Turso ID'leri ayni kalir
+    const ins = /^\s*INSERT\s+(?:OR\s+\w+\s+)?INTO\s+([A-Za-z_]+)/i.exec(this._sql);
+    if (ins && lastInsertRowid) {
+      try {
+        const stmt = _db.prepare('SELECT * FROM ' + ins[1] + ' WHERE rowid = ?');
+        let row;
+        try { stmt.bind([lastInsertRowid]); if (stmt.step()) row = stmt.getAsObject(); } finally { stmt.free(); }
+        if (row) {
+          const cols = Object.keys(row);
+          tursoWrite(
+            'INSERT OR REPLACE INTO ' + ins[1] + ' (' + cols.join(', ') + ') VALUES (' + cols.map(() => '?').join(', ') + ')',
+            cols.map(c => row[c])
+          );
+          return { lastInsertRowid };
+        }
+      } catch (e) { /* asagida ham SQL ile devam */ }
+    }
     tursoWrite(this._sql, params);
     return { lastInsertRowid };
   }
@@ -330,7 +357,18 @@ async function initDatabase() {
     locateFile: file => require.resolve(`sql.js/dist/${file}`)
   });
 
-  _db = new SQL.Database();
+  // Diskte kayitli veritabani varsa ONCE onu yukle — tek basina Turso'ya guvenme
+  try {
+    if (fs.existsSync(DB_PATH)) {
+      _db = new SQL.Database(fs.readFileSync(DB_PATH));
+      console.log('[DB] Yerel veritabani dosyasi yuklendi:', DB_PATH);
+    } else {
+      _db = new SQL.Database();
+    }
+  } catch (e) {
+    console.warn('[DB] Yerel dosya okunamadi, bos baslatiliyor:', e.message);
+    _db = new SQL.Database();
+  }
   _db.run('PRAGMA foreign_keys = ON');
 
   // Yerel şema (senkron, hızlı)
