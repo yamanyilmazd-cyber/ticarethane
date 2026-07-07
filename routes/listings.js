@@ -111,8 +111,19 @@ router.get('/', (req, res) => {
        LIMIT ? OFFSET ?`
     ).all(...params, limitNum, offset);
 
+    // Arama varsa eslesen firmalari da dondur
+    let sellers = [];
+    if (search) {
+      sellers = db.prepare(
+        `SELECT id, name, company_name, city, is_verified FROM users
+         WHERE is_active = 1 AND role != 'admin' AND (name LIKE ? OR company_name LIKE ?)
+         LIMIT 5`
+      ).all(`%${search}%`, `%${search}%`);
+    }
+
     res.json({
       listings:   rows,
+      sellers,
       pagination: { total, page: pageNum, limit: limitNum, pages: Math.ceil(total / limitNum) }
     });
   } catch (err) {
@@ -154,6 +165,7 @@ router.get('/:id', optionalAuth, (req, res) => {
          c.name AS category_name, c.slug AS category_slug,
          sc.name AS subcategory_name,
          u.name AS seller_name, u.company_name, u.city AS seller_city,
+         u.is_verified AS seller_verified,
          u.phone AS seller_phone
        FROM listings l
        LEFT JOIN categories    c  ON l.category_id    = c.id

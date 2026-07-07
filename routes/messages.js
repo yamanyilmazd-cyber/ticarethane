@@ -104,6 +104,11 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Alıcı ve mesaj içeriği zorunludur.' });
     if (String(to_user_id) === String(uid))
       return res.status(400).json({ error: 'Kendinize mesaj gönderemezsiniz.' });
+    if (!listing_id)
+      return res.status(400).json({ error: 'Mesaj göndermek için bir ilan üzerinden iletişime geçmelisiniz.' });
+    const lst = db.prepare('SELECT id, user_id FROM listings WHERE id = ?').get(parseInt(listing_id));
+    if (!lst || String(lst.user_id) !== String(to_user_id))
+      return res.status(400).json({ error: 'Geçersiz ilan.' });
 
     const target = db.prepare('SELECT id FROM users WHERE id=? AND is_active=1').get(to_user_id);
     if (!target) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });

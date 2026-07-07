@@ -324,10 +324,16 @@ function updateNavbar() {
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' +
         '<span id="msgBadge" style="display:none;position:absolute;top:-4px;right:-6px;background:var(--red);color:#fff;border-radius:99px;font-size:.65rem;font-weight:700;width:17px;height:17px;align-items:center;justify-content:center;"></span>' +
       '</a>' +
-      '<a href="#/hesabim" class="btn-nav btn-nav-ghost">' + esc(name) + '</a>' +
-      (isAdmin() ? '<a href="#/admin" class="btn-nav btn-nav-ghost">Yönetim</a>' : '') +
-      '<a href="#/ilan-ver" class="btn-nav btn-nav-accent">+ İlan Ver</a>' +
-      '<button class="btn-nav btn-nav-ghost" id="logoutBtn">Çıkış</button>';
+      '<a href="#/hesabim" class="btn-nav btn-nav-ghost" title="Hesabım" style="display:inline-flex;align-items:center;gap:5px;">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' +
+        '<span class="nav-txt">' + esc(name) + '</span></a>' +
+      (isAdmin() ? '<a href="#/admin" class="btn-nav btn-nav-ghost" title="Yönetim" style="display:inline-flex;align-items:center;gap:5px;">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>' +
+        '<span class="nav-txt">Yönetim</span></a>' : '') +
+      '<a href="#/ilan-ver" class="btn-nav btn-nav-accent" style="white-space:nowrap;">+ İlan Ver</a>' +
+      '<button class="btn-nav btn-nav-ghost" id="logoutBtn" title="Çıkış" style="display:inline-flex;align-items:center;gap:5px;">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>' +
+        '<span class="nav-txt">Çıkış</span></button>';
     var lb = document.getElementById('logoutBtn');
     if (lb) lb.addEventListener('click', function() {
       clearAuth(); if ((location.hash || '#/') === '#/' ) { updateNavbar(); router(); } else { goTo('/'); } toast('Çıkış yapıldı.', 'success');
@@ -753,6 +759,17 @@ async function renderSearch() {
               '<div><div class="section-title">' + (search ? '"'+esc(search)+'" için sonuçlar' : 'Tüm İlanlar') + ' <span class="text-muted fs-sm">(' + data.pagination.total + ' ilan)</span></div></div>' +
               (isLoggedIn() ? '<a href="#/ilan-ver" class="btn btn-accent btn-sm">+ İlan Ver</a>' : '') +
             '</div>' +
+            ((search && data.sellers && data.sellers.length)
+              ? '<div class="filter-block" style="margin-bottom:18px;"><div class="filter-block-title">Firmalar</div><div class="filter-block-body">' +
+                data.sellers.map(function(f) {
+                  return '<a class="filter-radio" href="#/satici/' + f.id + '" style="font-weight:600;">' +
+                    esc(f.company_name || f.name) +
+                    (f.is_verified ? ' <span style="color:#16a34a;">✓</span>' : '') +
+                    (f.city ? ' <span style="color:var(--text-muted);font-weight:400;">· ' + esc(f.city) + '</span>' : '') +
+                  '</a>';
+                }).join('') +
+                '</div></div>'
+              : '') +
             (data.listings.length
               ? '<div class="listing-grid">' + data.listings.map(listingCardHTML).join('') + '</div>'
               : '<div class="empty-state"><div class="empty-state-title">İlan bulunamadı</div><div class="empty-state-sub">Filtreleri değiştirerek tekrar deneyin.</div></div>') +
@@ -1039,7 +1056,7 @@ async function renderListingDetail(params) {
           '<div class="listing-contact-card mb-4">' +
             '<div style="font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:4px;">Satıcı Bilgileri</div>' +
             '<a href="#/satici/' + l.user_id + '" class="btn btn-ghost btn-sm w-100" style="margin-bottom:8px;">🏢 Firmanın Tüm İlanları</a>' +
-            infoRow('Firma / Kişi', l.company_name||l.seller_name) + infoRow('Konum', l.seller_city) +
+            infoRow('Firma / Kişi', (l.company_name||l.seller_name||'') + (l.seller_verified ? ' ✓ Doğrulanmış' : '')) + infoRow('Konum', l.seller_city) +
             (l.contact_phone ? '<a href="tel:' + l.contact_phone + '" class="btn btn-primary w-100">' + esc(l.contact_phone) + '</a>' : '') +
             (l.contact_email ? '<i class="bi bi-envelope me-1"></i> ' + l.contact_email + ' &nbsp;<a href="mailto:' + l.contact_email + '" style="font-size:0.85em;">(e-posta gönder)</a>' : '') +
             (l.website && /^https?:\/\//i.test(l.website) ? '<a href="' + esc(l.website) + '" target="_blank" rel="noopener noreferrer" class="btn btn-ghost w-100">Web Sitesi</a>' : '') +
@@ -2337,17 +2354,21 @@ async function renderSellerPage(params) {
   var app = document.getElementById('app');
   app.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
   try {
-    var data = await api('GET', '/listings?seller_id=' + params.userId + '&limit=50');
+    var results = await Promise.all([
+      api('GET', '/listings?seller_id=' + params.userId + '&limit=50'),
+      api('GET', '/auth/seller/' + params.userId).catch(function() { return null; })
+    ]);
+    var data = results[0]; var profil = results[1];
     var listings = data.listings || [];
 
-    // Satıcı adını ilk ilandan al
-    var sellerName = listings.length ? (listings[0].company_name || listings[0].seller_name || 'Firma') : 'Firma';
+    var sellerName = (profil && (profil.company_name || profil.name)) ||
+      (listings.length ? (listings[0].company_name || listings[0].seller_name) : 'Firma');
 
     app.innerHTML =
       '<div class="dash-header"><div class="container">' +
         '<div class="breadcrumb" style="margin-bottom:8px;"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>Firma İlanları</span></div>' +
-        '<h1>' + esc(sellerName) + '</h1>' +
-        '<p>' + listings.length + ' aktif ilan</p>' +
+        '<h1>' + esc(sellerName) + ((profil && profil.is_verified) ? ' <span style="font-size:.85rem;color:#22c55e;vertical-align:middle;white-space:nowrap;">✓ Doğrulanmış Firma</span>' : '') + '</h1>' +
+        '<p>' + ((profil && profil.city) ? esc(profil.city) + ' · ' : '') + listings.length + ' aktif ilan</p>' +
       '</div></div>' +
       '<div class="container" style="padding:32px 16px;">';
 

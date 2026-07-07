@@ -218,6 +218,20 @@ router.post('/login', async (req, res) => {
 });
 
 // ---- Mevcut kullanıcı ----
+// GET /api/auth/seller/:id — herkese açık firma profili
+router.get('/seller/:id', (req, res) => {
+  try {
+    const db = getDb();
+    const u  = db.prepare(
+      'SELECT id, name, company_name, city, is_verified, created_at FROM users WHERE id = ? AND is_active = 1'
+    ).get(parseInt(req.params.id));
+    if (!u) return res.status(404).json({ error: 'Firma bulunamadı.' });
+    res.json(u);
+  } catch (err) {
+    res.status(500).json({ error: 'Firma yüklenemedi.' });
+  }
+});
+
 router.get('/me', authenticate, (req, res) => {
   try {
   const db   = getDb();
