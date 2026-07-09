@@ -50,8 +50,13 @@ const State = {
 };
 
 // ── Döviz kuru cache ──────────────────────────────────────────────────────
-var _fxRates   = { USD: 40, EUR: 43 };   // fallback (2026 yaklaşık)
+var _fxRates   = { USD: 40, EUR: 43 };   // en son çare
 var _fxFetched = 0;
+// Son bilinen gerçek kuru hatırla (sayfa yenilense bile)
+try {
+  var _fxSaved = JSON.parse(localStorage.getItem('tc_fx') || 'null');
+  if (_fxSaved && _fxSaved.USD > 0 && _fxSaved.EUR > 0) _fxRates = { USD: _fxSaved.USD, EUR: _fxSaved.EUR };
+} catch(e) {}
 
 async function getFxRates() {
   if (Date.now() - _fxFetched < 30 * 60 * 1000) return _fxRates; // 30 dk cache
@@ -59,11 +64,12 @@ async function getFxRates() {
     var r = await fetch('/api/rates');
     if (!r.ok) throw new Error('rate fetch failed');
     var d = await r.json();
-    if (d.USD && d.EUR) {
+    if (d.USD > 0 && d.EUR > 0) {
       _fxRates   = { USD: d.USD, EUR: d.EUR };
       _fxFetched = Date.now();
+      try { localStorage.setItem('tc_fx', JSON.stringify(_fxRates)); } catch(e) {}
     }
-  } catch(e) { /* fallback'i koru */ }
+  } catch(e) { /* son bilinen kur gösterilmeye devam eder */ }
   return _fxRates;
 }
 
@@ -1047,6 +1053,7 @@ async function renderListingDetail(params) {
             }
             return '<div class="listing-price-box mb-4">' +
               '<div class="listing-price-main">' + formatPrice(l) + '</div>' +
+              (l.price && l.currency && l.currency !== 'TRY' ? '<div class="listing-card-fx" id="fx_' + l.id + '" style="font-size:.85rem;">~₺ hesaplanıyor...</div>' : '') +
               (l.price_type==='negotiable' ? '<div class="text-muted fs-sm">Fiyat pazarlıklıdır.</div>' : '') +
               (basisLabel ? '<div class="text-muted fs-sm">' + basisLabel + '</div>' : '') +
               calcLine +
@@ -1119,6 +1126,9 @@ async function renderListingDetail(params) {
       sendMsgBtn.disabled = false; sendMsgBtn.textContent = 'Mesaj Gönder';
     }
   });
+
+  // ---- Döviz karşılığı ----
+  updateFxCards([l]);
 
   // ---- Favori butonu ----
   var favBtn = document.getElementById('favBtn');

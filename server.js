@@ -140,6 +140,7 @@ app.use('/api/messages',   messageRoutes);
 app.use('/api/favorites',      favoritesRoutes);
 app.use('/api/notifications',  notificationsRoutes);
 app.use('/api/reports',        reportsRoutes);
+app.use('/api/rates',          require('./routes/rates'));
 
 // Döviz kuru proxy — tarayıcı CSP'sini devre dışı bırakmadan sunucu tarafında çek
 app.get('/api/rates', async (_req, res) => {
