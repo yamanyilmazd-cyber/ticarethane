@@ -324,10 +324,10 @@ function updateNavbar() {
       '<a href="#/favorilerim" class="btn-nav btn-nav-ghost" title="Favorilerim" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;">' +
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>' +
       '</a>' +
-      '<a href="#/bildirimler" class="btn-nav btn-nav-ghost" style="position:relative;">' +
+      '<a href="#/bildirimler" class="btn-nav btn-nav-ghost" title="Bildirimler" style="position:relative;">' +
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:99px;font-size:.6rem;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;"></span>' +
       '</a>' +
-      '<a href="#/mesajlar" class="btn-nav btn-nav-ghost" style="position:relative;">' +
+      '<a href="#/mesajlar" class="btn-nav btn-nav-ghost" title="Mesajlar" style="position:relative;">' +
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' +
         '<span id="msgBadge" style="display:none;position:absolute;top:-4px;right:-6px;background:var(--red);color:#fff;border-radius:99px;font-size:.65rem;font-weight:700;width:17px;height:17px;align-items:center;justify-content:center;"></span>' +
       '</a>' +

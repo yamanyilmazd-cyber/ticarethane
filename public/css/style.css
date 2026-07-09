@@ -826,29 +826,6 @@ tbody td { padding: 11px 14px; color: var(--text); }
 /* ================================================================
    ADMİN — Ekstra stiller
    ================================================================ */
-.admin-layout {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  min-height: calc(100vh - 60px);
-}
-.admin-sidebar {
-  background: var(--navy);
-  padding: 24px 0;
-}
-.admin-sidebar-item {
-  padding: 12px 24px;
-  color: rgba(255,255,255,.65);
-  font-size: .88rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background .12s, color .12s;
-  border-left: 3px solid transparent;
-}
-.admin-sidebar-item:hover { background: rgba(255,255,255,.07); color: #fff; }
-.admin-sidebar-item.active { background: rgba(255,255,255,.12); color: #fff; border-left-color: var(--accent); }
-.admin-content { padding: 32px; background: var(--bg-alt); }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
 
 /* Tüm İlanlar kart */
 .cat-card-all { background: linear-gradient(135deg, var(--blue) 0%, #6366f1 100%); color: #fff; }
