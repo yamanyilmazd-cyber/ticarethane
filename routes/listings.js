@@ -286,7 +286,7 @@ router.post('/', authenticate, upload.array('images', 8), (req, res) => {
 
     if (req.files?.length) {
       const ins = db.prepare('INSERT INTO listing_images (listing_id, filename, sort_order) VALUES (?,?,?)');
-      req.files.forEach((f, i) => ins.run(lid, tag));
+      req.files.forEach((f, i) => ins.run(lid, f.filename, i));
     }
 
     if (tags) {

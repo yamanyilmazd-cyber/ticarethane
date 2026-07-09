@@ -1230,10 +1230,10 @@ function listingFormHTML(l) {
       '</div>' +
       '<div style="display:flex;gap:12px;margin-top:8px;">' +
         '<label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">' +
-          '<input type="radio" name="price_basis" value="per_unit"' + (l.price_basis==='total'?'':' checked') + '> Birim / Lot Başı Fiyat' +
+          '<input type="radio" name="price_basis" value="total"' + (l.price_basis==='per_unit'?'':' checked') + '> Toplam Fiyat' +
         '</label>' +
         '<label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">' +
-          '<input type="radio" name="price_basis" value="total"' + (l.price_basis==='total'?' checked':'') + '> Toplam Fiyat' +
+          '<input type="radio" name="price_basis" value="per_unit"' + (l.price_basis==='per_unit'?' checked':'') + '> Birim / Lot Başı Fiyat' +
         '</label>' +
       '</div>' +
     '</div>' +
