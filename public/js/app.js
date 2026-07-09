@@ -1236,7 +1236,6 @@ function listingFormHTML(l) {
           '<input type="radio" name="price_basis" value="per_unit"' + (l.price_basis==='per_unit'?' checked':'') + '> Birim / Lot Başı Fiyat' +
         '</label>' +
       '</div>' +
-    '</div>' +
     '<div class="form-group"><label class="form-label">Miktar</label><input type="number" name="quantity" class="form-control" value="' + (l.quantity||'') + '" placeholder="Örn: 1000" min="0" /></div>' +
 
     '<div class="form-group"><label class="form-label">Birim</label><select name="quantity_unit" class="form-control">' + ['','Ton','Kg','Litre','m³','Adet','Palet','Lot','Konteyner','Fıçı','m²','m'].map(function(u){ return '<option value="'+u+'"'+(l.quantity_unit===u?' selected':'')+'>'+(u||'— Birim Seçin —')+'</option>'; }).join('') + '</select></div>' +
