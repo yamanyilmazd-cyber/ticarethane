@@ -1239,7 +1239,14 @@ function listingFormHTML(l) {
     '<div class="form-group"><label class="form-label">İlan Türü <span class="req">*</span></label><select name="listing_type" class="form-control"><option value="sell"' + (l.listing_type==='sell'||!l.listing_type?' selected':'') + '>Satılır</option><option value="buy"' + (l.listing_type==='buy'?' selected':'') + '>Alınır (Satın Almak İstiyorum)</option></select></div>' +
     '<div class="form-group"><label class="form-label">Fiyat Türü</label><select name="price_type" class="form-control" id="priceTypeSelect"><option value="fixed"' + (l.price_type==='fixed'||!l.price_type?' selected':'') + '>Sabit Fiyat</option><option value="negotiable"' + (l.price_type==='negotiable'?' selected':'') + '>Pazarlık Usulü</option><option value="on_request"' + (l.price_type==='on_request'?' selected':'') + '>Fiyat Sorunuz</option></select></div>' +
     '<div class="form-group" id="priceInputGroup"' + (l.price_type==='on_request'?' style="display:none">':'>') +
-        '<input type="number" name="price" id="priceInput" class="form-control" value="' + (l.price||'') + '" placeholder="0.00" min="0" step="0.01" />' +
+        '<div style="display:flex;gap:8px;">' +
+          '<input type="number" name="price" id="priceInput" class="form-control" value="' + (l.price||'') + '" placeholder="0.00" min="0" step="0.01" style="flex:1;" />' +
+          '<select name="currency" class="form-control" style="flex:0 0 auto;width:auto;">' +
+            '<option value="TRY"' + (!l.currency||l.currency==='TRY'?' selected':'') + '>₺ TRY</option>' +
+            '<option value="USD"' + (l.currency==='USD'?' selected':'') + '>$ USD</option>' +
+            '<option value="EUR"' + (l.currency==='EUR'?' selected':'') + '>€ EUR</option>' +
+          '</select>' +
+        '</div>' +
       '</div>' +
       '<div style="display:flex;gap:12px;margin-top:8px;">' +
         '<label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">' +
