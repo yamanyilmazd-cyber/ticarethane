@@ -227,13 +227,26 @@ async function initAdmin() {
   }
 }
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
       console.log(`[SERVER] Ticaret-hane http://localhost:${PORT} adresinde çalışıyor`);
       if (!isProd) console.log(`[SERVER] Admin: http://localhost:${PORT}/#/admin`);
       initAdmin();
     });
+
+    // Graceful shutdown: Railway redeploy sirasinda SIGTERM temiz karsilanir,
+    // surec 0 koduyla kapanir ve "deployment crashed" bildirimi olusmaz.
+    const shutdown = (signal) => {
+      console.log('[SERVER] ' + signal + ' alindi, sunucu kapatiliyor...');
+      server.close(() => {
+        console.log('[SERVER] Tum baglantilar kapandi, cikiliyor.');
+        process.exit(0);
+      });
+      setTimeout(() => process.exit(0), 10000).unref();
+    };
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT',  () => shutdown('SIGINT'));
   } catch (err) {
-    console.error('[FATAL] Başlatılamadı:', err.message);
+    console.error('[FATAL] Baslatilamadi:', err.message);
     process.exit(1);
   }
 })();
