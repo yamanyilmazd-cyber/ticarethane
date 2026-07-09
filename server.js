@@ -142,20 +142,6 @@ app.use('/api/notifications',  notificationsRoutes);
 app.use('/api/reports',        reportsRoutes);
 app.use('/api/rates',          require('./routes/rates'));
 
-// Döviz kuru proxy — tarayıcı CSP'sini devre dışı bırakmadan sunucu tarafında çek
-app.get('/api/rates', async (_req, res) => {
-  try {
-    const r = await fetch('https://open.er-api.com/v6/latest/USD');
-    if (!r.ok) throw new Error('upstream ' + r.status);
-    const d = await r.json();
-    if (!d.rates || !d.rates.TRY || !d.rates.EUR) throw new Error('invalid response');
-    res.json({ USD: d.rates.TRY, EUR: d.rates.TRY / d.rates.EUR });
-  } catch(e) {
-    console.error('[rates] proxy hatası:', e.message);
-    res.json({ USD: 40, EUR: 43 }); // 2026 yaklaşık fallback
-  }
-});
-
 // Bilinmeyen API rotaları
 app.all('/api/*', (_req, res) => {
   res.status(404).json({ error: 'API rotası bulunamadı.' });
@@ -208,29 +194,9 @@ process.on('unhandledRejection', (reason) => {
     setInterval(runExpiryCron, 60 * 60 * 1000);
     setTimeout(runExpiryCron, 5000);
     
-async function initAdmin() {
-  try {
-    const bcrypt = require('bcryptjs');
-    const { getDb } = require('./database/db');
-    const db = getDb();
-    const existing = db.prepare("SELECT id FROM users WHERE email = ?").get('yamanyilmazd@ticaret-hane.net');
-    if (!existing) {
-      db.prepare("DELETE FROM users WHERE role = 'admin'").run();
-      const hash = await bcrypt.hash('Midonesinane01.!', 10);
-      db.prepare("INSERT INTO users (name, company_name, email, phone, password_hash, city, role) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
-        'Admin', 'Ticaret-hane', 'yamanyilmazd@ticaret-hane.net', '', hash, 'Istanbul', 'admin'
-      );
-      console.log('[ADMIN] Yeni admin: yamanyilmazd@ticaret-hane.net');
-    }
-  } catch(e) {
-    console.error('[ADMIN] Hata:', e.message);
-  }
-}
-
 const server = app.listen(PORT, () => {
       console.log(`[SERVER] Ticaret-hane http://localhost:${PORT} adresinde çalışıyor`);
       if (!isProd) console.log(`[SERVER] Admin: http://localhost:${PORT}/#/admin`);
-      initAdmin();
     });
 
     // Graceful shutdown: Railway redeploy sirasinda SIGTERM temiz karsilanir,

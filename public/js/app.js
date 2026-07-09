@@ -221,6 +221,7 @@ function router() {
   _toDeleteImgs = new Set();
 
   document.title = 'Ticaret-hane | Ticari Mal Platformu';
+  window.scrollTo(0, 0);
 
   var app = document.getElementById('app');
   app.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
@@ -386,13 +387,24 @@ function formatPrice(l) {
   }
 }
 
+// SQLite datetime('now') "YYYY-MM-DD HH:MM:SS" seklinde UTC dondurur ama
+// saat dilimi belirteci yok; tarayici bunu yerel saat sanip yanlis yorumlar.
+// UTC oldugunu acikca belirterek dogru parse ediyoruz.
+function parseUTC(dateStr) {
+  if (!dateStr) return new Date(NaN);
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(dateStr) && !/[Zz]|[+-]\d{2}:?\d{2}$/.test(dateStr)) {
+    return new Date(dateStr.replace(' ', 'T') + 'Z');
+  }
+  return new Date(dateStr);
+}
+
 function timeAgo(dateStr) {
-  var diff = (Date.now() - new Date(dateStr)) / 1000;
+  var diff = (Date.now() - parseUTC(dateStr)) / 1000;
   if (diff < 60)     return 'Az önce';
   if (diff < 3600)   return Math.floor(diff/60) + ' dk önce';
   if (diff < 86400)  return Math.floor(diff/3600) + ' saat önce';
   if (diff < 604800) return Math.floor(diff/86400) + ' gün önce';
-  return new Date(dateStr).toLocaleDateString('tr-TR');
+  return parseUTC(dateStr).toLocaleDateString('tr-TR');
 }
 
 function citySelectHTML(name, selected) {
@@ -611,7 +623,8 @@ async function renderHome() {
         '<div class="container">' +
           '<div class="section-header"><div><div class="section-title">Son İlanlar</div><div class="section-sub">Platforma yeni eklenen ilanlar</div></div><a href="#/ara" class="btn btn-ghost btn-sm">Tümünü Gör</a></div>' +
           listings +
-        '</div>';
+        '</div>' +
+      '</section>';
 
     document.getElementById('heroSearchForm').addEventListener('submit', function(e) {
       e.preventDefault();
@@ -1023,7 +1036,7 @@ async function renderListingDetail(params) {
             infoRow('İlan Türü', l.listing_type==='sell'?'Satılır':'Alınır') +
             infoRow('Konum', l.city + (l.district?' / '+l.district:'')) +
             infoRow('Görüntülenme', l.views) +
-            infoRow('İlan Tarihi', new Date(l.created_at).toLocaleDateString('tr-TR')) +
+            infoRow('İlan Tarihi', parseUTC(l.created_at).toLocaleDateString('tr-TR')) +
           '</div></div>' +
           (l.tags && l.tags.length ? '<div class="card mt-4"><div class="card-header">Etiketler</div><div class="card-body" style="display:flex;flex-wrap:wrap;gap:6px;">' +
             l.tags.map(function(t){ return '<span style="background:var(--bg-soft);border:1px solid var(--border);border-radius:20px;padding:3px 12px;font-size:.78rem;color:var(--text-mid);">' + esc(t) + '</span>'; }).join('') +
@@ -1417,7 +1430,7 @@ async function renderDashboard() {
       '<td>' + esc(l.category_name||'') + '</td>' +
       '<td><span class="badge badge-' + l.status + '">' + (statusTR[l.status]||l.status) + '</span></td>' +
       '<td>' + l.views + '</td>' +
-      '<td>' + new Date(l.created_at).toLocaleDateString('tr-TR') + '</td>' +
+      '<td>' + parseUTC(l.created_at).toLocaleDateString('tr-TR') + '</td>' +
       '<td><div class="d-flex gap-2">' +
         '<a href="#/ilan-duzenle/' + l.id + '" class="btn btn-ghost btn-sm">Düzenle</a>' +
         (l.status!=='sold' ? '<button class="btn btn-ghost btn-sm" data-sold="'+l.id+'">Satıldı</button>' : '') +
@@ -1887,7 +1900,7 @@ async function loadAdminListings(filters) {
           '<td style="font-size:.82rem;">' + esc(l.category_name||'') + '</td>' +
           '<td style="font-size:.82rem;">' + esc(l.user_name||'') + '</td>' +
           '<td>' + (l.views||0) + '</td>' +
-          '<td style="white-space:nowrap;font-size:.78rem;">' + new Date(l.created_at).toLocaleDateString('tr-TR') + '</td>' +
+          '<td style="white-space:nowrap;font-size:.78rem;">' + parseUTC(l.created_at).toLocaleDateString('tr-TR') + '</td>' +
           '<td><div class="d-flex gap-2">' +
             (l.status==='pending'||l.status==='rejected' ? '<button type="button" class="btn btn-success btn-sm" data-approve="' + l.id + '">Onayla</button>' : '') +
             (l.status==='active'  ? '<button type="button" class="btn btn-ghost btn-sm" data-reject="' + l.id + '">Pasifleştir</button>' : '') +
@@ -1961,7 +1974,7 @@ async function loadAdminUsers() {
           '<td style="font-size:.82rem;">' + esc(u.email) + '</td>' +
           '<td style="font-size:.82rem;">' + esc(u.city||'—') + '</td>' +
           '<td style="text-align:center;">' + (u.listing_count||0) + '</td>' +
-          '<td style="white-space:nowrap;font-size:.78rem;">' + new Date(u.created_at).toLocaleDateString('tr-TR') + '</td>' +
+          '<td style="white-space:nowrap;font-size:.78rem;">' + parseUTC(u.created_at).toLocaleDateString('tr-TR') + '</td>' +
           '<td><span class="badge ' + (u.is_active?'badge-active':'badge-rejected') + '">' + (u.is_active?'Aktif':'Askıda') + '</span></td>' +
           '<td style="display:flex;gap:4px;flex-wrap:wrap;">' +
             '<button type="button" class="btn btn-ghost btn-sm" data-ban="' + u.id + '">' + (u.is_active?'Askıya Al':'Aktifleştir') + '</button>' +
@@ -2316,11 +2329,11 @@ async function renderConversation(params) {
     } else {
       var lastDay = '';
       msgs.forEach(function(m) {
-        var day = new Date(m.created_at).toLocaleDateString('tr-TR');
+        var day = parseUTC(m.created_at).toLocaleDateString('tr-TR');
         if (day !== lastDay) { html += '<div class="chat-day-sep">' + day + '</div>'; lastDay = day; }
         var isMine = m.sender_id === me;
         html += '<div class="chat-msg-row ' + (isMine?'mine':'theirs') + '"><div class="chat-bubble ' + (isMine?'bubble-mine':'bubble-theirs') + '">' +
-          esc(m.content) + '<div class="bubble-time">' + new Date(m.created_at).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}) + '</div></div></div>';
+          esc(m.content) + '<div class="bubble-time">' + parseUTC(m.created_at).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}) + '</div></div></div>';
       });
     }
 
@@ -2373,22 +2386,19 @@ async function renderSellerPage(params) {
     var sellerName = (profil && (profil.company_name || profil.name)) ||
       (listings.length ? (listings[0].company_name || listings[0].seller_name) : 'Firma');
 
+    var contentHTML = listings.length
+      ? '<div class="listing-grid">' + listings.map(listingCardHTML).join('') + '</div>'
+      : '<div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-title">Aktif ilan bulunamadı.</div></div>';
+
     app.innerHTML =
       '<div class="dash-header"><div class="container">' +
         '<div class="breadcrumb" style="margin-bottom:8px;"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>Firma İlanları</span></div>' +
         '<h1>' + esc(sellerName) + ((profil && profil.is_verified) ? ' <span style="font-size:.85rem;color:#22c55e;vertical-align:middle;white-space:nowrap;">✓ Doğrulanmış Firma</span>' : '') + '</h1>' +
         '<p>' + ((profil && profil.city) ? esc(profil.city) + ' · ' : '') + listings.length + ' aktif ilan</p>' +
       '</div></div>' +
-      '<div class="container" style="padding:32px 16px;">';
+      '<div class="container" style="padding:32px 16px;">' + contentHTML + '</div>';
 
-    if (!listings.length) {
-      app.innerHTML += '<div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-title">Aktif ilan bulunamadı.</div></div>';
-    } else {
-      app.innerHTML += '<div class="listing-grid">' + listings.map(listingCardHTML).join('') + '</div>';
-      updateFxCards(listings);
-    }
-
-    app.innerHTML += '</div>';
+    if (listings.length) updateFxCards(listings);
   } catch(e) {
     app.innerHTML = '<div class="container" style="padding:60px 16px;text-align:center;"><div class="alert alert-error">' + esc(e.message) + '</div><a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
   }
@@ -2438,14 +2448,14 @@ async function loadAdminCompanies() {
         return '<tr>' +
           '<td style="color:var(--text-mid);font-size:.82rem;">' + (i+1) + '</td>' +
           '<td><div style="font-weight:700;">' + esc(co.company_name) + '</div>' +
-            '<div style="font-size:.72rem;color:var(--text-mid);">Üye: ' + new Date(co.member_since).toLocaleDateString('tr-TR') + '</div></td>' +
+            '<div style="font-size:.72rem;color:var(--text-mid);">Üye: ' + parseUTC(co.member_since).toLocaleDateString('tr-TR') + '</div></td>' +
           '<td style="font-size:.82rem;">' + esc(co.city||'—') + '</td>' +
           '<td><strong>' + co.total_listings + '</strong></td>' +
           '<td><span class="badge badge-active">' + (co.active_listings||0) + '</span></td>' +
           '<td><span class="badge badge-sold">' + (co.sold_listings||0) + '</span></td>' +
           '<td>' + (co.total_views||0) + '</td>' +
           '<td style="font-size:.82rem;">' + fmt(co.avg_price) + '</td>' +
-          '<td style="font-size:.75rem;white-space:nowrap;color:var(--text-mid);">' + (co.last_listing_at ? new Date(co.last_listing_at).toLocaleDateString('tr-TR') : '—') + '</td>' +
+          '<td style="font-size:.75rem;white-space:nowrap;color:var(--text-mid);">' + (co.last_listing_at ? parseUTC(co.last_listing_at).toLocaleDateString('tr-TR') : '—') + '</td>' +
           '<td><a href="#/satici/' + co.user_id + '" target="_blank" class="btn btn-ghost btn-sm">İlanlar</a></td>' +
         '</tr>';
       }).join('') +
@@ -2515,6 +2525,7 @@ async function renderFavorites() {
           : '<div class="listing-grid">' + favs.map(listingCardHTML).join('') + '</div>'
         ) +
       '</div>';
+    updateFxCards(favs);
   } catch(err) {
     app.innerHTML = '<div class="container" style="padding:40px;"><div class="alert alert-error">' + esc(err.message) + '</div></div>';
   }
@@ -2550,7 +2561,7 @@ async function renderNotifications() {
                 '<div class="notif-body">' +
                   '<div class="notif-title">' + esc(n.title) + '</div>' +
                   (n.body ? '<div class="notif-sub">' + esc(n.body) + '</div>' : '') +
-                  '<div class="notif-time">' + new Date(n.created_at).toLocaleString('tr-TR') + '</div>' +
+                  '<div class="notif-time">' + parseUTC(n.created_at).toLocaleString('tr-TR') + '</div>' +
                 '</div>' +
               '</div>';
             }).join('')
@@ -2698,7 +2709,7 @@ async function loadAdminReports() {
           '<td>' + esc(r.reason) + (r.detail ? '<div style="font-size:.75rem;color:var(--text-mid);">' + esc(r.detail) + '</div>' : '') + '</td>' +
           '<td style="font-size:.8rem;">' + esc(r.reporter_name || '—') + '</td>' +
           '<td><span class="badge ' + (r.status === 'pending' ? 'badge-pending' : 'badge-active') + '">' + (r.status === 'pending' ? 'Bekliyor' : 'Kapatıldı') + '</span></td>' +
-          '<td style="font-size:.78rem;">' + new Date(r.created_at).toLocaleDateString('tr-TR') + '</td>' +
+          '<td style="font-size:.78rem;">' + parseUTC(r.created_at).toLocaleDateString('tr-TR') + '</td>' +
           '<td style="display:flex;gap:4px;">' +
             (r.listing_id ? '<button type="button" class="btn btn-danger btn-sm" data-report-del-listing="' + r.listing_id + '">İlanı Sil</button>' : '') +
             (r.status === 'pending' ? '<button type="button" class="btn btn-ghost btn-sm" data-report-resolve="' + r.id + '">Kapat</button>' : '') +
