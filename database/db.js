@@ -438,6 +438,15 @@ function fixTurkishText() {
     dbProxy.prepare("UPDATE categories SET name = REPLACE(REPLACE(name,'ø','ü'),'Ø','Ü'), description = REPLACE(REPLACE(description,'ø','ü'),'Ø','Ü') WHERE name LIKE '%ø%' OR description LIKE '%ø%'").run();
     dbProxy.prepare("UPDATE subcategories SET name = REPLACE(REPLACE(name,'ø','ü'),'Ø','Ü') WHERE name LIKE '%ø%'").run();
     dbProxy.prepare("UPDATE subcategories SET name = 'Solvent & Tiner', slug = 'solvent-tiner' WHERE name = 'Solvent & Thinner'").run();
+
+    // Eski/artik gecerli olmayan admin hesaplarini temizle. Su anki
+    // ADMIN_EMAIL asla silinmez.
+    const staleAdminEmails = ['yamanyilmazd@ticaret-hane.net', 'yamanyilmazd@gmail.com'];
+    staleAdminEmails.forEach(email => {
+      if (email && email !== process.env.ADMIN_EMAIL) {
+        dbProxy.prepare("DELETE FROM users WHERE email = ? AND role = 'admin'").run(email);
+      }
+    });
   } catch(e) { console.warn('[DB] Karakter düzeltme hatası:', e.message); }
 }
 
