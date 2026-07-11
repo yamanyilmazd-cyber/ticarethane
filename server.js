@@ -51,9 +51,9 @@ app.use(helmet({
       styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
       imgSrc:     ["'self'", 'data:', 'blob:'],
-      scriptSrc:  ["'self'", "'unsafe-inline'"],
-      connectSrc: ["'self'", 'https://open.er-api.com'],
-      frameSrc:   ["'none'"],
+      scriptSrc:  ["'self'", "'unsafe-inline'", 'https://accounts.google.com/gsi/client'],
+      connectSrc: ["'self'", 'https://open.er-api.com', 'https://accounts.google.com'],
+      frameSrc:   ['https://accounts.google.com'],
       objectSrc:  ["'none'"],
       baseUri:    ["'self'"],
     }
@@ -120,6 +120,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
 }));
 
 // ---------- API rotaları ----------
+// İstemciye açık, hassas olmayan yapılandırma (Google Client ID herkese açık bir değerdir)
+app.get('/api/config', (_req, res) => {
+  res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null });
+});
 // Profil güncelleme (şifre değişimi) rate limit
 app.use('/api/auth/profile', rateLimit({
   windowMs: 15 * 60 * 1000,

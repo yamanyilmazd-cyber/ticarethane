@@ -98,6 +98,31 @@ function clearAuth() {
 function isLoggedIn() { return !!State.token; }
 function isAdmin()    { return State.user && State.user.role === 'admin'; }
 
+// ── Google ile Giriş ─────────────────────────────────────────────────────────
+var _googleConfigPromise = null;
+function initGoogleSignIn(containerId) {
+  if (!window.google || !window.google.accounts) { setTimeout(function() { initGoogleSignIn(containerId); }, 300); return; }
+  if (!_googleConfigPromise) _googleConfigPromise = api('GET', '/config');
+  _googleConfigPromise.then(function(cfg) {
+    if (!cfg.googleClientId) return;
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    google.accounts.id.initialize({
+      client_id: cfg.googleClientId,
+      callback: async function(response) {
+        try {
+          var res = await api('POST', '/auth/google', { credential: response.credential });
+          setAuth(res.token, res.user, true);
+          updateNavbar();
+          toast('Hoş geldiniz, ' + res.user.name + '!', 'success');
+          goTo(res.user.role === 'admin' ? '/admin' : '/hesabim');
+        } catch(e) { toast(e.message, 'error'); }
+      }
+    });
+    google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', width: 320, locale: 'tr' });
+  }).catch(function() {});
+}
+
 // ================================================================
 // API yardımcı
 // ================================================================
@@ -1558,10 +1583,13 @@ async function renderLogin() {
           '<div style="text-align:right;margin-bottom:8px;"><a href="#/sifremi-unuttum" style="font-size:.82rem;color:var(--blue);">Şifremi unuttum</a></div>' +
           '<button type="submit" class="btn btn-primary w-100 btn-lg" id="loginBtn">Giriş Yap</button>' +
           '<div class="auth-divider">veya</div>' +
+          '<div id="googleSignInDiv" style="display:flex;justify-content:center;margin-bottom:12px;"></div>' +
           '<a href="#/kayit" class="btn btn-outline w-100">Üye Ol</a>' +
         '</form>' +
       '</div>' +
     '</div>';
+
+  initGoogleSignIn('googleSignInDiv');
 
   document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -1619,11 +1647,16 @@ async function renderRegister() {
           '</div>' +
           '<div id="regError" class="alert alert-error" style="display:none;"></div>' +
           '<button type="submit" class="btn btn-accent w-100 btn-lg" id="regBtn">Üye Ol</button>' +
+          '<div class="auth-divider">veya</div>' +
+          '<div id="googleSignInDiv" style="display:flex;justify-content:center;margin-bottom:8px;"></div>' +
+          '<p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-bottom:12px;">Google ile devam ederek <a href="#/sozlesme" style="color:#2563eb;">Kullanım Koşulları</a> ve <a href="#/kvkk" style="color:#2563eb;">KVKK Metni</a>&#39;ni kabul etmiş olursunuz.</p>' +
           '<div class="auth-divider">Zaten hesabınız var mı?</div>' +
           '<a href="#/giris" class="btn btn-outline w-100">Giriş Yap</a>' +
         '</form>' +
       '</div>' +
     '</div>';
+
+  initGoogleSignIn('googleSignInDiv');
 
   document.getElementById('regForm').addEventListener('submit', async function(e) {
     e.preventDefault();

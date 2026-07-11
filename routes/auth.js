@@ -3,6 +3,8 @@
 const express = require('express');
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
+const crypto  = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const { getDb }        = require('../database/db');
 const { authenticate } = require('../middleware/auth');
 
@@ -10,6 +12,7 @@ const router     = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('[FATAL] JWT_SECRET environment variable is not set.');
 const JWT_EXP    = '30d';
+const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 
 function signToken(userId, role) {
   return jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: JWT_EXP });
@@ -214,6 +217,57 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error('[AUTH] giris hatasi:', err.message);
     res.status(500).json({ error: 'Giriş sırasında hata oluştu. Lütfen tekrar deneyin.' });
+  }
+});
+
+// ---- Google ile giriş ----
+router.post('/google', async (req, res) => {
+  try {
+    if (!googleClient) return res.status(500).json({ error: 'Google ile giriş yapılandırılmamış.' });
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Google kimlik bilgisi eksik.' });
+
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: process.env.GOOGLE_CLIENT_ID });
+      payload = ticket.getPayload();
+    } catch (e) {
+      return res.status(401).json({ error: 'Google girişi doğrulanamadı.' });
+    }
+    if (!payload.email_verified) return res.status(400).json({ error: 'Google e-postanız doğrulanmamış.' });
+
+    const email = payload.email.toLowerCase();
+    const db    = getDb();
+    let user = db.prepare('SELECT * FROM users WHERE google_id = ? OR email = ?').get(payload.sub, email);
+
+    if (user) {
+      if (!user.is_active)
+        return res.status(403).json({ error: 'Hesabınız askıya alınmıştır. Yönetici ile iletişime geçin.' });
+      if (!user.google_id)
+        db.prepare('UPDATE users SET google_id = ? WHERE id = ?').run(payload.sub, user.id);
+    } else {
+      const randomHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+      const name = sanitize(payload.name || email.split('@')[0]);
+      const result = db.prepare(
+        `INSERT INTO users (name, email, password_hash, google_id, is_verified) VALUES (?, ?, ?, ?, 1)`
+      ).run(name, email, randomHash, payload.sub);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    }
+
+    const token = signToken(user.id, user.role);
+    res.json({
+      token,
+      user: {
+        id:           user.id,
+        name:         user.name,
+        company_name: user.company_name,
+        email:        user.email,
+        role:         user.role,
+      },
+    });
+  } catch (err) {
+    console.error('[AUTH] google giris hatasi:', err.message);
+    res.status(500).json({ error: 'Google ile giriş sırasında hata oluştu.' });
   }
 });
 

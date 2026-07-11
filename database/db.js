@@ -374,6 +374,12 @@ async function initDatabase() {
   // Yerel şema (senkron, hızlı)
   SCHEMA_DDL.forEach(sql => _db.run(sql));
 
+  // Google ile giriş için google_id kolonu (mevcut tablolara sonradan eklenir)
+  try { _db.run('ALTER TABLE users ADD COLUMN google_id TEXT'); } catch (e) {
+    if (!/duplicate column/i.test(e.message)) console.warn('[DB] google_id kolonu eklenemedi:', e.message);
+  }
+  try { _db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)'); } catch (e) {}
+
   // Kategorileri seed et
   const catCount = dbProxy.prepare('SELECT COUNT(*) AS c FROM categories').get();
   if (!catCount || !catCount.c) {
