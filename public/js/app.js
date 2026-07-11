@@ -2780,7 +2780,7 @@ function renderSozlesme() {
   s += '<p>Kayıt işlemini tamamlayarak veya Platform&#39;u kullanmaya devam ederek bu Sözleşme&#39;nin tüm hükümlerini okuyup anladığınızı ve kabul ettiğinizi beyan etmiş olursunuz.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">2. Üyelik Şartları</h2>';
   s += '<p>Platform&#39;a üye olabilmek için aşağıdaki şartların sağlanması gerekmektedir:</p>';
-  s += '<ul style="margin:10px 0 10px 24px;"><li>18 yaşını doldurmuş olmak veya kanuni temsilci onayına sahip olmak,</li><li>Gerçek, doğru ve güncel bilgilerle kayıt olmak,</li><li>Geçerli bir e-posta adresine ve Türkiye’de kayıtlı bir GSM numarasına sahip olmak,</li><li>Daha önce Platform tarafından üyeliği askıya alınmamış ya da sona erdirilmemiş olmak.</li></ul>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li>18 yaşını doldurmuş olmak veya kanuni temsilci onayına sahip olmak,</li><li>Gerçek, doğru ve güncel bilgilerle kayıt olmak,</li><li>Geçerli bir e-posta adresine ve Türkiye&#39;de kayıtlı bir GSM numarasına sahip olmak,</li><li>Daha önce Platform tarafından üyeliği askıya alınmamış ya da sona erdirilmemiş olmak.</li></ul>';
   s += '<p>Platform, herhangi bir üyelik başvurusunu gerekçe göstermeksizin reddetme veya mevcut üyelikleri askıya alma hakkını saklı tutar.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">3. Hizmetin Kapsamı</h2>';
   s += '<p>Ticaret-hane; üyelerine ilan oluşturma, düzenleme, arama ve mesajlaşma hizmetleri sunmaktadır. Platform, alıcı ile satıcı arasındaki işlemlere doğrudan taraf olmaz ve herhangi bir ödeme işlemini gerçekleştirmez ya da garanti etmez.</p>';
@@ -2788,7 +2788,7 @@ function renderSozlesme() {
   s += '<p>Kullanıcı, Platform&#39;u kullanırken aşağıdaki yükümlülüklere uymayı kabul eder:</p>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Yayımladığı ilanların gerçek, doğru ve güncel bilgiler içermesini sağlamak,</li><li>Ürün fiyat, miktar ve özelliklerini eksiksiz ve dürüstçe belirtmek,</li><li>Yayımladığı görsellerin yalnızca ilgili ürüne ait olduğunu doğrulamak,</li><li>Yürürlükteki tüm kanun, yönetmelik ve mevzuata uymak,</li><li>Üçüncü kişilerin kişisel verilerini yetkisiz biçimde paylaşmamak,</li><li>Platform altyapısına zarar verecek yazılım, bot veya otomatik sistem kullanmamak.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">5. Yasaklı Faaliyetler ve İçerikler</h2>';
-  s += '<p>Aşağıdaki ürün ve içeriklerin Platform’da yayımlanması kesinlikle yasaktır:</p>';
+  s += '<p>Aşağıdaki ürün ve içeriklerin Platform&#39;da yayımlanması kesinlikle yasaktır:</p>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Yasadışı, çalıntı veya kaçak ürünler,</li><li>Silah, mühimmat veya patlayıcı maddeler,</li><li>Uyuşturucu ve bağımlılık yapıcı maddeler,</li><li>Sahte veya taklit ürünler,</li><li>Telif hakkı ihlali barındıran içerikler,</li><li>Yanıltıcı, hakaret içeren veya ayrımcı ifadeler.</li></ul>';
   s += '<p>Bu kurallara aykırı ilanlar bildirim yapılmaksızın Platform&#39;dan kaldırılır; ilgili hesap askıya alınabilir veya kalıcı olarak kapatılabilir.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">6. Dolandırıcılık ve Güvenlik Uyarısı</h2>';
@@ -2796,9 +2796,9 @@ function renderSozlesme() {
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">7. Sorumluluk Sınırlaması</h2>';
   s += '<p>Platform, kullanıcılar arasındaki işlemlerin hukuka uygunluğunu, ürünlerin kalitesini veya satıcıların güvenilirliğini garanti etmez. Teknik sorunlar, sunucu kesintileri veya üçüncü taraf kaynaklı aksaklıklar nedeniyle uğranılan zararlardan sorumlu değildir.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">8. Sözleşme Değişiklikleri</h2>';
-  s += '<p>Ticaret-hane, bu Sözleşme’yi dilediği zaman güncelleme hakkını saklı tutar. Değişiklikler Platform&#39;da yayımlandığı tarihten itibaren yürürlüğe girer.</p>';
+  s += '<p>Ticaret-hane, bu Sözleşme&#39;yi dilediği zaman güncelleme hakkını saklı tutar. Değişiklikler Platform&#39;da yayımlandığı tarihten itibaren yürürlüğe girer.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">9. Uygulanacak Hukuk</h2>';
-  s += '<p>Bu Sözleşme, Türkiye Cumhuriyeti kanunlarına tabidir. Sözleşme’den doğabilecek uyuşmazlıklarda İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.</p>';
+  s += '<p>Bu Sözleşme, Türkiye Cumhuriyeti kanunlarına tabidir. Sözleşme&#39;den doğabilecek uyuşmazlıklarda İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">10. İletişim</h2>';
   s += '<p>Soru ve talepleriniz için: <strong>destek@ticaret-hane.net</strong></p>';
   s += '</div>';
@@ -2819,13 +2819,13 @@ function renderKvkk() {
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">3. Kişisel Verilerin İşlenme Amacı</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Üyelik kaydının oluşturulması ve hesap yönetimi,</li><li>Platform hizmetlerinin sunulması ve iyileştirilmesi,</li><li>İlan yayımlama, güncelleme ve yönetim süreçleri,</li><li>Kullanıcılar arası iletişimin sağlanması,</li><li>Yasal yükümlülüklerin yerine getirilmesi,</li><li>Platform güvenliğinin sağlanması ve dolandırıcılığın önlenmesi,</li><li>Teknik destek ve müşteri hizmetlerinin sağlanması.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">4. Kişisel Verilerin Aktarıldığı Taraflar</h2>';
-  s += '<p>Kişisel verileriniz; yasal zorunluluklar kapsamında kamu kurum ve kuruluşlarıyla, Platform’un teknik altyapısını sağlayan bulut hizmeti sağlayıcılarıyla ve açık rızanızın bulunduğu üçüncü taraf iş ortaklarıyla KVKK’nın 8. ve 9. maddeleri çerçevesinde paylaşılabilir.</p>';
+  s += '<p>Kişisel verileriniz; yasal zorunluluklar kapsamında kamu kurum ve kuruluşlarıyla, Platform&#39;un teknik altyapısını sağlayan bulut hizmeti sağlayıcılarıyla ve açık rızanızın bulunduğu üçüncü taraf iş ortaklarıyla KVKK&#39;nın 8. ve 9. maddeleri çerçevesinde paylaşılabilir.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">5. Hukuki Sebep</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Sözleşmenin kurulması ve ifası (KVKK md. 5/2-c),</li><li>Hukuki yükümlülüklerin yerine getirilmesi (KVKK md. 5/2-ç),</li><li>Meşru menfaat kapsamında zorunlu işlemler (KVKK md. 5/2-f),</li><li>Açık rızaya dayalı işlemler (KVKK md. 5/1).</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">6. Haklarınız (KVKK Madde 11)</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li><li>Verilerinize ilişkin bilgi talep etme,</li><li>İşlenme amacını öğrenme,</li><li>Verilerin aktarıldığı üçüncü kişileri öğrenme,</li><li>Eksik veya yanlış verilerin düzeltilmesini isteme,</li><li>Verilerin silinmesini veya yok edilmesini isteme,</li><li>Otomatik sistemler sonucu aleyhe kararınıza itiraz etme,</li><li>Kanuna aykırı işleme nedeniyle uğradığınız zararın tazminini talep etme.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">7. Başvuru Hakkı</h2>';
-  s += '<p>Haklarınızı kullanmak için <strong>destek@ticaret-hane.net</strong> adresine e-posta gönderebilir ya da Platform’daki &#34;Hesabım&#34; sayfasından başvurabilirsiniz. Başvurularınız en geç 30 gün içinde yanıtlanacaktır.</p>';
+  s += '<p>Haklarınızı kullanmak için <strong>destek@ticaret-hane.net</strong> adresine e-posta gönderebilir ya da Platform&#39;daki &#34;Hesabım&#34; sayfasından başvurabilirsiniz. Başvurularınız en geç 30 gün içinde yanıtlanacaktır.</p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
 }
