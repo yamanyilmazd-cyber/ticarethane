@@ -1492,7 +1492,9 @@ async function renderDashboard() {
               '<div class="form-group mb-4"><label class="form-label">Şehir</label>' + citySelectHTML('city', me.city) + '</div>' +
               '<hr style="border:none;border-top:1px solid var(--border);margin:20px 0;" />' +
               '<div class="fw-semibold mb-4" style="color:var(--navy);">Şifre Değiştir (isteğe bağlı)</div>' +
-              '<div class="form-group mb-4"><label class="form-label">Mevcut Şifre</label><input type="password" name="current_password" class="form-control" /></div>' +
+              (me.google_linked
+                ? '<p style="font-size:.82rem;color:var(--text-mid);margin-bottom:12px;">Hesabınız Google ile bağlı. Aşağıya yeni bir şifre girerek platforma e-posta/şifre ile de giriş yapabilirsiniz.</p>'
+                : '<div class="form-group mb-4"><label class="form-label">Mevcut Şifre</label><input type="password" name="current_password" class="form-control" /></div>') +
               '<div class="form-group mb-4"><label class="form-label">Yeni Şifre</label><input type="password" name="new_password" class="form-control" /></div>' +
               '<button type="submit" class="btn btn-primary" id="profileBtn">Kaydet</button>' +
               '<hr style="border:none;border-top:1px solid var(--border);margin:28px 0;" />' +
@@ -1539,10 +1541,13 @@ async function renderDashboard() {
   // Hesap silme
   document.getElementById('deleteAccountBtn').addEventListener('click', async function() {
     if (!confirm('Hesabınız ve tüm ilanlarınız kalıcı olarak silinecek. Bu işlem geri alınamaz. Emin misiniz?')) return;
-    var confirmed = prompt('Silmek için şifrenizi girin:');
-    if (!confirmed) return;
+    var password;
+    if (!me.google_linked) {
+      password = prompt('Silmek için şifrenizi girin:');
+      if (!password) return;
+    }
     try {
-      await api('DELETE', '/auth/account', { password: confirmed });
+      await api('DELETE', '/auth/account', { password: password });
       clearAuth();
       toast('Hesabınız silindi.', 'success');
       goTo('/');

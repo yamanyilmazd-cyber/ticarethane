@@ -191,6 +191,8 @@ router.post('/login', async (req, res) => {
         console.warn('[AUTH] hesap kilitlendi:', email, 'IP:', req.ip);
         return res.status(429).json({ error: 'Çok fazla başarısız deneme. Hesap 15 dakika kilitlendi.' });
       }
+      if (user && user.google_id)
+        return res.status(401).json({ error: 'Bu hesap Google ile bağlı. Lütfen "Google ile Giriş Yap" butonunu kullanın.' });
       return res.status(401).json({ error: `E-posta veya şifre hatalı. (${kalan} deneme hakkı kaldı)` });
     }
 
@@ -290,9 +292,11 @@ router.get('/me', authenticate, (req, res) => {
   try {
   const db   = getDb();
   const user = db.prepare(
-    'SELECT id, name, company_name, email, phone, city, role, created_at FROM users WHERE id = ?'
+    'SELECT id, name, company_name, email, phone, city, role, created_at, google_id FROM users WHERE id = ?'
   ).get(req.userId);
   if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+  user.google_linked = !!user.google_id;
+  delete user.google_id;
   res.json(user);
   } catch(err) { res.status(500).json({ error: 'Sunucu hatası.' }); }
 });
@@ -317,10 +321,12 @@ router.put('/profile', authenticate, async (req, res) => {
         return res.status(400).json({ error: 'Yeni şifre en az 8 karakter olmalıdır.' });
       if (new_pw.length > 128)
         return res.status(400).json({ error: 'Yeni şifre en fazla 128 karakter olabilir.' });
-      const user  = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.userId);
-      const valid = await bcrypt.compare(current_pw || '', user.password_hash);
-      if (!valid)
-        return res.status(401).json({ error: 'Mevcut şifre hatalı.' });
+      const user = db.prepare('SELECT password_hash, google_id FROM users WHERE id = ?').get(req.userId);
+      if (!user.google_id) {
+        const valid = await bcrypt.compare(current_pw || '', user.password_hash);
+        if (!valid)
+          return res.status(401).json({ error: 'Mevcut şifre hatalı.' });
+      }
       const hash = await bcrypt.hash(new_pw, 12);
       db.prepare('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
         .run(hash, req.userId);
@@ -346,13 +352,14 @@ router.delete('/account', authenticate, async (req, res) => {
     const uid  = req.userId;
     const { password } = req.body;
 
-    if (!password) return res.status(400).json({ error: 'Şifre zorunludur.' });
-
     const user = db.prepare('SELECT * FROM users WHERE id=? AND role!="admin"').get(uid);
     if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: 'Şifre hatalı.' });
+    if (!user.google_id) {
+      if (!password) return res.status(400).json({ error: 'Şifre zorunludur.' });
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (!valid) return res.status(401).json({ error: 'Şifre hatalı.' });
+    }
 
     // Görselleri sil
     const fs   = require('fs');
