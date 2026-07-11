@@ -147,6 +147,42 @@ app.all('/api/*', (_req, res) => {
   res.status(404).json({ error: 'API rotası bulunamadı.' });
 });
 
+// ---------- SEO: dinamik sitemap.xml ----------
+app.get('/sitemap.xml', (_req, res) => {
+  try {
+    const db = require('./database/db').getDb();
+    const base = 'https://ticaret-hane.net';
+    const today = new Date().toISOString().slice(0, 10);
+
+    const staticPaths = ['/', '/ara', '/sozlesme', '/kvkk', '/ilan-kurallari', '/iletisim'];
+    const categories = db.prepare('SELECT slug FROM categories').all();
+    const listings   = db.prepare("SELECT id, updated_at FROM listings WHERE status='active'").all();
+
+    const urls = [];
+    staticPaths.forEach(p => urls.push({ loc: base + (p === '/' ? '/' : '/#' + p), lastmod: today }));
+    categories.forEach(c => urls.push({ loc: base + '/#/kategori/' + c.slug, lastmod: today }));
+    listings.forEach(l => urls.push({ loc: base + '/#/ilan/' + l.id, lastmod: (l.updated_at || today).slice(0, 10) }));
+
+    const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+      urls.map(u => '  <url><loc>' + u.loc + '</loc><lastmod>' + u.lastmod + '</lastmod></url>').join('\n') +
+      '\n</urlset>';
+
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (err) {
+    console.error('[SITEMAP] hata:', err.message);
+    res.header('Content-Type', 'application/xml');
+    res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+  }
+});
+
+// ---------- SEO: robots.txt ----------
+app.get('/robots.txt', (_req, res) => {
+  res.header('Content-Type', 'text/plain');
+  res.send('User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://ticaret-hane.net/sitemap.xml\n');
+});
+
 // ---------- SPA fallback ----------
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
