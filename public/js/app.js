@@ -119,7 +119,8 @@ function initGoogleSignIn(containerId) {
         } catch(e) { toast(e.message, 'error'); }
       }
     });
-    google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', width: 320, locale: 'tr' });
+    var w = Math.max(200, Math.min(el.offsetWidth || 320, 400));
+    google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', width: w, locale: 'tr' });
   }).catch(function() {});
 }
 
