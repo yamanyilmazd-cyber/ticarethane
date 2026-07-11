@@ -1750,18 +1750,28 @@ async function renderAdmin() {
   // Load recent activity for dashboard
   loadDashRecent();
 
-  // Stat card click → switch tab + filter
+  // Stat card click → switch tab + filter (tek seferde, gecikmeli çift-çağrı yok)
   document.getElementById('atab_dashboard').addEventListener('click', function(e) {
     var card = e.target.closest('.stat-card-link');
     if (!card) return;
     var tab    = card.dataset.goto;
     var filter = card.dataset.filter;
+
+    document.querySelectorAll('.admin-sidebar-item').forEach(function(i) { i.classList.remove('active'); });
+    document.querySelectorAll('[id^="atab_"]').forEach(function(t) { t.classList.remove('active'); });
     var sideItem = document.querySelector('[data-tab="' + tab + '"]');
-    if (sideItem) sideItem.click();
-    if (filter === 'active')  setTimeout(function() { loadAdminListings({ status: 'active' }); }, 50);
-    if (filter === 'sold')    setTimeout(function() { loadAdminListings({ status: 'sold' }); }, 50);
-    if (filter === 'pending') setTimeout(function() { loadAdminPending(); }, 50);
-    if (filter === 'banned')  setTimeout(function() { loadAdminUsers(); }, 50);
+    if (sideItem) sideItem.classList.add('active');
+    var el = document.getElementById('atab_' + tab);
+    if (el) el.classList.add('active');
+
+    if (tab === 'listings')       loadAdminListings(filter ? { status: filter } : {});
+    else if (tab === 'users')     loadAdminUsers(filter ? { status: filter } : {});
+    else if (tab === 'pending')   loadAdminPending();
+    else if (tab === 'companies') loadAdminCompanies();
+    else if (tab === 'prices')    loadAdminPrices();
+    else if (tab === 'trends')    loadAdminTrends();
+    else if (tab === 'stats')     loadAdminStats();
+    else if (tab === 'reports')   loadAdminReports();
   });
 
   document.querySelectorAll('.admin-sidebar-item').forEach(function(item) {
@@ -1962,16 +1972,27 @@ async function loadAdminListings(filters) {
   } catch(err) { c.innerHTML = '<div class="alert alert-error">' + esc(err.message) + '</div>'; }
 }
 
-async function loadAdminUsers() {
+async function loadAdminUsers(filters) {
   var c = document.getElementById('usersContent');
   c.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
+  filters = filters || {};
+  var q = new URLSearchParams({ limit: 100 });
+  if (filters.status === 'active') q.set('is_active', '1');
+  if (filters.status === 'banned') q.set('is_active', '0');
+  if (filters.search) q.set('search', filters.search);
   try {
-    var data = await api('GET', '/admin/users?limit=100');
+    var data = await api('GET', '/admin/users?' + q.toString());
+    var ul = { active: 'Aktif', banned: 'Askıda' };
     c.innerHTML =
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">' +
         '<h2 style="margin:0;">Kullanıcılar</h2>' +
         '<span style="font-size:.82rem;color:var(--text-mid);">' + (data.total||0) + ' kayıtlı üye</span>' +
-        '<input type="text" id="userSearchInput" placeholder="Ad, e-posta ara..." class="form-control" style="width:220px;font-size:.82rem;padding:5px 10px;margin-left:auto;" />' +
+        '<div style="margin-left:auto;display:flex;gap:6px;">' +
+          ['', 'active', 'banned'].map(function(s) {
+            return '<button type="button" class="btn btn-ghost btn-sm' + ((!filters.status&&!s)||(filters.status===s)?' btn-active':'') + '" data-filter-status="' + s + '">' + (s?(ul[s]||s):'Tümü') + '</button>';
+          }).join('') +
+        '</div>' +
+        '<input type="text" id="userSearchInput" placeholder="Ad, e-posta ara..." class="form-control" style="width:220px;font-size:.82rem;padding:5px 10px;" value="' + esc(filters.search||'') + '" />' +
       '</div>' +
       '<div class="table-wrapper"><table><thead><tr><th>#</th><th>Ad / Firma</th><th>E-posta</th><th>Şehir</th><th>İlan</th><th>Kayıt</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>' +
       data.users.map(function(u) {
@@ -1995,20 +2016,22 @@ async function loadAdminUsers() {
     // Client-side search filter
     var si = document.getElementById('userSearchInput');
     if (si) {
+      var timer;
       si.addEventListener('input', function() {
-        var q = si.value.toLowerCase();
-        c.querySelectorAll('tbody tr').forEach(function(tr) {
-          tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
-        });
+        clearTimeout(timer);
+        timer = setTimeout(function() { loadAdminUsers(Object.assign({}, filters, { search: si.value.trim() })); }, 500);
       });
     }
+    c.querySelectorAll('[data-filter-status]').forEach(function(btn) {
+      btn.addEventListener('click', function() { loadAdminUsers(Object.assign({}, filters, { status: btn.dataset.filterStatus })); });
+    });
 
     c.querySelectorAll('[data-ban]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var id = btn.dataset.ban;
         var action = btn.textContent.trim();
         if (!confirm(action + ' #' + id + ' — Emin misiniz?')) return;
-        try { var res = await api('PATCH', '/admin/users/' + id + '/toggle'); toast(res.message,'success'); loadAdminUsers(); }
+        try { var res = await api('PATCH', '/admin/users/' + id + '/toggle'); toast(res.message,'success'); loadAdminUsers(filters); }
         catch(e) { toast(e.message,'error'); }
       });
     });
@@ -2017,7 +2040,7 @@ async function loadAdminUsers() {
       btn.addEventListener('click', async function() {
         var id = btn.dataset.delUser;
         if (!confirm('Kullanıcı #' + id + ' ve tüm ilanları/mesajları kalıcı olarak silinecek.\nBu işlem geri alınamaz! Emin misiniz?')) return;
-        try { var res = await api('DELETE', '/admin/users/' + id); toast(res.message,'success'); loadAdminUsers(); }
+        try { var res = await api('DELETE', '/admin/users/' + id); toast(res.message,'success'); loadAdminUsers(filters); }
         catch(e) { toast(e.message,'error'); }
       });
     });
@@ -2026,7 +2049,7 @@ async function loadAdminUsers() {
         try {
           var res = await api('PATCH', '/admin/users/' + btn.dataset.verify + '/verify');
           toast(res.message, 'success');
-          loadAdminUsers();
+          loadAdminUsers(filters);
         } catch(e) { toast(e.message,'error'); }
       });
     });

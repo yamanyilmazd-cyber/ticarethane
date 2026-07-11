@@ -437,6 +437,7 @@ function fixTurkishText() {
   try {
     dbProxy.prepare("UPDATE categories SET name = REPLACE(REPLACE(name,'ø','ü'),'Ø','Ü'), description = REPLACE(REPLACE(description,'ø','ü'),'Ø','Ü') WHERE name LIKE '%ø%' OR description LIKE '%ø%'").run();
     dbProxy.prepare("UPDATE subcategories SET name = REPLACE(REPLACE(name,'ø','ü'),'Ø','Ü') WHERE name LIKE '%ø%'").run();
+    dbProxy.prepare("UPDATE subcategories SET name = 'Solvent & Tiner', slug = 'solvent-tiner' WHERE name = 'Solvent & Thinner'").run();
   } catch(e) { console.warn('[DB] Karakter düzeltme hatası:', e.message); }
 }
 
@@ -447,7 +448,7 @@ function slugify(str) {
 function seedCategories() {
   const cats = [
     { slug: 'kimya', name: 'Kimya & Hammadde', desc: 'Soda külü, asit, solvent, boya hammaddesi ve kimyasal ürünler',
-      subs: ['Asit & Baz', 'Solvent & Thinner', 'Soda Külü & Sodyum Ürünleri', 'Klorlu Bileşikler', 'Boya Hammaddesi', 'Deterjan Hammaddesi', 'Gübre Kimyasalları', 'Diğer'] },
+      subs: ['Asit & Baz', 'Solvent & Tiner', 'Soda Külü & Sodyum Ürünleri', 'Klorlu Bileşikler', 'Boya Hammaddesi', 'Deterjan Hammaddesi', 'Gübre Kimyasalları', 'Diğer'] },
     { slug: 'demir-celik', name: 'Demir, Çelik & Metal', desc: 'Profil, boru, sac, çelik, alüminyum ve metal ürünler',
       subs: ['HEA/HEB Profil', 'Boru & Tüp', 'Sac & Levha', 'Filmaşin & Tel', 'İnşaat Demiri', 'Alüminyum', 'Bakır', 'Paslanmaz Çelik', 'Hurda Metal', 'Diğer'] },
     { slug: 'tarim-gida', name: 'Tarım & Gıda Hammaddeleri', desc: 'Tahıl, bakliyat, gübre, zirai ilaç ve gıda hammaddeleri',

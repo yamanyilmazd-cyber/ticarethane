@@ -232,9 +232,8 @@ router.get('/stats/detailed', (_req, res) => {
     LEFT JOIN listings l ON l.user_id = u.id
     WHERE u.role = 'user'
     GROUP BY u.id
-    HAVING total_listings > 0
     ORDER BY total_listings DESC
-    LIMIT 50
+    LIMIT 200
   `).all();
 
   // Sektör dağılımı firmalar bazında
