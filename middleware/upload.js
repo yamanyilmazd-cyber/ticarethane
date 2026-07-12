@@ -4,7 +4,17 @@ const multer = require('multer');
 const path   = require('path');
 const fs     = require('fs');
 const crypto = require('crypto');
-const sharp  = require('sharp');
+
+// sharp bir native modul; bazi barindirma ortamlarinda platforma uygun
+// derlenmis binary yuklenemeyebilir. require() burada patlarsa ve bu dosya
+// server.js zincirinden (routes/listings.js uzerinden) yukleniyorsa, TUM
+// sunucu ayaga kalkamaz — sadece HEIC donusumu bu durumda devre disi kalsin.
+let sharp = null;
+try {
+  sharp = require('sharp');
+} catch (e) {
+  console.error('[UPLOAD] sharp yuklenemedi, HEIC donusumu devre disi kalacak:', e.message);
+}
 
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
 
