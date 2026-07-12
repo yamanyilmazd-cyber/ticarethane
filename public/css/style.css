@@ -385,6 +385,42 @@ select.form-control {
 .filter-radio { display: flex; align-items: center; gap: 8px; font-size: .84rem; cursor: pointer; color: var(--text-mid); transition: color .12s; }
 .filter-radio:hover { color: var(--text); }
 .filter-radio.active { color: var(--navy); font-weight: 600; }
+
+/* Mobil filtre çekmecesi — sahibinden tarzı tıkla-tıkla-tıkla akışı */
+.mobile-filter-btn { display: none; }
+.mobile-filter-overlay { display: none; }
+.mf-panel { display: none; }
+@media (max-width: 860px) {
+  .filter-sidebar { display: none; }
+  .mobile-filter-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    width: 100%; margin-bottom: 16px; padding: 11px 16px;
+    background: var(--navy); color: #fff; border: none; border-radius: var(--r-lg);
+    font-size: .88rem; font-weight: 700; cursor: pointer;
+  }
+  .mf-badge { background: #fff; color: var(--navy); border-radius: 20px; padding: 1px 8px; font-size: .74rem; font-weight: 800; }
+  .mobile-filter-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 1000; display: none; }
+  .mobile-filter-overlay.open { display: block; }
+  .mf-sheet {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 90%; max-width: 380px;
+    background: var(--bg-card); display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: -6px 0 24px rgba(0,0,0,.2);
+  }
+  .mf-sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; background: var(--navy); color: #fff; font-weight: 700; font-size: .95rem; flex-shrink: 0; }
+  .mf-close { background: none; border: none; color: #fff; font-size: 1.3rem; line-height: 1; cursor: pointer; padding: 2px 6px; }
+  .mf-list { padding: 10px 14px; overflow-y: auto; flex: 1; }
+  .mf-group-row { display: flex; align-items: center; justify-content: space-between; width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid var(--border); padding: 15px 4px; cursor: pointer; gap: 10px; }
+  .mf-group-row:last-child { border-bottom: none; }
+  .mf-group-title { font-weight: 600; font-size: .87rem; color: var(--text); flex-shrink: 0; }
+  .mf-group-summary { font-size: .78rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: right; }
+  .mf-chevron { color: var(--text-muted); font-size: 1.15rem; flex-shrink: 0; }
+  .mf-panel { position: absolute; inset: 0; background: var(--bg-card); display: none; flex-direction: column; z-index: 2; }
+  .mf-panel.open { display: flex; }
+  .mf-panel-header { display: flex; align-items: center; gap: 12px; padding: 16px 18px; background: var(--navy); color: #fff; font-weight: 700; font-size: .95rem; flex-shrink: 0; }
+  .mf-back { background: none; border: none; color: #fff; font-size: 1.1rem; cursor: pointer; padding: 2px 8px; }
+  .mf-panel-body { padding: 14px 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+}
+
 .radio-dot {
   width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0;
   border: 2px solid var(--border-mid); background: #fff; transition: border-color .12s, background .12s;
@@ -572,6 +608,11 @@ tbody td { padding: 11px 14px; color: var(--text); }
 .upload-previews { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .upload-preview-item { position: relative; width: 88px; height: 88px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--border); }
 .upload-preview-item img { width: 100%; height: 100%; object-fit: cover; }
+.upload-preview-heic {
+  width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; background: var(--bg-alt); color: var(--text-muted); font-size: 1.4rem;
+}
+.upload-preview-heic span { font-size: .62rem; font-weight: 700; letter-spacing: .03em; }
 .upload-preview-remove {
   position: absolute; top: 3px; right: 3px; width: 20px; height: 20px;
   background: rgba(0,0,0,.6); border: none; border-radius: 50%; color: #fff;
@@ -939,7 +980,7 @@ tbody td { padding: 11px 14px; color: var(--text); }
   /* Navbar biraz sıkıştır — butonlar sığmazsa alt satıra insin */
   /* Tek satır navbar: butonlar alt satıra inmez, yazılar gizlenir ikon kalır */
   .navbar-inner { gap: 6px; flex-wrap: nowrap; height: auto; min-height: 52px; padding: 8px 12px; justify-content: space-between; }
-  .navbar-logo { font-size: 1.05rem; white-space: nowrap; flex-shrink: 0; }
+  .navbar-logo { font-size: 1.3rem; white-space: nowrap; flex-shrink: 0; }
   .navbar-actions { flex-wrap: nowrap; gap: 3px; margin-left: auto; justify-content: flex-end; }
   .navbar-actions .nav-txt { display: none; }
   .btn-nav { padding: 6px 8px; font-size: .74rem; white-space: nowrap; }

@@ -4,6 +4,7 @@ const multer = require('multer');
 const path   = require('path');
 const fs     = require('fs');
 const crypto = require('crypto');
+const sharp  = require('sharp');
 
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
 
@@ -20,16 +21,22 @@ const storage = multer.diskStorage({
   }
 });
 
-const ALLOWED_EXT  = new Set(['.jpg', '.jpeg', '.png', '.webp']);
-const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
+// iPhone kamerasi varsayilan olarak HEIC/HEIF formatinda cekiyor; bunlari da
+// kabul edip asagidaki convertHeic middleware'inde JPEG'e ceviriyoruz —
+// aksi halde iPhone kullanicilari ilan gorseli yukleyemiyordu.
+const ALLOWED_EXT  = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif']);
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 
 const fileFilter = (_req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
   if (!ALLOWED_EXT.has(ext)) {
-    return cb(new Error('Sadece JPG, PNG ve WebP dosyalari yuklenebilir.'), false);
+    return cb(new Error('Sadece JPG, PNG, WebP ve HEIC dosyalari yuklenebilir.'), false);
   }
-  if (!ALLOWED_MIME.has(file.mimetype)) {
-    return cb(new Error('Gecersiz dosya tipi. Sadece JPG, PNG ve WebP kabul edilir.'), false);
+  // iOS bazi HEIC dosyalarina genel "application/octet-stream" mimetype'i
+  // atayabiliyor; uzanti dogruysa mimetype kontrolunu gevsetiyoruz.
+  const isHeicExt = ext === '.heic' || ext === '.heif';
+  if (!ALLOWED_MIME.has(file.mimetype) && !isHeicExt) {
+    return cb(new Error('Gecersiz dosya tipi. Sadece JPG, PNG, WebP ve HEIC kabul edilir.'), false);
   }
   cb(null, true);
 };
@@ -43,4 +50,29 @@ const upload = multer({
   }
 });
 
-module.exports = { upload };
+// HEIC/HEIF dosyalarini JPEG'e cevirir — tarayicilarin cogu (Chrome, Firefox,
+// Android) HEIC'i <img> icinde gosteremez, bu yuzden yukleme sonrasi hemen
+// donusturup orijinal dosyayi siliyoruz. req.file.filename/path guncellenir.
+async function convertHeic(req, res, next) {
+  if (!req.files || !req.files.length) return next();
+  try {
+    for (const file of req.files) {
+      const ext = path.extname(file.filename).toLowerCase();
+      if (ext !== '.heic' && ext !== '.heif') continue;
+      const newFilename = file.filename.slice(0, -ext.length) + '.jpg';
+      const newPath = path.join(UPLOAD_DIR, newFilename);
+      await sharp(file.path).rotate().jpeg({ quality: 85 }).toFile(newPath);
+      fs.unlinkSync(file.path);
+      file.filename = newFilename;
+      file.path = newPath;
+      file.mimetype = 'image/jpeg';
+    }
+    next();
+  } catch (e) {
+    console.error('[UPLOAD] HEIC donusum hatasi:', e.message);
+    req.files.forEach(f => { try { fs.unlinkSync(f.path); } catch {} });
+    res.status(400).json({ error: 'Görsel işlenemedi. Lütfen JPG, PNG veya WebP formatında tekrar deneyin.' });
+  }
+}
+
+module.exports = { upload, convertHeic };
