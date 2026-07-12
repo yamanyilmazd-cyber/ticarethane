@@ -402,14 +402,18 @@ function formatPrice(l) {
   var cur  = l.currency || 'TRY';
   var sym  = cur === 'USD' ? '$' : cur === 'EUR' ? '€' : '₺';
   var lotQty = (l.price_basis === 'per_unit' && parseInt(l.lot_quantity) > 1) ? parseInt(l.lot_quantity) : 1;
+  var qtyNum = l.quantity ? parseFloat(l.quantity) : 0;
+  var totalSuffix = (qtyNum > 0 && l.quantity_unit)
+    ? ' (Toplam · ' + qtyNum.toLocaleString('tr-TR') + ' ' + l.quantity_unit + ')'
+    : ' (Toplam)';
   try {
     var formatted = new Intl.NumberFormat('tr-TR', { style:'currency', currency: cur, maximumFractionDigits:0 }).format(l.price);
     var suffix = '';
     if (l.price_basis === 'per_unit' && l.quantity_unit) suffix = ' / ' + (lotQty > 1 ? lotQty + ' ' : '') + l.quantity_unit;
-    else if (l.price_basis === 'total') suffix = ' (Toplam)';
+    else if (l.price_basis === 'total') suffix = totalSuffix;
     return formatted + suffix;
   } catch(e) {
-    var suffix2 = l.price_basis === 'per_unit' && l.quantity_unit ? ' / ' + (lotQty > 1 ? lotQty + ' ' : '') + l.quantity_unit : '';
+    var suffix2 = l.price_basis === 'per_unit' && l.quantity_unit ? ' / ' + (lotQty > 1 ? lotQty + ' ' : '') + l.quantity_unit : (l.price_basis === 'total' ? totalSuffix : '');
     return sym + Number(l.price).toLocaleString('tr-TR') + suffix2;
   }
 }
