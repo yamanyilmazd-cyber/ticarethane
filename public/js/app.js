@@ -505,9 +505,9 @@ function updatePriceBasisHelp() {
   if (!help) return;
   if (basis === 'per_unit') {
     var lotVal = (lotEl && parseInt(lotEl.value)) || 1;
-    help.innerHTML = 'Girdiğiniz fiyat, her <strong>' + lotVal + ' ' + esc(unit) + '</strong> için geçerli olacak (toplam fiyat otomatik hesaplanır). Örn: 10 yazıp "Kg" seçerseniz, fiyat "10 Kg başı" anlamına gelir.';
+    help.innerHTML = '<strong>Malını parça parça / bölerek satmak isteyenler içindir.</strong> Girdiğiniz fiyat, her <strong>' + lotVal + ' ' + esc(unit) + '</strong> için geçerli olacak (toplam fiyat otomatik hesaplanır). Örn: 10 yazıp "Kg" seçerseniz, fiyat "10 Kg başı" anlamına gelir.';
   } else {
-    help.innerHTML = 'Girdiğiniz fiyat, yukarıdaki <strong>toplam miktarın tamamı</strong> içindir (birim başı fiyat otomatik hesaplanıp gösterilir).';
+    help.innerHTML = '<strong>Malının tamamını tek partide satmak isteyenler içindir.</strong> Girdiğiniz fiyat, yukarıdaki <strong>toplam miktarın tamamı</strong> içindir (birim başı fiyat otomatik hesaplanıp gösterilir).';
   }
 }
 window.updatePriceBasisHelp = updatePriceBasisHelp;
@@ -1426,10 +1426,10 @@ function listingFormHTML(l) {
       '</div>' +
       '<div style="display:flex;gap:12px;margin-top:8px;">' +
         '<label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">' +
-          '<input type="radio" name="price_basis" value="per_unit"' + (l.price_basis==='total'?'':' checked') + '> Birim / Lot Başı Fiyat' +
+          '<input type="radio" name="price_basis" value="total"' + (l.price_basis==='per_unit'?'':' checked') + '> Toplam Fiyat' +
         '</label>' +
         '<label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">' +
-          '<input type="radio" name="price_basis" value="total"' + (l.price_basis==='total'?' checked':'') + '> Toplam Fiyat' +
+          '<input type="radio" name="price_basis" value="per_unit"' + (l.price_basis==='per_unit'?' checked':'') + '> Birim / Lot Başı Fiyat' +
         '</label>' +
       '</div>' +
       '<div id="priceBasisHelp" style="font-size:.78rem;color:var(--text-mid);background:var(--bg-alt);border-radius:6px;padding:8px 10px;margin-top:8px;line-height:1.5;"></div>' +
