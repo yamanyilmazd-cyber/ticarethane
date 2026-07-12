@@ -1588,8 +1588,8 @@ async function renderLogin() {
           '<div id="loginError" class="alert alert-error" style="display:none;"></div>' +
           '<div style="text-align:right;margin-bottom:8px;"><a href="#/sifremi-unuttum" style="font-size:.82rem;color:var(--blue);">Şifremi unuttum</a></div>' +
           '<button type="submit" class="btn btn-primary w-100 btn-lg" id="loginBtn">Giriş Yap</button>' +
+          '<div id="googleSignInDiv" style="display:flex;justify-content:center;margin:12px 0;"></div>' +
           '<div class="auth-divider">veya</div>' +
-          '<div id="googleSignInDiv" style="display:flex;justify-content:center;margin-bottom:12px;"></div>' +
           '<a href="#/kayit" class="btn btn-outline w-100">Üye Ol</a>' +
         '</form>' +
       '</div>' +
@@ -1653,8 +1653,7 @@ async function renderRegister() {
           '</div>' +
           '<div id="regError" class="alert alert-error" style="display:none;"></div>' +
           '<button type="submit" class="btn btn-accent w-100 btn-lg" id="regBtn">Üye Ol</button>' +
-          '<div class="auth-divider">veya</div>' +
-          '<div id="googleSignInDiv" style="display:flex;justify-content:center;margin-bottom:8px;"></div>' +
+          '<div id="googleSignInDiv" style="display:flex;justify-content:center;margin:12px 0 8px;"></div>' +
           '<p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-bottom:12px;">Google ile devam ederek <a href="#/sozlesme" style="color:#2563eb;">Kullanım Koşulları</a> ve <a href="#/kvkk" style="color:#2563eb;">KVKK Metni</a>&#39;ni kabul etmiş olursunuz.</p>' +
           '<div class="auth-divider">Zaten hesabınız var mı?</div>' +
           '<a href="#/giris" class="btn btn-outline w-100">Giriş Yap</a>' +

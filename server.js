@@ -59,6 +59,10 @@ app.use(helmet({
     }
   },
   crossOriginEmbedderPolicy: false,
+  // Google Sign-In popup'u, ana sayfayla postMessage ile haberleşebilmek
+  // için window.opener referansına ihtiyaç duyar; varsayılan "same-origin"
+  // COOP bunu engelleyip popup'ı boş/askıda bırakıyordu.
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   // Üretimde HSTS: tarayıcı 1 yıl boyunca sadece HTTPS kullanır
   hsts: isProd ? { maxAge: 31536000, includeSubDomains: true } : false,
 }));
