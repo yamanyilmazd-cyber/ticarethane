@@ -553,10 +553,37 @@ function infoRow(label, val) {
   return '<div class="info-row"><span class="info-row-label">' + esc(label) + '</span><span class="info-row-val">' + esc(String(val)) + '</span></div>';
 }
 
+function imgPlaceholderHTML(label) {
+  return '<div class="listing-card-img-placeholder"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.3;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span style="font-size:.68rem;margin-top:6px;text-align:center;">' + esc(label) + '</span></div>';
+}
+function mainImgPlaceholderHTML() {
+  return '<div style="height:280px;background:var(--bg);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;color:var(--text-muted);border:1px solid var(--border);">Görsel Eklenmemiş</div>';
+}
+// Görsel kaydı DB'de var ama dosya sunucudan silinmişse (ör. kalıcı olmayan
+// depolamada deploy sonrası kayıp), kırık resim ikonu yerine ayni bos-gorsel
+// kutusunu goster. CSP'de script-src-attr 'none' oldugu icin inline
+// onerror="" attribute'lari calismiyor — bu yuzden tek bir global,
+// capture-phase delegasyonla dinliyoruz ('error' olayi bubble etmez).
+document.addEventListener('error', function(e) {
+  var el = e.target;
+  if (!el || el.tagName !== 'IMG') return;
+  if (el.classList.contains('listing-card-img')) {
+    var label = el.getAttribute('data-fallback-label') || 'Görsel Yok';
+    var tmp = document.createElement('div');
+    tmp.innerHTML = imgPlaceholderHTML(label);
+    el.replaceWith(tmp.firstElementChild);
+  } else if (el.id === 'mainImg') {
+    var tmp2 = document.createElement('div');
+    tmp2.innerHTML = mainImgPlaceholderHTML();
+    el.replaceWith(tmp2.firstElementChild);
+  } else if (el.classList.contains('listing-thumb')) {
+    el.style.display = 'none';
+  }
+}, true);
 function listingCardHTML(l) {
   var img = l.thumbnail
-    ? '<img class="listing-card-img" src="/uploads/' + l.thumbnail + '" alt="' + esc(l.title) + '" loading="lazy" />'
-    : '<div class="listing-card-img-placeholder"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.3;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span style="font-size:.68rem;margin-top:6px;text-align:center;">' + esc(l.category_name||'Görsel Yok') + '</span></div>';
+    ? '<img class="listing-card-img" src="/uploads/' + l.thumbnail + '" alt="' + esc(l.title) + '" loading="lazy" data-fallback-label="' + esc(l.category_name||'Görsel Yok') + '" />'
+    : imgPlaceholderHTML(l.category_name||'Görsel Yok');
   var priceHtml = '<div class="listing-card-price">' + formatPrice(l) + '</div>';
   var qtyNum = l.quantity ? parseFloat(l.quantity) : 0;
   if (l.price && qtyNum > 0) {
@@ -1118,7 +1145,7 @@ async function renderListingDetail(params) {
       (imgs.length > 1 ? '<div class="listing-thumbnails">' + imgs.map(function(img, i) {
         return '<img class="listing-thumb' + (i===0?' active':'') + '" src="/uploads/' + img.filename + '" data-src="/uploads/' + img.filename + '" />';
       }).join('') + '</div>' : '')
-    : '<div style="height:280px;background:var(--bg);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;color:var(--text-muted);border:1px solid var(--border);">Görsel Eklenmemiş</div>';
+    : mainImgPlaceholderHTML();
 
   var myControls = '';
   if (State.user && State.user.id === l.user_id) {
