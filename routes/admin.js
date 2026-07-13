@@ -407,6 +407,22 @@ router.patch('/listings/:id/reject', (req, res) => {
   } catch(err) { res.status(500).json({ error: "İşlem başarısız." }); }
 });
 
+// ---- Kategori düzelt ----
+router.patch('/listings/:id/category', (req, res) => {
+  try {
+    const db = getDb();
+    const { category_id, subcategory_id } = req.body;
+    const listing = db.prepare('SELECT id FROM listings WHERE id=?').get(req.params.id);
+    if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
+    if (!category_id || !db.prepare('SELECT id FROM categories WHERE id=?').get(category_id)) {
+      return res.status(400).json({ error: 'Geçersiz kategori.' });
+    }
+    db.prepare('UPDATE listings SET category_id=?, subcategory_id=?, updated_at=datetime("now") WHERE id=?')
+      .run(parseInt(category_id), subcategory_id ? parseInt(subcategory_id) : null, req.params.id);
+    res.json({ message: 'Kategori güncellendi.' });
+  } catch(err) { res.status(500).json({ error: "İşlem başarısız." }); }
+});
+
 // ---- Toplu onayla ----
 router.post('/listings/bulk-approve', (req, res) => {
   const db  = getDb();
