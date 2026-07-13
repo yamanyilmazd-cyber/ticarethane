@@ -30,7 +30,7 @@ router.get('/', (req, res) => {
       JOIN users u ON u.id = CASE WHEN c.user1_id=? THEN c.user2_id ELSE c.user1_id END
       LEFT JOIN listings l ON l.id = c.listing_id
       LEFT JOIN messages m ON m.id = (
-        SELECT id FROM messages WHERE conversation_id=c.id ORDER BY created_at DESC LIMIT 1
+        SELECT id FROM messages WHERE conversation_id=c.id ORDER BY created_at DESC, id DESC LIMIT 1
       )
       WHERE c.user1_id=? OR c.user2_id=?
       ORDER BY c.last_message_at DESC

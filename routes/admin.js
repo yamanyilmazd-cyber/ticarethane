@@ -573,7 +573,7 @@ router.get('/messages', (req, res) => {
       JOIN users u1 ON u1.id=c.user1_id
       JOIN users u2 ON u2.id=c.user2_id
       LEFT JOIN listings l ON l.id=c.listing_id
-      LEFT JOIN messages m ON m.id=(SELECT id FROM messages WHERE conversation_id=c.id ORDER BY created_at DESC LIMIT 1)
+      LEFT JOIN messages m ON m.id=(SELECT id FROM messages WHERE conversation_id=c.id ORDER BY created_at DESC, id DESC LIMIT 1)
       ORDER BY c.last_message_at DESC
       LIMIT ? OFFSET ?
     `).all(parseInt(limit), offset);
