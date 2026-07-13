@@ -67,7 +67,9 @@ async function tursoHttp(sql, params, timeoutMs) {
     });
     return { cols, rows };
   } catch(e) {
-    console.error('[TURSO] HTTP hatası:', e.message);
+    // "duplicate column" -> migrasyon zaten uygulanmis, her boot'ta tekrar
+    // denenmesi normal ve zararsiz; log kirletmesin.
+    if (!/duplicate column/i.test(e.message)) console.error('[TURSO] HTTP hatası:', e.message);
     return null;
   }
 }
@@ -275,6 +277,14 @@ const SCHEMA_DDL = [
   `CREATE INDEX IF NOT EXISTS idx_favorites_listing ON favorites(listing_id)`,
 ];
 
+// Mevcut tablolara sonradan eklenen kolonlar — hem yerel hem Turso semasina
+// uygulanmasi gerekir, aksi halde bu kolonlari iceren yazmalar Turso'da
+// "no such column" hatasiyla sessizce basarisiz olur.
+const COLUMN_MIGRATIONS = [
+  'ALTER TABLE users ADD COLUMN google_id TEXT',
+  'ALTER TABLE listings ADD COLUMN vat_included INTEGER DEFAULT 1',
+];
+
 // ── Turso arka plan başlatma (sunucu başladıktan sonra) ────────────────────
 async function initTursoBackground() {
   if (!TURSO_URL || !TURSO_TOKEN) return;
@@ -290,6 +300,11 @@ async function initTursoBackground() {
       const r = await tursoHttp(sql, [], 15000);
       if (!r && sql.includes('TABLE')) console.warn('[TURSO] Tablo oluşturulamadı.');
     }
+  }
+  // Sonradan eklenen kolonlari Turso semasina da uygula — yoksa bu kolonlari
+  // iceren her INSERT/UPDATE Turso'da "no such column" ile sessizce basarisiz olur.
+  for (const sql of COLUMN_MIGRATIONS) {
+    await tursoHttp(sql, [], 15000);
   }
   console.log('[TURSO] Şema hazır.');
 
@@ -374,16 +389,13 @@ async function initDatabase() {
   // Yerel şema (senkron, hızlı)
   SCHEMA_DDL.forEach(sql => _db.run(sql));
 
-  // Google ile giriş için google_id kolonu (mevcut tablolara sonradan eklenir)
-  try { _db.run('ALTER TABLE users ADD COLUMN google_id TEXT'); } catch (e) {
-    if (!/duplicate column/i.test(e.message)) console.warn('[DB] google_id kolonu eklenemedi:', e.message);
-  }
+  // Sonradan eklenen kolonlar (google_id, vat_included vb.) — yerel semaya uygula
+  COLUMN_MIGRATIONS.forEach(sql => {
+    try { _db.run(sql); } catch (e) {
+      if (!/duplicate column/i.test(e.message)) console.warn('[DB] Kolon migrasyonu basarisiz:', sql, '-', e.message);
+    }
+  });
   try { _db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)'); } catch (e) {}
-
-  // KDV dahil/hariç bilgisi (mevcut tablolara sonradan eklenir)
-  try { _db.run('ALTER TABLE listings ADD COLUMN vat_included INTEGER DEFAULT 1'); } catch (e) {
-    if (!/duplicate column/i.test(e.message)) console.warn('[DB] vat_included kolonu eklenemedi:', e.message);
-  }
 
   // Kategorileri seed et
   const catCount = dbProxy.prepare('SELECT COUNT(*) AS c FROM categories').get();
