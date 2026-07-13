@@ -42,6 +42,15 @@ const SECTOR_ICONS = [
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4c0 2-4 6-4 6S8 8 8 6a4 4 0 014-4z"/><rect x="4" y="12" width="16" height="10" rx="2"/><line x1="8" y1="12" x2="8" y2="22"/><line x1="16" y1="12" x2="16" y2="22"/><line x1="4" y1="17" x2="20" y2="17"/></svg>`,
 ];
 
+// Bazi sektorler icin genel SECTOR_ICONS rotasyonu yerine sabit, anlamli
+// ikon kullanilir (slug bazli) — yeni kategori eklenince rotasyon kaymasin.
+const CATEGORY_ICONS = {
+  gida: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8c-3-2-7 0-7 5 0 4 3 8 6 8 1 0 1.5-.5 2-.5s1 .5 2 .5c3 0 6-4 6-8 0-4.5-3.5-6.5-6.5-5"/><path d="M12 8V5c0-1 1-2 2-2"/></svg>`,
+};
+function sectorIcon(slug, idx) {
+  return CATEGORY_ICONS[slug] || SECTOR_ICONS[(idx >= 0 ? idx : 0) % SECTOR_ICONS.length];
+}
+
 // ---- Global durum ----
 const State = {
   token:      localStorage.getItem('tc_token') || sessionStorage.getItem('tc_token') || null,
@@ -661,7 +670,7 @@ async function renderHome() {
       '</a>' +
       State.categories.map(function(c, i) {
         return '<a class="cat-card" href="#/kategori/' + c.slug + '">' +
-          '<div class="cat-icon-wrap ic-' + (i % 18) + '">' + SECTOR_ICONS[i % SECTOR_ICONS.length] + '</div>' +
+          '<div class="cat-icon-wrap ic-' + (i % 18) + '">' + sectorIcon(c.slug, i) + '</div>' +
           '<div class="cat-card-name">' + esc(c.name) + '</div>' +
         '</a>';
       }).join('');
@@ -947,7 +956,7 @@ async function renderCategory(params) {
     var pagination = data.pagination || { total: 0, page: 1, pages: 1, limit: 24 };
 
     var idx  = State.categories.findIndex(function(c) { return c.slug === slug; });
-    var icon = SECTOR_ICONS[idx >= 0 ? idx % SECTOR_ICONS.length : 0];
+    var icon = sectorIcon(slug, idx);
     var icCls = 'ic-' + (idx >= 0 ? idx % 18 : 0);
 
     function catLink(overrides) {

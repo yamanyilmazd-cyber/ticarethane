@@ -130,7 +130,7 @@ router.post('/', (req, res) => {
     db.prepare(
       'INSERT INTO messages (conversation_id, sender_id, content) VALUES (?, ?, ?)'
     ).run(conv.id, uid, sanitize(content));
-    db.prepare('UPDATE conversations SET last_message_at=datetime("now") WHERE id=?').run(conv.id);
+    db.prepare("UPDATE conversations SET last_message_at=datetime('now') WHERE id=?").run(conv.id);
 
     // Alıcıya bildirim gönder
     try {
@@ -173,7 +173,7 @@ router.post('/:convId', (req, res) => {
     const msgResult = db.prepare(
       'INSERT INTO messages (conversation_id, sender_id, content) VALUES (?, ?, ?)'
     ).run(conv.id, uid, sanitize(content));
-    db.prepare('UPDATE conversations SET last_message_at=datetime("now") WHERE id=?').run(conv.id);
+    db.prepare("UPDATE conversations SET last_message_at=datetime('now') WHERE id=?").run(conv.id);
 
     // Karşı tarafa bildirim gönder
     try {

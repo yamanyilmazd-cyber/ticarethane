@@ -484,7 +484,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     const hash = await bcrypt.hash(password, 12);
-    db.prepare('UPDATE users SET password_hash=?, updated_at=datetime("now") WHERE id=?').run(hash, row.user_id);
+    db.prepare("UPDATE users SET password_hash=?, updated_at=datetime('now') WHERE id=?").run(hash, row.user_id);
     db.prepare('UPDATE password_reset_tokens SET used=1 WHERE id=?').run(row.id);
     // Diger aktif tokenlari da iptal et
     db.prepare('DELETE FROM password_reset_tokens WHERE user_id=? AND id!=?').run(row.user_id, row.id);

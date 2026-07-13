@@ -439,7 +439,7 @@ router.patch('/:id/sold', authenticate, (req, res) => {
     const db      = getDb();
     const listing = db.prepare('SELECT id FROM listings WHERE id=? AND user_id=?').get(req.params.id, req.userId);
     if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
-    db.prepare('UPDATE listings SET status="sold", updated_at=CURRENT_TIMESTAMP WHERE id=?').run(listing.id);
+    db.prepare("UPDATE listings SET status='sold', updated_at=CURRENT_TIMESTAMP WHERE id=?").run(listing.id);
     res.json({ message: 'İlan satıldı olarak işaretlendi.' });
   } catch (err) {
     console.error('[LISTINGS] sold:', err.message);
@@ -457,7 +457,7 @@ router.patch('/:id/renew', authenticate, (req, res) => {
       return res.status(400).json({ error: 'Sadece aktif veya reddedilmiş ilanlar yenilenebilir.' });
     const newExp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const newStatus = listing.status === 'rejected' ? 'pending' : 'active';
-    db.prepare('UPDATE listings SET expires_at=?, renewed_at=datetime("now"), status=?, updated_at=datetime("now") WHERE id=?')
+    db.prepare("UPDATE listings SET expires_at=?, renewed_at=datetime('now'), status=?, updated_at=datetime('now') WHERE id=?")
       .run(newExp, newStatus, req.params.id);
     res.json({ message: 'İlan yenilendi.', expires_at: newExp });
   } catch (err) {

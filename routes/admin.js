@@ -395,7 +395,7 @@ router.patch('/listings/:id/reject', (req, res) => {
   const reason = req.body.reason || 'İlan kurallara aykırıdır.';
   const listing = db.prepare('SELECT id, user_id, title FROM listings WHERE id=?').get(req.params.id);
   if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
-  db.prepare('UPDATE listings SET status="rejected", rejection_reason=?, updated_at=datetime("now") WHERE id=?').run(reason, req.params.id);
+  db.prepare("UPDATE listings SET status='rejected', rejection_reason=?, updated_at=datetime('now') WHERE id=?").run(reason, req.params.id);
   try {
     createNotification(db, listing.user_id, 'listing_rejected',
       'İlanınız Reddedildi',
@@ -417,7 +417,7 @@ router.patch('/listings/:id/category', (req, res) => {
     if (!category_id || !db.prepare('SELECT id FROM categories WHERE id=?').get(category_id)) {
       return res.status(400).json({ error: 'Geçersiz kategori.' });
     }
-    db.prepare('UPDATE listings SET category_id=?, subcategory_id=?, updated_at=datetime("now") WHERE id=?')
+    db.prepare("UPDATE listings SET category_id=?, subcategory_id=?, updated_at=datetime('now') WHERE id=?")
       .run(parseInt(category_id), subcategory_id ? parseInt(subcategory_id) : null, req.params.id);
     res.json({ message: 'Kategori güncellendi.' });
   } catch(err) { res.status(500).json({ error: "İşlem başarısız." }); }
@@ -432,7 +432,7 @@ router.post('/listings/bulk-approve', (req, res) => {
   const validIds = ids.map(Number).filter(id => Number.isInteger(id) && id > 0);
   if (!validIds.length) return res.status(400).json({ error: 'Geçersiz ID listesi.' });
   validIds.forEach(id => {
-    db.prepare('UPDATE listings SET status="active", updated_at=datetime("now") WHERE id=? AND status="pending"').run(id);
+    db.prepare("UPDATE listings SET status='active', updated_at=datetime('now') WHERE id=? AND status='pending'").run(id);
   });
   res.json({ message: `${validIds.length} ilan onaylandı.` });
 });
@@ -503,10 +503,10 @@ router.patch('/users/:id/toggle', (req, res) => {
   const user = db.prepare('SELECT id, is_active FROM users WHERE id=? AND role!="admin"').get(req.params.id);
   if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
   const newState = user.is_active ? 0 : 1;
-  db.prepare('UPDATE users SET is_active=?, updated_at=datetime("now") WHERE id=?').run(newState, user.id);
+  db.prepare("UPDATE users SET is_active=?, updated_at=datetime('now') WHERE id=?").run(newState, user.id);
   // Askıya alınırsa ilanları da pasif yap
   if (!newState) {
-    db.prepare('UPDATE listings SET status="rejected", rejection_reason="Hesap askıya alındı." WHERE user_id=? AND status IN ("active","pending")').run(user.id);
+    db.prepare("UPDATE listings SET status='rejected', rejection_reason='Hesap askıya alındı.' WHERE user_id=? AND status IN ('active','pending')").run(user.id);
   }
   res.json({ message: newState ? 'Kullanıcı aktifleştirildi.' : 'Kullanıcı ve ilanları askıya alındı.', is_active: newState });
 });
