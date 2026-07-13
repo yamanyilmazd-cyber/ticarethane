@@ -219,7 +219,7 @@ const SCHEMA_DDL = [
     category_id INTEGER NOT NULL, subcategory_id INTEGER, title TEXT NOT NULL,
     description TEXT NOT NULL, listing_type TEXT NOT NULL DEFAULT 'sell',
     price REAL, price_type TEXT DEFAULT 'negotiable', price_unit TEXT DEFAULT 'TRY',
-    price_basis TEXT DEFAULT 'per_unit', currency TEXT DEFAULT 'TRY',
+    price_basis TEXT DEFAULT 'per_unit', currency TEXT DEFAULT 'TRY', vat_included INTEGER DEFAULT 1,
     quantity REAL, quantity_unit TEXT, lot_quantity INTEGER,
     city TEXT NOT NULL, district TEXT, contact_phone TEXT, contact_email TEXT,
     website TEXT, status TEXT DEFAULT 'pending', rejection_reason TEXT,
@@ -380,6 +380,11 @@ async function initDatabase() {
   }
   try { _db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)'); } catch (e) {}
 
+  // KDV dahil/hariç bilgisi (mevcut tablolara sonradan eklenir)
+  try { _db.run('ALTER TABLE listings ADD COLUMN vat_included INTEGER DEFAULT 1'); } catch (e) {
+    if (!/duplicate column/i.test(e.message)) console.warn('[DB] vat_included kolonu eklenemedi:', e.message);
+  }
+
   // Kategorileri seed et
   const catCount = dbProxy.prepare('SELECT COUNT(*) AS c FROM categories').get();
   if (!catCount || !catCount.c) {
@@ -426,6 +431,29 @@ function migrateCategories() {
   [['Tekstil & Ham Madde', 'Tekstil & Hammadde']].forEach(([old, neu]) => {
     dbProxy.prepare('UPDATE categories SET name = ? WHERE name = ?').run(neu, old);
   });
+
+  // "Tarım & Gıda Hammaddeleri" ikiye ayrildi: Tarım (mevcut kategori ID korunarak
+  // yeniden adlandirilir, ilan referanslari etkilenmez) ve yeni Gıda kategorisi.
+  const tarimGida = dbProxy.prepare("SELECT id FROM categories WHERE slug = 'tarim-gida'").get();
+  if (tarimGida) {
+    dbProxy.prepare("UPDATE categories SET slug = 'tarim', name = 'Tarım', description = ? WHERE id = ?")
+      .run('Tahıl, bakliyat, yağlı tohum, gübre, fide, zirai ilaç ve tarımsal hammaddeler', tarimGida.id);
+  }
+  if (!dbProxy.prepare("SELECT id FROM categories WHERE slug = 'gida'").get()) {
+    const r = dbProxy.prepare('INSERT INTO categories (slug, name, description) VALUES (?, ?, ?)')
+      .run('gida', 'Gıda', 'Gıda hammaddeleri (un, şeker, yağ, baharat) ve ambalajlı/işlenmiş gıda ürünleri');
+    const gidaId = r.lastInsertRowid;
+    ['Un & Nişasta', 'Şeker & Tatlandırıcı', 'Bitkisel Yağ', 'Süt & Süt Ürünleri', 'Et & Et Ürünleri', 'Baharat & Gıda Aromaları', 'Hazır & Ambalajlı Gıda Ürünleri', 'İçecek Ürünleri', 'Diğer'].forEach(subName => {
+      dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)').run(gidaId, slugify(subName), subName);
+    });
+  }
+
+  // Elektrik & Elektronik altina Güneş Paneli eklendi
+  const elektrik = dbProxy.prepare("SELECT id FROM categories WHERE slug = 'elektrik-elektronik'").get();
+  if (elektrik && !dbProxy.prepare("SELECT id FROM subcategories WHERE category_id = ? AND slug = 'gunes-paneli'").get(elektrik.id)) {
+    dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)').run(elektrik.id, 'gunes-paneli', 'Güneş Paneli');
+  }
+
   const cats = dbProxy.prepare('SELECT id FROM categories').all();
   cats.forEach(cat => {
     const exists = dbProxy.prepare(
@@ -466,8 +494,10 @@ function seedCategories() {
       subs: ['Asit & Baz', 'Solvent & Tiner', 'Soda Külü & Sodyum Ürünleri', 'Klorlu Bileşikler', 'Boya Hammaddesi', 'Deterjan Hammaddesi', 'Gübre Kimyasalları', 'Diğer'] },
     { slug: 'demir-celik', name: 'Demir, Çelik & Metal', desc: 'Profil, boru, sac, çelik, alüminyum ve metal ürünler',
       subs: ['HEA/HEB Profil', 'Boru & Tüp', 'Sac & Levha', 'Filmaşin & Tel', 'İnşaat Demiri', 'Alüminyum', 'Bakır', 'Paslanmaz Çelik', 'Hurda Metal', 'Diğer'] },
-    { slug: 'tarim-gida', name: 'Tarım & Gıda Hammaddeleri', desc: 'Tahıl, bakliyat, gübre, zirai ilaç ve gıda hammaddeleri',
+    { slug: 'tarim', name: 'Tarım', desc: 'Tahıl, bakliyat, yağlı tohum, gübre, fide, zirai ilaç ve tarımsal hammaddeler',
       subs: ['Tahıl & Hububat', 'Bakliyat', 'Yağlı Tohumlar', 'Gübre', 'Zirai İlaç & Pestisit', 'Fide & Tohum', 'Hayvan Yemi', 'Meyve & Sebze (Toptan)', 'Diğer'] },
+    { slug: 'gida', name: 'Gıda', desc: 'Gıda hammaddeleri (un, şeker, yağ, baharat) ve ambalajlı/işlenmiş gıda ürünleri',
+      subs: ['Un & Nişasta', 'Şeker & Tatlandırıcı', 'Bitkisel Yağ', 'Süt & Süt Ürünleri', 'Et & Et Ürünleri', 'Baharat & Gıda Aromaları', 'Hazır & Ambalajlı Gıda Ürünleri', 'İçecek Ürünleri', 'Diğer'] },
     { slug: 'plastik-polimer', name: 'Plastik & Polimer', desc: 'PP, PE, PVC, PET ve diğer plastik hammaddeler',
       subs: ['Polipropilen (PP)', 'Polietilen (PE)', 'PVC', 'PET', 'Polistiren (PS)', 'ABS', 'Naylon & Poliamid', 'Plastik Hurda & Regrind', 'Diğer'] },
     { slug: 'insaat', name: 'İnşaat & Yapı Malzemeleri', desc: 'Çimento, tuğla, seramik, yalıtım ve yapı malzemeleri',
@@ -483,7 +513,7 @@ function seedCategories() {
     { slug: 'makina-ekipman', name: 'Makina & Sanayi Ekipmanı', desc: 'Üretim makineleri, sanayi ekipmanları ve yedek parçalar',
       subs: ['Üretim Makinaları', 'Kompresör & Pompa', 'Vinç & Yükleme', 'Jeneratör', 'İsı Değiştirici', 'Filtre Sistemleri', 'CNC & İşleme', 'Yedek Parça', 'Diğer'] },
     { slug: 'elektrik-elektronik', name: 'Elektrik & Elektronik Malzeme', desc: 'Kablo, pano, trafo ve elektrik malzemeleri',
-      subs: ['Güç Kablosu', 'Trafo & Kompanzasyon', 'Pano & Şalter', 'Aydınlatma', 'Motor & Sürücü', 'Otomasyon', 'Kablo Raf & Kanal', 'Topraklama', 'Diğer'] },
+      subs: ['Güç Kablosu', 'Trafo & Kompanzasyon', 'Pano & Şalter', 'Aydınlatma', 'Motor & Sürücü', 'Otomasyon', 'Kablo Raf & Kanal', 'Topraklama', 'Güneş Paneli', 'Diğer'] },
     { slug: 'ahsap-orman', name: 'Ahşap & Orman Ürünleri', desc: 'Kereste, kontrplak, sunta ve ahşap ürünler',
       subs: ['Kereste', 'Kontrplak', 'Sunta & MDF', 'OSB', 'Parke', 'Mobilya Levhası', 'Yonga & Talaş', 'Orman Ürünleri', 'Diğer'] },
     { slug: 'deri', name: 'Deri & Ham Deri', desc: 'Ham deri, işlenmiş deri ve deri hammaddeleri',

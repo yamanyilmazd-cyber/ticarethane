@@ -94,7 +94,7 @@ router.get('/', (req, res) => {
 
     const rows = db.prepare(
       `SELECT
-         l.id, l.title, l.price, l.price_type, l.price_unit, l.price_basis, l.currency, l.is_featured,
+         l.id, l.title, l.price, l.price_type, l.price_unit, l.price_basis, l.currency, l.vat_included, l.is_featured,
          l.quantity, l.quantity_unit, l.lot_quantity, l.city, l.district,
          l.listing_type, l.views, l.created_at,
          c.name AS category_name, c.slug AS category_slug,
@@ -208,7 +208,7 @@ router.post('/', authenticate, upload.array('images', 8), convertHeic, (req, res
       price, price_type, quantity, quantity_unit,
       city, district, listing_type,
       contact_phone, contact_email, website, tags,
-      price_basis, currency, lot_quantity
+      price_basis, currency, lot_quantity, vat_included
     } = req.body;
 
     if (!title || !description || !category_id || !city) {
@@ -254,12 +254,12 @@ router.post('/', authenticate, upload.array('images', 8), convertHeic, (req, res
 
     const r = db.prepare(
       `INSERT INTO listings
-         (user_id, category_id, subcategory_id, title, description, price_basis, currency,
+         (user_id, category_id, subcategory_id, title, description, price_basis, currency, vat_included,
           price, price_type, quantity, quantity_unit, lot_quantity,
           city, district, listing_type,
           contact_phone, contact_email, website,
           status, expires_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,  'pending',?)`
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,  'pending',?)`
     ).run(
       req.userId,
       parseInt(category_id),
@@ -268,6 +268,7 @@ router.post('/', authenticate, upload.array('images', 8), convertHeic, (req, res
       description.trim(),
       price_basis || 'per_unit',
       currency    || 'TRY',
+      vat_included === '0' ? 0 : 1,
       price       ? parseFloat(price) : null,
       price_type  || 'fixed',
       quantity    ? parseFloat(quantity) : null,
@@ -318,7 +319,7 @@ router.put('/:id', authenticate, upload.array('images', 8), convertHeic, (req, r
 
     const {
       title, description, category_id, subcategory_id,
-      price, price_type, price_basis, currency, quantity, quantity_unit, lot_quantity,
+      price, price_type, price_basis, currency, vat_included, quantity, quantity_unit, lot_quantity,
       city, district, listing_type,
       contact_phone, contact_email, website, delete_images
     } = req.body;
@@ -326,7 +327,7 @@ router.put('/:id', authenticate, upload.array('images', 8), convertHeic, (req, r
     db.prepare(
       `UPDATE listings SET
          title=?, description=?, category_id=?, subcategory_id=?,
-         price=?, price_type=?, price_basis=?, currency=?, quantity=?, quantity_unit=?, lot_quantity=?,
+         price=?, price_type=?, price_basis=?, currency=?, vat_included=?, quantity=?, quantity_unit=?, lot_quantity=?,
          city=?, district=?, listing_type=?,
          contact_phone=?, contact_email=?, website=?,
          status='pending', updated_at=CURRENT_TIMESTAMP
@@ -340,6 +341,7 @@ router.put('/:id', authenticate, upload.array('images', 8), convertHeic, (req, r
       price_type    || listing.price_type,
       price_basis   || listing.price_basis || 'per_unit',
       currency      || listing.currency || 'TRY',
+      vat_included !== undefined ? (vat_included === '0' ? 0 : 1) : (listing.vat_included ?? 1),
       quantity ? parseFloat(quantity) : listing.quantity,
       quantity_unit?.trim() || listing.quantity_unit,
       (lot_quantity !== undefined && lot_quantity !== null && lot_quantity !== '') ? (parseInt(lot_quantity) || null) : (listing.lot_quantity ?? null),

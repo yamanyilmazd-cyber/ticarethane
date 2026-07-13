@@ -584,6 +584,10 @@ document.addEventListener('error', function(e) {
     el.style.display = 'none';
   }
 }, true);
+function vatLabelHTML(l) {
+  if (l.price_type === 'on_request' || !l.price) return '';
+  return '<div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;">' + (l.vat_included === 0 ? 'KDV Hariç' : 'KDV Dahil') + '</div>';
+}
 function listingCardHTML(l) {
   var img = l.thumbnail
     ? '<img class="listing-card-img" src="/uploads/' + l.thumbnail + '" alt="' + esc(l.title) + '" loading="lazy" data-fallback-label="' + esc(l.category_name||'Görsel Yok') + '" />'
@@ -604,6 +608,7 @@ function listingCardHTML(l) {
       priceHtml += '<div style="font-size:.76rem;color:var(--text-muted);margin-top:2px;">Toplam: ' + sym + totalPrice.toLocaleString('tr-TR', {maximumFractionDigits:0}) + '</div>';
     }
   }
+  priceHtml += vatLabelHTML(l);
   return '<a class="listing-card" href="#/ilan/' + l.id + '">' +
     img +
     '<div class="listing-card-body">' +
@@ -1237,6 +1242,7 @@ async function renderListingDetail(params) {
               (l.price_type==='negotiable' ? '<div class="text-muted fs-sm">Fiyat pazarlıklıdır.</div>' : '') +
               (basisLabel ? '<div class="text-muted fs-sm">' + basisLabel + '</div>' : '') +
               calcLine +
+              vatLabelHTML(l) +
             '</div>';
           })() +
           '<div class="listing-contact-card mb-4">' +
@@ -1433,6 +1439,15 @@ function listingFormHTML(l) {
         '</label>' +
       '</div>' +
       '<div id="priceBasisHelp" style="font-size:.78rem;color:var(--text-mid);background:var(--bg-alt);border-radius:6px;padding:8px 10px;margin-top:8px;line-height:1.5;"></div>' +
+      '<div style="display:flex;gap:12px;margin-top:10px;align-items:center;">' +
+        '<span style="font-size:.85rem;color:var(--text-mid);">KDV:</span>' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">' +
+          '<input type="radio" name="vat_included" value="1"' + (l.vat_included===0?'':' checked') + '> KDV Dahildir' +
+        '</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">' +
+          '<input type="radio" name="vat_included" value="0"' + (l.vat_included===0?' checked':'') + '> KDV Hariçtir' +
+        '</label>' +
+      '</div>' +
     '<div class="form-group"><label class="form-label">Miktar</label><input type="number" name="quantity" class="form-control" value="' + (l.quantity||'') + '" placeholder="Örn: 1000" min="0" /></div>' +
 
     '<div class="form-group"><label class="form-label">Birim</label><div style="display:flex;gap:8px;">' +
