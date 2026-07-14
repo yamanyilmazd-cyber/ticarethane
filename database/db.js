@@ -455,8 +455,19 @@ function migrateCategories() {
     const r = dbProxy.prepare('INSERT INTO categories (slug, name, description) VALUES (?, ?, ?)')
       .run('gida', 'Gıda', 'Gıda hammaddeleri (un, şeker, yağ, baharat) ve ambalajlı/işlenmiş gıda ürünleri');
     const gidaId = r.lastInsertRowid;
-    ['Un & Nişasta', 'Şeker & Tatlandırıcı', 'Bitkisel Yağ', 'Süt & Süt Ürünleri', 'Et & Et Ürünleri', 'Baharat & Gıda Aromaları', 'Hazır & Ambalajlı Gıda Ürünleri', 'İçecek Ürünleri', 'Diğer'].forEach(subName => {
+    ['Un & Nişasta', 'Şeker & Tatlandırıcı', 'Bitkisel Yağ', 'Süt & Süt Ürünleri', 'Et & Et Ürünleri', 'Baharat & Gıda Aromaları', 'Koruyucular', 'Hazır & Ambalajlı Gıda Ürünleri', 'Konserve Gıdalar', 'İçecek Ürünleri', 'Diğer'].forEach(subName => {
       dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)').run(gidaId, slugify(subName), subName);
+    });
+  }
+
+  // Gıda altina Koruyucular (katki/hammadde) ve Konserve Gıdalar (urun) eklendi
+  const gidaCat = dbProxy.prepare("SELECT id FROM categories WHERE slug = 'gida'").get();
+  if (gidaCat) {
+    ['Koruyucular', 'Konserve Gıdalar'].forEach(subName => {
+      const subSlug = slugify(subName);
+      if (!dbProxy.prepare('SELECT id FROM subcategories WHERE category_id = ? AND slug = ?').get(gidaCat.id, subSlug)) {
+        dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)').run(gidaCat.id, subSlug, subName);
+      }
     });
   }
 
@@ -509,7 +520,7 @@ function seedCategories() {
     { slug: 'tarim', name: 'Tarım', desc: 'Tahıl, bakliyat, yağlı tohum, gübre, fide, zirai ilaç ve tarımsal hammaddeler',
       subs: ['Tahıl & Hububat', 'Bakliyat', 'Yağlı Tohumlar', 'Gübre', 'Zirai İlaç & Pestisit', 'Fide & Tohum', 'Hayvan Yemi', 'Meyve & Sebze (Toptan)', 'Diğer'] },
     { slug: 'gida', name: 'Gıda', desc: 'Gıda hammaddeleri (un, şeker, yağ, baharat) ve ambalajlı/işlenmiş gıda ürünleri',
-      subs: ['Un & Nişasta', 'Şeker & Tatlandırıcı', 'Bitkisel Yağ', 'Süt & Süt Ürünleri', 'Et & Et Ürünleri', 'Baharat & Gıda Aromaları', 'Hazır & Ambalajlı Gıda Ürünleri', 'İçecek Ürünleri', 'Diğer'] },
+      subs: ['Un & Nişasta', 'Şeker & Tatlandırıcı', 'Bitkisel Yağ', 'Süt & Süt Ürünleri', 'Et & Et Ürünleri', 'Baharat & Gıda Aromaları', 'Koruyucular', 'Hazır & Ambalajlı Gıda Ürünleri', 'Konserve Gıdalar', 'İçecek Ürünleri', 'Diğer'] },
     { slug: 'plastik-polimer', name: 'Plastik & Polimer', desc: 'PP, PE, PVC, PET ve diğer plastik hammaddeler',
       subs: ['Polipropilen (PP)', 'Polietilen (PE)', 'PVC', 'PET', 'Polistiren (PS)', 'ABS', 'Naylon & Poliamid', 'Plastik Hurda & Regrind', 'Diğer'] },
     { slug: 'insaat', name: 'İnşaat & Yapı Malzemeleri', desc: 'Çimento, tuğla, seramik, yalıtım ve yapı malzemeleri',
