@@ -511,6 +511,20 @@ router.patch('/users/:id/toggle', (req, res) => {
   res.json({ message: newState ? 'Kullanıcı aktifleştirildi.' : 'Kullanıcı ve ilanları askıya alındı.', is_active: newState });
 });
 
+// ---- Kullanıcı ad/firma duzelt ----
+router.patch('/users/:id/name', (req, res) => {
+  try {
+    const db = getDb();
+    const { name, company_name } = req.body;
+    const user = db.prepare("SELECT id, company_name FROM users WHERE id=? AND role!='admin'").get(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+    if (!name || !name.trim()) return res.status(400).json({ error: 'İsim zorunludur.' });
+    db.prepare("UPDATE users SET name=?, company_name=?, updated_at=datetime('now') WHERE id=?")
+      .run(name.trim(), company_name !== undefined ? (company_name?.trim() || null) : user.company_name, user.id);
+    res.json({ message: 'Kullanıcı bilgileri güncellendi.' });
+  } catch(err) { res.status(500).json({ error: 'İşlem başarısız.' }); }
+});
+
 // ---- Kullanıcı sil (admin) ----
 router.delete('/users/:id', (req, res) => {
   try {
