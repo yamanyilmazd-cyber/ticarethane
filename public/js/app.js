@@ -662,13 +662,10 @@ async function renderHome() {
   try {
     var results = await Promise.all([
       api('GET', '/listings?limit=12&sort=newest'),
-      api('GET', '/listings?limit=4&sort=newest&featured=1').catch(function() { return { listings: [] }; }),
       api('GET', '/showcase').catch(function() { return { listings: [] }; }),
     ]);
     var data = results[0];
-    var featData = results[1];
-    var featuredListings = (featData.listings || []).filter(function(l) { return l.is_featured; });
-    var vitrinListings = (results[2].listings || []).slice(0, 8);
+    var vitrinListings = (results[1].listings || []).slice(0, 8);
 
     var catCards =
       '<a class="cat-card cat-card-all" href="#/ara">' +
@@ -685,15 +682,6 @@ async function renderHome() {
     var listings = (data.listings && data.listings.length)
       ? '<div class="listing-grid">' + data.listings.map(listingCardHTML).join('') + '</div>'
       : '<div class="empty-state"><div class="empty-state-icon">◈</div><div class="empty-state-title">Henüz ilan yok</div></div>';
-
-    var featuredHTML = featuredListings.length > 0
-      ? '<section class="section" style="padding-top:0;">' +
-          '<div class="container">' +
-            '<div class="section-header"><div><div class="section-title">Öne Çıkan İlanlar</div><div class="section-sub">Öne çıkarılmış seçkin ilanlar</div></div></div>' +
-            '<div class="listing-grid">' + featuredListings.map(listingCardHTML).join('') + '</div>' +
-          '</div>' +
-        '</section>'
-      : '';
 
     var vitrinHTML = vitrinListings.length > 0
       ? '<section class="section vitrin-section" style="padding-top:0;">' +
@@ -730,7 +718,6 @@ async function renderHome() {
         '</div>' +
       '</section>' +
       vitrinHTML +
-      featuredHTML +
       '<section class="section">' +
         '<div class="container">' +
           '<div class="section-header"><div><div class="section-title">Son İlanlar</div><div class="section-sub">Platforma yeni eklenen ilanlar</div></div><a href="#/ara" class="btn btn-ghost btn-sm">Tümünü Gör</a></div>' +
@@ -744,7 +731,7 @@ async function renderHome() {
       if (q) goTo('/ara?search=' + encodeURIComponent(q));
     });
 
-    updateFxCards((data.listings || []).concat(vitrinListings, featuredListings));
+    updateFxCards((data.listings || []).concat(vitrinListings));
   } catch(err) {
     app.innerHTML = '<div class="container" style="padding:40px;"><div class="alert alert-error">' + esc(err.message) + '</div></div>';
   }
