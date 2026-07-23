@@ -25,6 +25,7 @@ const messageRoutes     = require('./routes/messages');
 const favoritesRoutes   = require('./routes/favorites');
 const notificationsRoutes = require('./routes/notifications');
 const reportsRoutes     = require('./routes/reports');
+const showcaseRoutes    = require('./routes/showcase');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
@@ -148,6 +149,7 @@ app.use('/api/messages',   messageRoutes);
 app.use('/api/favorites',      favoritesRoutes);
 app.use('/api/notifications',  notificationsRoutes);
 app.use('/api/reports',        reportsRoutes);
+app.use('/api/showcase',       showcaseRoutes);
 app.use('/api/rates',          require('./routes/rates'));
 
 // Bilinmeyen API rotaları
@@ -162,7 +164,7 @@ app.get('/sitemap.xml', (_req, res) => {
     const base = 'https://ticaret-hane.net';
     const today = new Date().toISOString().slice(0, 10);
 
-    const staticPaths = ['/', '/ara', '/sozlesme', '/kvkk', '/ilan-kurallari', '/iletisim'];
+    const staticPaths = ['/', '/ara', '/vitrin', '/sozlesme', '/kvkk', '/ilan-kurallari', '/iletisim'];
     const categories = db.prepare('SELECT slug FROM categories').all();
     const listings   = db.prepare("SELECT id, updated_at FROM listings WHERE status='active'").all();
 
@@ -218,6 +220,11 @@ function runExpiryCron() {
     // expires_at süresi dolmuş aktif ilanları 'expired' yap
     db.prepare(
       "UPDATE listings SET status='expired', updated_at=datetime('now') WHERE status='active' AND expires_at IS NOT NULL AND expires_at < datetime('now')"
+    ).run();
+    // featured_until süresi dolmuş "öne çıkan" ilanları normale döndür —
+    // aksi halde sıralama öncelikleri süresiz olarak takılı kalır.
+    db.prepare(
+      "UPDATE listings SET is_featured=0, featured_until=NULL WHERE is_featured=1 AND featured_until IS NOT NULL AND featured_until < datetime('now')"
     ).run();
   } catch(e) {
     console.error('[CRON] expiry error:', e.message);

@@ -51,6 +51,9 @@ function sectorIcon(slug, idx) {
   return CATEGORY_ICONS[slug] || SECTOR_ICONS[(idx >= 0 ? idx : 0) % SECTOR_ICONS.length];
 }
 
+// Vitrin sayfası başlığı için yıldız ikonu (diğer sektör ikonlarıyla aynı çizim stili)
+const VITRIN_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+
 // ---- Global durum ----
 const State = {
   token:      localStorage.getItem('tc_token') || sessionStorage.getItem('tc_token') || null,
@@ -177,6 +180,7 @@ function toast(msg, type, ms) {
 var routes = {
   '/':                    renderHome,
   '/ara':                 renderSearch,
+  '/vitrin':              renderVitrin,
   '/ilan/:id':            renderListingDetail,
   '/ilan-ver':            renderCreateListing,
   '/ilan-duzenle/:id':    renderEditListing,
@@ -315,7 +319,8 @@ async function loadCategories() {
 
 function buildCatBar() {
   var el = document.getElementById('catBarInner');
-  var html = '<a class="cat-bar-item" href="#/ara">Tüm İlanlar</a>';
+  var html = '<a class="cat-bar-item" href="#/ara">Tüm İlanlar</a>' +
+    '<a class="cat-bar-item cat-bar-item-vitrin" data-slug="vitrin" href="#/vitrin">★ Vitrin</a>';
   State.categories.forEach(function(c) {
     html += '<a class="cat-bar-item" data-slug="' + c.slug + '" href="#/kategori/' + c.slug + '">' + esc(c.name) + '</a>';
   });
@@ -1041,6 +1046,36 @@ async function renderCategory(params) {
       '</div>';
   }
 }
+
+// ================================================================
+// VİTRİN — admin'in elle seçtiği ilanlar
+// ================================================================
+async function renderVitrin() {
+  var app = document.getElementById('app');
+  try {
+    var data = await api('GET', '/showcase');
+    var listings = data.listings || [];
+
+    app.innerHTML =
+      '<div class="cat-hero"><div class="container"><div class="cat-hero-inner">' +
+        '<span class="cat-icon-wrap ic-4 cat-hero-icon">' + VITRIN_ICON + '</span>' +
+        '<div><div class="cat-hero-label"><a href="#/" style="color:inherit;opacity:.7;">Ana Sayfa</a> / Vitrin</div>' +
+        '<h1 class="cat-hero-title">Vitrin</h1>' +
+        '<p class="cat-hero-desc">Ticaret-hane ekibinin özenle seçtiği öne çıkan ilanlar.</p></div>' +
+      '</div></div></div>' +
+      '<div class="container" style="padding-top:24px;">' +
+        (listings.length
+          ? '<div class="listing-grid">' + listings.map(listingCardHTML).join('') + '</div>'
+          : '<div class="empty-state"><div class="empty-state-icon">★</div><div class="empty-state-title">Vitrin henüz boş.</div><div class="empty-state-sub">Yakında seçkin ilanlar burada yer alacak.</div></div>') +
+      '</div>';
+
+    updateFxCards(listings);
+  } catch(err) {
+    console.error('[renderVitrin]', err);
+    app.innerHTML = '<div class="container" style="padding:60px 0;text-align:center;"><p class="text-muted">Vitrin yüklenemedi.</p><a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
+  }
+}
+
 // Filtre bloğu — radio yerine <a href> kullanır
 function filterOptionsHTML(b) {
   return b.options.map(function(opt) {
@@ -1915,6 +1950,7 @@ async function renderAdmin() {
         '<div class="admin-sidebar-item active" data-tab="dashboard">Genel Bakış</div>' +
         '<div class="admin-sidebar-item" data-tab="pending">Bekleyen' + (stats.pending_listings > 0 ? ' <span style="background:var(--red);color:#fff;border-radius:99px;padding:1px 7px;font-size:.7rem;font-weight:700;margin-left:4px;">' + stats.pending_listings + '</span>' : '') + '</div>' +
         '<div class="admin-sidebar-item" data-tab="listings">Tüm İlanlar</div>' +
+        '<div class="admin-sidebar-item" data-tab="vitrin">Vitrin</div>' +
         '<div class="admin-sidebar-item" data-tab="users">Kullanıcılar</div>' +
 
         '<div class="admin-sidebar-item" data-tab="companies">Firmalar</div>' +
@@ -1950,6 +1986,7 @@ async function renderAdmin() {
 
         '<div id="atab_pending"  class="tab-content"><div id="pendingContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
         '<div id="atab_listings" class="tab-content"><div id="allListingsContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
+        '<div id="atab_vitrin"   class="tab-content"><div id="vitrinAdminContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
         '<div id="atab_users"    class="tab-content"><div id="usersContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
 
         '<div id="atab_companies" class="tab-content"><div id="companiesContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
@@ -1987,6 +2024,7 @@ async function renderAdmin() {
     if (el) el.classList.add('active');
 
     if (tab === 'listings')       loadAdminListings(filter ? { status: filter } : {});
+    else if (tab === 'vitrin')    loadAdminVitrin();
     else if (tab === 'users')     loadAdminUsers(filter ? { status: filter } : {});
     else if (tab === 'pending')   loadAdminPending();
     else if (tab === 'companies') loadAdminCompanies();
@@ -2006,6 +2044,7 @@ async function renderAdmin() {
       if (el) el.classList.add('active');
       if (tab === 'pending')  loadAdminPending();
       if (tab === 'listings') loadAdminListings();
+      if (tab === 'vitrin')   loadAdminVitrin();
       if (tab === 'users')    loadAdminUsers();
 
       if (tab === 'companies') loadAdminCompanies();
@@ -2144,6 +2183,7 @@ async function loadAdminListings(filters) {
             (l.status==='pending'||l.status==='rejected' ? '<button type="button" class="btn btn-success btn-sm" data-approve="' + l.id + '">Onayla</button>' : '') +
             (l.status==='active'  ? '<button type="button" class="btn btn-ghost btn-sm" data-reject="' + l.id + '">Pasifleştir</button>' : '') +
             '<button type="button" class="btn btn-sm ' + (l.is_featured ? 'btn-accent' : 'btn-ghost') + '" data-feature="' + l.id + '" title="Öne Çıkar">' + (l.is_featured ? '⭐' : '☆') + '</button>' +
+            '<button type="button" class="btn btn-sm ' + (l.in_showcase ? 'btn-accent' : 'btn-ghost') + '" data-showcase="' + l.id + '" title="Vitrine Ekle/Çıkar">' + (l.in_showcase ? '🖼️ Vitrinde' : '🖼️ Vitrine Ekle') + '</button>' +
             '<button type="button" class="btn btn-danger btn-sm" data-admindel="' + l.id + '">Sil</button>' +
           '</div></td>' +
         '</tr>';
@@ -2188,6 +2228,56 @@ async function loadAdminListings(filters) {
           var res = await api('PATCH', '/admin/listings/' + btn.dataset.feature + '/feature');
           toast(res.message, 'success');
           loadAdminListings(filters);
+        } catch(e) { toast(e.message,'error'); }
+      });
+    });
+    c.querySelectorAll('[data-showcase]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        try {
+          var res = await api('PATCH', '/admin/listings/' + btn.dataset.showcase + '/showcase');
+          toast(res.message, 'success');
+          loadAdminListings(filters);
+        } catch(e) { toast(e.message,'error'); }
+      });
+    });
+  } catch(err) { c.innerHTML = '<div class="alert alert-error">' + esc(err.message) + '</div>'; }
+}
+
+async function loadAdminVitrin() {
+  var c = document.getElementById('vitrinAdminContent');
+  c.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
+  try {
+    var rows = await api('GET', '/admin/showcase');
+    var sl = { pending:'Bekliyor', active:'Aktif', rejected:'Reddedildi', sold:'Satıldı', expired:'Süresi Doldu' };
+    c.innerHTML =
+      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">' +
+        '<h2 style="margin:0;">Vitrin</h2>' +
+        '<span style="font-size:.82rem;color:var(--text-mid);">' + rows.length + ' ilan</span>' +
+      '</div>' +
+      '<div class="alert alert-success" style="margin-bottom:16px;">İlanı vitrine eklemek için <strong>Tüm İlanlar</strong> sekmesindeki 🖼️ butonunu kullanın.</div>' +
+      (rows.length
+        ? '<div class="table-wrapper"><table><thead><tr><th>#</th><th>Başlık</th><th>Durum</th><th>Sektör</th><th>Üye</th><th>Eklenme</th><th>İşlem</th></tr></thead><tbody>' +
+          rows.map(function(l) {
+            return '<tr id="vrow_' + l.id + '">' +
+              '<td>#' + l.id + '</td>' +
+              '<td><a href="#/ilan/' + l.id + '" target="_blank" style="color:var(--blue);">' + esc(l.title) + '</a></td>' +
+              '<td><span class="badge badge-' + l.status + '">' + (sl[l.status]||l.status) + '</span></td>' +
+              '<td style="font-size:.82rem;">' + esc(l.category_name||'') + '</td>' +
+              '<td style="font-size:.82rem;">' + esc(l.user_name||'') + '</td>' +
+              '<td style="white-space:nowrap;font-size:.78rem;">' + timeAgo(l.added_at) + '</td>' +
+              '<td><button type="button" class="btn btn-ghost btn-sm" data-unshowcase="' + l.id + '">Vitrinden Çıkar</button></td>' +
+            '</tr>';
+          }).join('') +
+          '</tbody></table></div>'
+        : '<div class="empty-state"><div class="empty-state-title">Vitrin henüz boş.</div></div>');
+
+    c.querySelectorAll('[data-unshowcase]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var id = btn.dataset.unshowcase;
+        try {
+          await api('PATCH', '/admin/listings/' + id + '/showcase');
+          document.getElementById('vrow_'+id)?.remove();
+          toast('Vitrinden çıkarıldı.', 'success');
         } catch(e) { toast(e.message,'error'); }
       });
     });

@@ -78,12 +78,15 @@ router.get('/', (req, res) => {
 
     const WHERE = conditions.join(' AND ');
 
+    // Öne çıkarılan ilanlar, seçilen sıralamadan bağımsız olarak her zaman
+    // en üstte gösterilir — hem sektör (kategori filtreli) hem toplu
+    // ilan listelerinde geçerli olsun diye tek noktadan (bu sorgudan) yönetilir.
     const ORDER = {
-      oldest:     'l.created_at ASC',
-      price_asc:  'l.price ASC',
-      price_desc: 'l.price DESC',
-      views:      'l.views DESC',
-    }[sort] || 'l.created_at DESC';
+      oldest:     'l.is_featured DESC, l.created_at ASC',
+      price_asc:  'l.is_featured DESC, l.price ASC',
+      price_desc: 'l.is_featured DESC, l.price DESC',
+      views:      'l.is_featured DESC, l.views DESC',
+    }[sort] || 'l.is_featured DESC, l.created_at DESC';
 
     const total = db.prepare(
       `SELECT COUNT(*) AS n
@@ -423,6 +426,7 @@ router.delete('/:id', authenticate, (req, res) => {
     const imgs = db.prepare('SELECT filename FROM listing_images WHERE listing_id=?').all(listing.id);
     imgs.forEach(img => { try { fs.unlinkSync(path.join(__dirname, '..', 'uploads', img.filename)); } catch {} });
 
+    db.prepare('DELETE FROM showcase_listings WHERE listing_id=?').run(listing.id);
     db.prepare('DELETE FROM listings WHERE id=?').run(listing.id);
     res.json({ message: 'İlan silindi.' });
   } catch (err) {

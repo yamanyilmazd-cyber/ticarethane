@@ -339,7 +339,8 @@ router.get('/listings', (req, res) => {
   const rows = db.prepare(`
     SELECT l.*, c.name AS category_name, sc.name AS subcategory_name,
       u.name AS user_name, u.email AS user_email, u.company_name,
-      (SELECT COUNT(*) FROM listing_images WHERE listing_id=l.id) AS image_count
+      (SELECT COUNT(*) FROM listing_images WHERE listing_id=l.id) AS image_count,
+      (SELECT COUNT(*) FROM showcase_listings WHERE listing_id=l.id) AS in_showcase
     FROM listings l
     LEFT JOIN categories    c  ON l.category_id=c.id
     LEFT JOIN subcategories sc ON l.subcategory_id=sc.id
@@ -445,6 +446,7 @@ router.delete('/listings/:id', (req, res) => {
   const imgs = db.prepare('SELECT filename FROM listing_images WHERE listing_id=?').all(listing.id);
   imgs.forEach(img => { try { fs.unlinkSync(path.join(__dirname, '..', 'uploads', img.filename)); } catch {} });
   db.prepare('DELETE FROM listing_images WHERE listing_id=?').run(listing.id);
+  db.prepare('DELETE FROM showcase_listings WHERE listing_id=?').run(listing.id);
   db.prepare('DELETE FROM listings WHERE id=?').run(listing.id);
   res.json({ message: 'İlan silindi.' });
 });
@@ -543,6 +545,7 @@ router.delete('/users/:id', (req, res) => {
 
     // Veritabanından temizle
     db.prepare('DELETE FROM listing_images WHERE listing_id IN (SELECT id FROM listings WHERE user_id=?)').run(uid);
+    db.prepare('DELETE FROM showcase_listings WHERE listing_id IN (SELECT id FROM listings WHERE user_id=?)').run(uid);
     db.prepare('DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE user1_id=? OR user2_id=?)').run(uid, uid);
     db.prepare('DELETE FROM conversations WHERE user1_id=? OR user2_id=?').run(uid, uid);
     db.prepare('DELETE FROM listings WHERE user_id=?').run(uid);
@@ -690,6 +693,46 @@ router.patch('/listings/:id/feature', (req, res) => {
     res.json({ message: newState ? 'Ilan one cikartildi.' : 'One cikartma kaldirildi.', is_featured: newState });
   } catch(err) {
     res.status(500).json({ error: 'İşlem başarısız.' });
+  }
+});
+
+// ================================================================
+// VITRIN — admin'in elle sectigi ilanlar (listings tablosuna dokunmaz)
+// ================================================================
+router.patch('/listings/:id/showcase', (req, res) => {
+  try {
+    const db = getDb();
+    const listing = db.prepare('SELECT id FROM listings WHERE id=?').get(req.params.id);
+    if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
+
+    const existing = db.prepare('SELECT id FROM showcase_listings WHERE listing_id=?').get(req.params.id);
+    if (existing) {
+      db.prepare('DELETE FROM showcase_listings WHERE listing_id=?').run(req.params.id);
+      return res.json({ message: 'Vitrinden çıkarıldı.', in_showcase: 0 });
+    }
+    db.prepare('INSERT INTO showcase_listings (listing_id, added_by) VALUES (?, ?)').run(req.params.id, req.userId);
+    res.json({ message: 'Vitrine eklendi.', in_showcase: 1 });
+  } catch(err) {
+    res.status(500).json({ error: 'İşlem başarısız.' });
+  }
+});
+
+router.get('/showcase', (_req, res) => {
+  try {
+    const db = getDb();
+    const rows = db.prepare(`
+      SELECT s.id AS showcase_id, s.created_at AS added_at,
+        l.id, l.title, l.status,
+        c.name AS category_name, u.name AS user_name
+      FROM showcase_listings s
+      JOIN listings l ON l.id = s.listing_id
+      LEFT JOIN categories c ON l.category_id = c.id
+      LEFT JOIN users u ON l.user_id = u.id
+      ORDER BY s.created_at DESC LIMIT 200
+    `).all();
+    res.json(rows);
+  } catch(err) {
+    res.status(500).json({ error: 'Vitrin listesi yüklenemedi.' });
   }
 });
 

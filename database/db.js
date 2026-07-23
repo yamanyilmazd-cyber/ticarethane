@@ -264,6 +264,12 @@ const SCHEMA_DDL = [
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, listing_id INTEGER,
     note TEXT NOT NULL, created_by INTEGER NOT NULL,
     created_at TEXT DEFAULT (datetime('now')))`,
+  // Vitrin: admin'in elle sectigi ilanlarin gosterildigi ozel sekme.
+  // listings tablosuna hicbir dokunus yok — sadece hangi ilanin vitrinde
+  // oldugunu tutan ayri, katma bir tablo.
+  `CREATE TABLE IF NOT EXISTS showcase_listings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL UNIQUE,
+    added_by INTEGER, created_at TEXT DEFAULT (datetime('now')))`,
   `CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_city     ON listings(city)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_status   ON listings(status)`,
@@ -275,6 +281,7 @@ const SCHEMA_DDL = [
   `CREATE INDEX IF NOT EXISTS idx_notif_user        ON notifications(user_id, is_read, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_favorites_user    ON favorites(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_favorites_listing ON favorites(listing_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_showcase_listing   ON showcase_listings(listing_id)`,
 ];
 
 // Mevcut tablolara sonradan eklenen kolonlar — hem yerel hem Turso semasina
@@ -324,7 +331,8 @@ async function initTursoBackground() {
     const tables = [
       'users', 'categories', 'subcategories', 'listings', 'listing_images',
       'conversations', 'messages', 'favorites', 'notifications',
-      'listing_reports', 'password_reset_tokens', 'listing_tags', 'admin_notes'
+      'listing_reports', 'password_reset_tokens', 'listing_tags', 'admin_notes',
+      'showcase_listings'
     ];
 
     let totalRows = 0;

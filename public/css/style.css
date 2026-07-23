@@ -115,6 +115,8 @@ ul, ol { list-style: none; }
 }
 .cat-bar-item:hover { color: #fff; }
 .cat-bar-item.active { color: var(--amber-lt); border-bottom-color: var(--amber-lt); }
+.cat-bar-item-vitrin { color: var(--amber-lt); font-weight: 700; }
+.cat-bar-item-vitrin:hover { color: #fff; }
 
 /* ================================================================
    BUTONLAR
