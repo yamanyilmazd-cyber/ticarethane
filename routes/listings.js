@@ -84,16 +84,26 @@ function fuzzySearchFallback(db, searchWords, limitNum) {
      LIMIT 500`
   ).all();
 
+  // Kisa kelimelerde (ör. "iş", "ve") edit-distance/substring toleransi
+  // neredeyse her metinle alakasiz "yakin" eslesme uretir — bu yuzden
+  // tolerans kelime uzunluguyla birlikte kademeli olarak acilir.
   const scored = candidates.map(row => {
     const haystackWords = turkishNormalize(
       `${row.title} ${row.description || ''} ${row.category_name || ''}`
     ).split(/\s+/).filter(Boolean);
     let matched = 0;
     searchWords.forEach(sw => {
+      if (sw.length <= 2) {
+        // Cok kisa kelime: sadece birebir ayni kelimeyle eslessin
+        if (haystackWords.includes(sw)) matched++;
+        return;
+      }
       const maxDist = sw.length <= 4 ? 1 : Math.floor(sw.length / 4) + 1;
-      const hit = haystackWords.some(hw =>
-        hw.includes(sw) || sw.includes(hw) || levenshtein(sw, hw) <= maxDist
-      );
+      const hit = haystackWords.some(hw => {
+        if (hw.length <= 2) return hw === sw;
+        if ((sw.length >= 4 && hw.includes(sw)) || (hw.length >= 4 && sw.includes(hw))) return true;
+        return levenshtein(sw, hw) <= maxDist;
+      });
       if (hit) matched++;
     });
     return { row, matched };
