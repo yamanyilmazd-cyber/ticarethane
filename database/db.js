@@ -484,6 +484,12 @@ function migrateCategories() {
   if (elektrik && !dbProxy.prepare("SELECT id FROM subcategories WHERE category_id = ? AND slug = 'gunes-paneli'").get(elektrik.id)) {
     dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)').run(elektrik.id, 'gunes-paneli', 'Güneş Paneli');
   }
+  // Güneş Paneli alt kategoriler listesinde en üstte gösterilsin, aciklamada da basta gecsin
+  if (elektrik) {
+    dbProxy.prepare("UPDATE subcategories SET sort_order = -1 WHERE category_id = ? AND slug = 'gunes-paneli'").run(elektrik.id);
+    dbProxy.prepare("UPDATE categories SET description = ? WHERE id = ?")
+      .run('Güneş paneli, kablo, pano, trafo ve elektrik malzemeleri', elektrik.id);
+  }
 
   const cats = dbProxy.prepare('SELECT id FROM categories').all();
   cats.forEach(cat => {
@@ -543,8 +549,8 @@ function seedCategories() {
       subs: ['Bor Mineralleri', 'Krom Cevheri', 'Mermer & Taş', 'Kum & Çakıl', 'Barit', 'Perlit & Vermikülit', 'Kil & Kaolin', 'Bentonit', 'Diğer'] },
     { slug: 'makina-ekipman', name: 'Makina & Sanayi Ekipmanı', desc: 'Üretim makineleri, sanayi ekipmanları ve yedek parçalar',
       subs: ['Üretim Makinaları', 'Kompresör & Pompa', 'Vinç & Yükleme', 'Jeneratör', 'İsı Değiştirici', 'Filtre Sistemleri', 'CNC & İşleme', 'Yedek Parça', 'Diğer'] },
-    { slug: 'elektrik-elektronik', name: 'Elektrik & Elektronik Malzeme', desc: 'Kablo, pano, trafo ve elektrik malzemeleri',
-      subs: ['Güç Kablosu', 'Trafo & Kompanzasyon', 'Pano & Şalter', 'Aydınlatma', 'Motor & Sürücü', 'Otomasyon', 'Kablo Raf & Kanal', 'Topraklama', 'Güneş Paneli', 'Diğer'] },
+    { slug: 'elektrik-elektronik', name: 'Elektrik & Elektronik Malzeme', desc: 'Güneş paneli, kablo, pano, trafo ve elektrik malzemeleri',
+      subs: ['Güneş Paneli', 'Güç Kablosu', 'Trafo & Kompanzasyon', 'Pano & Şalter', 'Aydınlatma', 'Motor & Sürücü', 'Otomasyon', 'Kablo Raf & Kanal', 'Topraklama', 'Diğer'] },
     { slug: 'ahsap-orman', name: 'Ahşap & Orman Ürünleri', desc: 'Kereste, kontrplak, sunta ve ahşap ürünler',
       subs: ['Kereste', 'Kontrplak', 'Sunta & MDF', 'OSB', 'Parke', 'Mobilya Levhası', 'Yonga & Talaş', 'Orman Ürünleri', 'Diğer'] },
     { slug: 'deri', name: 'Deri & Ham Deri', desc: 'Ham deri, işlenmiş deri ve deri hammaddeleri',
@@ -573,6 +579,9 @@ function seedCategories() {
       const existSub = dbProxy.prepare('SELECT id FROM subcategories WHERE category_id = ? AND slug = ?').get(catId, subSlug);
       if (!existSub) dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)').run(catId, subSlug, subName);
     });
+    if (cat.slug === 'elektrik-elektronik') {
+      dbProxy.prepare("UPDATE subcategories SET sort_order = -1 WHERE category_id = ? AND slug = 'gunes-paneli'").run(catId);
+    }
   });
   console.log('[DB] Kategoriler seed edildi.');
 }
