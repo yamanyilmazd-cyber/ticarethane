@@ -491,6 +491,22 @@ function migrateCategories() {
       .run('Güneş paneli, kablo, pano, trafo ve elektrik malzemeleri', elektrik.id);
   }
 
+  // Yeni sektör: Hırdavat & İş Güvenliği Malzemeleri
+  if (!dbProxy.prepare("SELECT id FROM categories WHERE slug = 'hirdavat-is-guvenligi'").get()) {
+    const r = dbProxy.prepare('INSERT INTO categories (slug, name, description) VALUES (?, ?, ?)')
+      .run('hirdavat-is-guvenligi', 'Hırdavat & İş Güvenliği Malzemeleri', 'El aletleri, bağlantı elemanları, kişisel koruyucu donanım ve iş güvenliği ekipmanları');
+    const hirdavatId = r.lastInsertRowid;
+    [
+      'El Aletleri', 'Elektrikli El Aletleri', 'Vida, Civata & Bağlantı Elemanları',
+      'Kilit & Menteşe Sistemleri', 'Halat, Zincir & Kaldırma Ekipmanı', 'Yapıştırıcı & Bant',
+      'Kişisel Koruyucu Donanım (KKD)', 'Baş & Göz Koruma', 'İş Eldiveni & Ayakkabısı',
+      'Solunum & İşitme Koruma', 'Yangın & İlk Yardım Ekipmanı', 'İş Güvenliği İşaret & Levhaları',
+      'Diğer'
+    ].forEach(subName => {
+      dbProxy.prepare('INSERT INTO subcategories (category_id, slug, name) VALUES (?, ?, ?)').run(hirdavatId, slugify(subName), subName);
+    });
+  }
+
   const cats = dbProxy.prepare('SELECT id FROM categories').all();
   cats.forEach(cat => {
     const exists = dbProxy.prepare(
@@ -563,6 +579,8 @@ function seedCategories() {
       subs: ['Sanayi Boyası', 'Toz Boya', 'Vernik & Lake', 'Epoksi Kaplama', 'Astar & Boya Hammaddesi', 'Pigment & Boya Kimyasalları', 'Diğer'] },
     { slug: 'saglik-kimya', name: 'Sağlık & Hijyen Kimyasalları', desc: 'Dezenfektan, sterilizasyon, ilaç hammaddeleri ve hijyen ürünleri',
       subs: ['Dezenfektan & Antiseptik', 'İlaç Hammaddeleri (API)', 'Tıbbi Sarf Malzeme', 'Laboratuvar Kimyasalları', 'Kozmetik Hammadde', 'Diğer'] },
+    { slug: 'hirdavat-is-guvenligi', name: 'Hırdavat & İş Güvenliği Malzemeleri', desc: 'El aletleri, bağlantı elemanları, kişisel koruyucu donanım ve iş güvenliği ekipmanları',
+      subs: ['El Aletleri', 'Elektrikli El Aletleri', 'Vida, Civata & Bağlantı Elemanları', 'Kilit & Menteşe Sistemleri', 'Halat, Zincir & Kaldırma Ekipmanı', 'Yapıştırıcı & Bant', 'Kişisel Koruyucu Donanım (KKD)', 'Baş & Göz Koruma', 'İş Eldiveni & Ayakkabısı', 'Solunum & İşitme Koruma', 'Yangın & İlk Yardım Ekipmanı', 'İş Güvenliği İşaret & Levhaları', 'Diğer'] },
   ];
 
   cats.forEach(cat => {

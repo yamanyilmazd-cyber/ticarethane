@@ -46,6 +46,7 @@ const SECTOR_ICONS = [
 // ikon kullanilir (slug bazli) — yeni kategori eklenince rotasyon kaymasin.
 const CATEGORY_ICONS = {
   gida: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8c-3-2-7 0-7 5 0 4 3 8 6 8 1 0 1.5-.5 2-.5s1 .5 2 .5c3 0 6-4 6-8 0-4.5-3.5-6.5-6.5-5"/><path d="M12 8V5c0-1 1-2 2-2"/></svg>`,
+  'hirdavat-is-guvenligi': `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>`,
 };
 function sectorIcon(slug, idx) {
   return CATEGORY_ICONS[slug] || SECTOR_ICONS[(idx >= 0 ? idx : 0) % SECTOR_ICONS.length];
