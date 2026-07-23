@@ -18,6 +18,91 @@ function cleanupFiles(files) {
   files.forEach(f => { try { fs.unlinkSync(f.path); } catch {} });
 }
 
+// ── Arama: Türkçe karakter normalizasyonu ──────────────────────────────
+// Farklı klavye/klavye dilinde ı/ş/ğ/ü/ö/ç yazamayan kullanicilar da
+// (or.: "gunes" -> "güneş") dogru sonucu bulsun diye hem arama terimi hem
+// de veritabani metni ayni ASCII forma indirgenip oyle karsilastirilir.
+const TR_CHAR_PAIRS = [
+  ['İ','i'], ['I','i'], ['ı','i'],
+  ['Ş','s'], ['ş','s'],
+  ['Ğ','g'], ['ğ','g'],
+  ['Ü','u'], ['ü','u'],
+  ['Ö','o'], ['ö','o'],
+  ['Ç','c'], ['ç','c'],
+];
+function turkishNormalize(str) {
+  let s = String(str || '');
+  for (const [a, b] of TR_CHAR_PAIRS) s = s.split(a).join(b);
+  return s.toLowerCase().trim();
+}
+// Ayni normalizasyonun SQL karsiligi — bir kolon ifadesini sarar.
+function normSqlExpr(colExpr) {
+  let expr = colExpr;
+  for (const [a, b] of TR_CHAR_PAIRS) expr = `REPLACE(${expr}, '${a}', '${b}')`;
+  return `LOWER(${expr})`;
+}
+
+// ── Arama: yazim hatasi toleransi (Levenshtein mesafesi) ───────────────
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  const al = a.length, bl = b.length;
+  if (!al) return bl;
+  if (!bl) return al;
+  let prev = new Array(bl + 1);
+  for (let j = 0; j <= bl; j++) prev[j] = j;
+  for (let i = 1; i <= al; i++) {
+    const curr = [i];
+    for (let j = 1; j <= bl; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = curr;
+  }
+  return prev[bl];
+}
+
+// Normal (normalize edilmis, kelime bazli) arama hic sonuc bulamazsa
+// devreye girer: son eklenen aktif ilanlar arasinda yazim hatasina
+// toleransli en yakin eslesmeleri bulup siralar.
+function fuzzySearchFallback(db, searchWords, limitNum) {
+  const candidates = db.prepare(
+    `SELECT
+       l.id, l.title, l.price, l.price_type, l.price_unit, l.price_basis, l.currency, l.vat_included, l.is_featured,
+       l.quantity, l.quantity_unit, l.lot_quantity, l.city, l.district,
+       l.listing_type, l.views, l.created_at, l.description,
+       c.name AS category_name, c.slug AS category_slug,
+       sc.name AS subcategory_name,
+       u.name AS seller_name, u.company_name,
+       (SELECT filename FROM listing_images
+        WHERE listing_id = l.id ORDER BY sort_order ASC LIMIT 1) AS thumbnail
+     FROM listings l
+     LEFT JOIN categories   c  ON l.category_id    = c.id
+     LEFT JOIN subcategories sc ON l.subcategory_id = sc.id
+     LEFT JOIN users         u  ON l.user_id        = u.id
+     WHERE l.status = 'active'
+     ORDER BY l.is_featured DESC, l.created_at DESC
+     LIMIT 500`
+  ).all();
+
+  const scored = candidates.map(row => {
+    const haystackWords = turkishNormalize(
+      `${row.title} ${row.description || ''} ${row.category_name || ''}`
+    ).split(/\s+/).filter(Boolean);
+    let matched = 0;
+    searchWords.forEach(sw => {
+      const maxDist = sw.length <= 4 ? 1 : Math.floor(sw.length / 4) + 1;
+      const hit = haystackWords.some(hw =>
+        hw.includes(sw) || sw.includes(hw) || levenshtein(sw, hw) <= maxDist
+      );
+      if (hit) matched++;
+    });
+    return { row, matched };
+  }).filter(x => x.matched > 0);
+
+  scored.sort((a, b) => b.matched - a.matched);
+  return scored.slice(0, limitNum).map(x => { delete x.row.description; return x.row; });
+}
+
 // -----------------------------------------------------------------------
 // GET /api/listings  — filtreleme + sayfalama
 // -----------------------------------------------------------------------
@@ -66,9 +151,19 @@ router.get('/', (req, res) => {
     if (quantity_unit) addMulti(quantity_unit, 'l.quantity_unit');
     if (lot_qty_min) { conditions.push('l.lot_quantity >= ?'); params.push(parseInt(lot_qty_min)); }
     if (lot_qty_max) { conditions.push('l.lot_quantity <= ?'); params.push(parseInt(lot_qty_max)); }
+    // Arama: Türkçe karakter normalizasyonu + kelime kelime (AND) eslesme —
+    // "gunes panel" de, "Güneş Panel" de, kelime sirasi degisse de bulur.
+    // Kelime, baslik/aciklama/sektor adinin herhangi birinde geciyorsa yeter.
+    let searchWords = [];
     if (search) {
-      conditions.push('(l.title LIKE ? OR l.description LIKE ?)');
-      params.push(`%${search}%`, `%${search}%`);
+      searchWords = turkishNormalize(search).split(/\s+/).filter(Boolean).slice(0, 6);
+      const titleExpr = normSqlExpr('l.title');
+      const descExpr  = normSqlExpr('l.description');
+      const catExpr   = normSqlExpr('c.name');
+      searchWords.forEach(w => {
+        conditions.push(`(${titleExpr} LIKE ? OR ${descExpr} LIKE ? OR ${catExpr} LIKE ?)`);
+        params.push(`%${w}%`, `%${w}%`, `%${w}%`);
+      });
     }
     if (seller_id) {
       conditions.push('l.user_id = ?');
@@ -95,7 +190,7 @@ router.get('/', (req, res) => {
        WHERE ${WHERE}`
     ).get(...params).n;
 
-    const rows = db.prepare(
+    let rows = db.prepare(
       `SELECT
          l.id, l.title, l.price, l.price_type, l.price_unit, l.price_basis, l.currency, l.vat_included, l.is_featured,
          l.quantity, l.quantity_unit, l.lot_quantity, l.city, l.district,
@@ -114,20 +209,35 @@ router.get('/', (req, res) => {
        LIMIT ? OFFSET ?`
     ).all(...params, limitNum, offset);
 
-    // Arama varsa eslesen firmalari da dondur
+    // Normal (normalize + kelime bazli) arama hic sonuc bulamadiysa, yazim
+    // hatasina toleransli yakin-eslesme aramasina dus.
+    let fuzzy = false;
+    let fuzzyTotal = total;
+    if (total === 0 && searchWords.length && pageNum === 1) {
+      const fuzzyRows = fuzzySearchFallback(db, searchWords, limitNum);
+      if (fuzzyRows.length) { rows = fuzzyRows; fuzzy = true; fuzzyTotal = fuzzyRows.length; }
+    }
+
+    // Arama varsa eslesen firmalari da dondur (Turkce normalizasyonlu)
     let sellers = [];
     if (search) {
+      const normQ = turkishNormalize(search);
+      const nameExpr = normSqlExpr('name');
+      const compExpr = normSqlExpr('company_name');
       sellers = db.prepare(
         `SELECT id, name, company_name, city, is_verified FROM users
-         WHERE is_active = 1 AND role != 'admin' AND (name LIKE ? OR company_name LIKE ?)
+         WHERE is_active = 1 AND role != 'admin' AND (${nameExpr} LIKE ? OR ${compExpr} LIKE ?)
          LIMIT 5`
-      ).all(`%${search}%`, `%${search}%`);
+      ).all(`%${normQ}%`, `%${normQ}%`);
     }
 
     res.json({
       listings:   rows,
       sellers,
-      pagination: { total, page: pageNum, limit: limitNum, pages: Math.ceil(total / limitNum) }
+      fuzzy,
+      pagination: fuzzy
+        ? { total: fuzzyTotal, page: 1, limit: limitNum, pages: 1 }
+        : { total, page: pageNum, limit: limitNum, pages: Math.ceil(total / limitNum) }
     });
   } catch (err) {
     console.error('[LISTINGS] get:', err.message);

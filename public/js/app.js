@@ -880,6 +880,9 @@ async function renderSearch() {
               '<div><div class="section-title">' + (search ? '"'+esc(search)+'" için sonuçlar' : 'Tüm İlanlar') + ' <span class="text-muted fs-sm">(' + data.pagination.total + ' ilan)</span></div></div>' +
               (isLoggedIn() ? '<a href="#/ilan-ver" class="btn btn-accent btn-sm">+ İlan Ver</a>' : '') +
             '</div>' +
+            (data.fuzzy
+              ? '<div class="alert alert-info" style="margin-bottom:16px;">"' + esc(search) + '" için tam eşleşme bulunamadı — yakın sonuçlar gösteriliyor.</div>'
+              : '') +
             ((search && data.sellers && data.sellers.length)
               ? '<div class="filter-block" style="margin-bottom:18px;"><div class="filter-block-title">Firmalar</div><div class="filter-block-body">' +
                 data.sellers.map(function(f) {
