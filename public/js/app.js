@@ -1900,6 +1900,10 @@ async function renderRegister() {
       var res = await api('POST', '/auth/register', Object.fromEntries(fd));
       setAuth(res.token, res.user, remember);
       updateNavbar();
+      // Google Ads donusum: uye kaydi tamamlandi (AW-18285393404)
+      if (typeof gtag === 'function') {
+        gtag('event', 'conversion', { send_to: 'AW-18285393404/nVjBCNbyh9kcEPzrk49E' });
+      }
       toast('Hoş geldiniz! İlk ilanınızı oluşturun.', 'success');
       goTo('/hesabim');
     } catch(err) {
