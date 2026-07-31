@@ -368,6 +368,7 @@ async function initTursoBackground() {
     _tursoQueue = [];
   }
   fixTurkishText();
+  cleanupStaleListingImages();
   console.log('[TURSO] Hazır. Çift yazma aktif.');
 }
 
@@ -440,6 +441,10 @@ async function initDatabase() {
   const tursoEnabled = !!(TURSO_URL && TURSO_TOKEN);
   if (tursoEnabled) {
     initTursoBackground().catch(e => console.error('[TURSO] Arka plan hatası:', e.message));
+  } else {
+    // Turso yoksa (yerel gelistirme) restore-sonrasi asama hic calismayacagi
+    // icin temizligi burada, senkron olarak yap.
+    cleanupStaleListingImages();
   }
 
   _initComplete = true; // Artık runtime yazmaları kuyruğa alınabilir
@@ -535,6 +540,28 @@ function fixTurkishText() {
       }
     });
   } catch(e) { console.warn('[DB] Karakter düzeltme hatası:', e.message); }
+}
+
+// Yetim/yanlis eslesen gorsel kayitlarini temizle. Bir gorselin created_at'i
+// kendi ilaninin created_at'inden ONCE olamaz — bu sadece su durumda olusur:
+// eski (silinmis) bir ilanin gorsel satiri, Turso'ya DELETE olarak hic
+// yansitilmadan (ya da yansima tamamlanmadan sunucu yeniden baslatilarak)
+// yerelde/Turso'da kalmis, sonra AUTOINCREMENT ayni ID'yi YENI bir ilana
+// verince o eski gorsel yanlislikla yeni ilanin fotografiymis gibi gorunmustur.
+function cleanupStaleListingImages() {
+  try {
+    const stale = dbProxy.prepare(`
+      SELECT li.id FROM listing_images li
+      JOIN listings l ON l.id = li.listing_id
+      WHERE li.created_at < l.created_at
+    `).all();
+    if (stale.length) {
+      console.log(`[DB] ${stale.length} yetim/yanlis eslesen gorsel kaydi temizleniyor.`);
+      stale.forEach(row => {
+        dbProxy.prepare('DELETE FROM listing_images WHERE id=?').run(row.id);
+      });
+    }
+  } catch(e) { console.warn('[DB] Yetim gorsel temizligi hatasi:', e.message); }
 }
 
 function slugify(str) {

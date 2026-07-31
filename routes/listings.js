@@ -546,6 +546,7 @@ router.delete('/:id', authenticate, (req, res) => {
     const imgs = db.prepare('SELECT filename FROM listing_images WHERE listing_id=?').all(listing.id);
     imgs.forEach(img => { try { fs.unlinkSync(path.join(__dirname, '..', 'uploads', img.filename)); } catch {} });
 
+    db.prepare('DELETE FROM listing_images WHERE listing_id=?').run(listing.id);
     db.prepare('DELETE FROM showcase_listings WHERE listing_id=?').run(listing.id);
     db.prepare('DELETE FROM listings WHERE id=?').run(listing.id);
     res.json({ message: 'İlan silindi.' });
