@@ -143,6 +143,7 @@ ul, ol { list-style: none; }
 .btn-ghost    { background: transparent; color: var(--text-mid); border: 1px solid var(--border); }
 .btn-ghost:hover:not(:disabled) { background: var(--border); color: var(--text); }
 .btn-sm  { padding: 6px 14px; font-size: .8rem; }
+.btn-icon-only { padding: 6px 9px; min-width: 0; }
 .btn-lg  { padding: 13px 30px; font-size: 1rem; }
 .w-100   { width: 100%; }
 
@@ -314,6 +315,13 @@ select.form-control {
   grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
   gap: 18px;
 }
+/* Anasayfa Vitrin şeridi — yatay kaydırmalı, sınırsız ilan olsa bile taşmaz */
+.vitrin-scroll {
+  display: flex; gap: 18px; overflow-x: auto; padding-bottom: 10px;
+  scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+}
+.vitrin-scroll .listing-card { flex: 0 0 255px; scroll-snap-align: start; }
+@media (max-width: 768px) { .vitrin-scroll .listing-card { flex-basis: 200px; } }
 .listing-card {
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--r-lg); overflow: hidden;
@@ -514,6 +522,19 @@ select.form-control {
 
 .admin-content { padding: 28px; }
 .admin-content h2 { font-size: 1.2rem; font-weight: 800; color: var(--navy); margin-bottom: 22px; }
+.admin-content .table-wrapper th,
+.admin-content .table-wrapper td { padding: 11px 10px; }
+.admin-content .table-wrapper .d-flex { flex-wrap: nowrap; gap: 4px; }
+
+/* Büyük masaüstü ekranlarda panel küçük kalmasın — daha ferah boşluk/yazı */
+@media (min-width: 1600px) {
+  .admin-layout { grid-template-columns: 240px 1fr; }
+  .admin-content { padding: 40px 48px; }
+  .admin-content h2 { font-size: 1.4rem; }
+  .admin-sidebar-item { padding: 14px 24px; font-size: .92rem; }
+  .table-wrapper table { font-size: .92rem; }
+  .table-wrapper th, .table-wrapper td { padding: 14px 16px; }
+}
 
 /* Sektör bar grafik */
 .sector-bars { display: flex; flex-direction: column; gap: 10px; }

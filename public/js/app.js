@@ -688,7 +688,7 @@ async function renderHome() {
       ? '<section class="section vitrin-section" style="padding-top:0;">' +
           '<div class="container">' +
             '<div class="section-header"><div><div class="section-title">★ Vitrin</div><div class="section-sub">Ticaret-hane ekibinin özenle seçtiği ilanlar</div></div><a href="#/vitrin" class="btn btn-ghost btn-sm">Vitrini Gör</a></div>' +
-            '<div class="listing-grid">' + vitrinListings.map(listingCardHTML).join('') + '</div>' +
+            '<div class="vitrin-scroll">' + vitrinListings.map(listingCardHTML).join('') + '</div>' +
           '</div>' +
         '</section>'
       : '';
@@ -2189,9 +2189,9 @@ async function loadAdminListings(filters) {
           '<td><div class="d-flex gap-2">' +
             (l.status==='pending'||l.status==='rejected' ? '<button type="button" class="btn btn-success btn-sm" data-approve="' + l.id + '">Onayla</button>' : '') +
             (l.status==='active'  ? '<button type="button" class="btn btn-ghost btn-sm" data-reject="' + l.id + '">Pasifleştir</button>' : '') +
-            '<button type="button" class="btn btn-sm ' + (l.is_featured ? 'btn-accent' : 'btn-ghost') + '" data-feature="' + l.id + '" title="Öne Çıkar">' + (l.is_featured ? '⭐' : '☆') + '</button>' +
-            '<button type="button" class="btn btn-sm ' + (l.in_showcase ? 'btn-accent' : 'btn-ghost') + '" data-showcase="' + l.id + '" title="Vitrine Ekle/Çıkar">' + (l.in_showcase ? '🖼️ Vitrinde' : '🖼️ Vitrine Ekle') + '</button>' +
-            '<button type="button" class="btn btn-sm ' + (l.is_permanent ? 'btn-accent' : 'btn-ghost') + '" data-permanent="' + l.id + '" title="Sonsuza Kadar Yayında Kalsın">' + (l.is_permanent ? '♾️ Süresiz' : '♾️ Süresiz Yap') + '</button>' +
+            '<button type="button" class="btn btn-sm btn-icon-only ' + (l.is_featured ? 'btn-accent' : 'btn-ghost') + '" data-feature="' + l.id + '" title="Öne Çıkar">' + (l.is_featured ? '⭐' : '☆') + '</button>' +
+            '<button type="button" class="btn btn-sm btn-icon-only ' + (l.in_showcase ? 'btn-accent' : 'btn-ghost') + '" data-showcase="' + l.id + '" title="' + (l.in_showcase ? 'Vitrinde — Çıkar' : 'Vitrine Ekle') + '">🖼️</button>' +
+            '<button type="button" class="btn btn-sm btn-icon-only ' + (l.is_permanent ? 'btn-accent' : 'btn-ghost') + '" data-permanent="' + l.id + '" title="' + (l.is_permanent ? 'Süresiz — Kaldır' : 'Sonsuza Kadar Yayında Kalsın') + '">♾️</button>' +
             '<button type="button" class="btn btn-danger btn-sm" data-admindel="' + l.id + '">Sil</button>' +
           '</div></td>' +
         '</tr>';

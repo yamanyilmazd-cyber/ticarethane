@@ -706,7 +706,13 @@ router.patch('/listings/:id/permanent', (req, res) => {
     if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
     const newState = listing.is_permanent ? 0 : 1;
     if (newState) {
-      db.prepare('UPDATE listings SET is_permanent=1, expires_at=NULL WHERE id=?').run(req.params.id);
+      // Suresi dolmus (expired) eski ilanlari da tekrar aktife al — aksi
+      // halde "sonsuza kadar yayinda" hicbir sey ifade etmez. Diger
+      // durumlara (pending/rejected/sold) dokunulmuyor.
+      db.prepare(
+        "UPDATE listings SET is_permanent=1, expires_at=NULL, updated_at=datetime('now'), " +
+        "status=CASE WHEN status='expired' THEN 'active' ELSE status END WHERE id=?"
+      ).run(req.params.id);
     } else {
       db.prepare("UPDATE listings SET is_permanent=0, expires_at=datetime('now', '+30 days') WHERE id=?").run(req.params.id);
     }
@@ -748,7 +754,7 @@ router.get('/showcase', (_req, res) => {
       JOIN listings l ON l.id = s.listing_id
       LEFT JOIN categories c ON l.category_id = c.id
       LEFT JOIN users u ON l.user_id = u.id
-      ORDER BY s.created_at DESC LIMIT 200
+      ORDER BY s.created_at DESC LIMIT 1000
     `).all();
     res.json(rows);
   } catch(err) {

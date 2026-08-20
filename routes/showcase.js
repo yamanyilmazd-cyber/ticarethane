@@ -26,7 +26,7 @@ router.get('/', (_req, res) => {
        LEFT JOIN categories    c  ON l.category_id    = c.id
        LEFT JOIN subcategories sc ON l.subcategory_id = sc.id
        LEFT JOIN users         u  ON l.user_id        = u.id
-       ORDER BY l.is_featured DESC, s.created_at DESC LIMIT 60`
+       ORDER BY l.is_featured DESC, s.created_at DESC LIMIT 1000`
     ).all();
 
     res.json({ listings: rows });
