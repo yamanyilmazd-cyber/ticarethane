@@ -225,7 +225,7 @@ const SCHEMA_DDL = [
     quantity REAL, quantity_unit TEXT, lot_quantity INTEGER,
     city TEXT NOT NULL, district TEXT, contact_phone TEXT, contact_email TEXT,
     website TEXT, status TEXT DEFAULT 'pending', rejection_reason TEXT,
-    is_featured INTEGER DEFAULT 0, featured_until TEXT,
+    is_featured INTEGER DEFAULT 0, featured_until TEXT, is_permanent INTEGER DEFAULT 0,
     views INTEGER DEFAULT 0, expires_at TEXT, renewed_at TEXT,
     created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))`,
   `CREATE TABLE IF NOT EXISTS listing_images (
@@ -290,6 +290,7 @@ const SCHEMA_DDL = [
 const COLUMN_MIGRATIONS = [
   'ALTER TABLE users ADD COLUMN google_id TEXT',
   'ALTER TABLE listings ADD COLUMN vat_included INTEGER DEFAULT 1',
+  'ALTER TABLE listings ADD COLUMN is_permanent INTEGER DEFAULT 0',
 ];
 
 // ── Turso arka plan başlatma (sunucu başladıktan sonra) ────────────────────

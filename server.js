@@ -217,9 +217,9 @@ app.use((err, _req, res, _next) => {
 function runExpiryCron() {
   try {
     const db = require('./database/db').getDb();
-    // expires_at süresi dolmuş aktif ilanları 'expired' yap
+    // expires_at süresi dolmuş aktif ilanları 'expired' yap — kalıcı (is_permanent) ilanlar haric
     db.prepare(
-      "UPDATE listings SET status='expired', updated_at=datetime('now') WHERE status='active' AND expires_at IS NOT NULL AND expires_at < datetime('now')"
+      "UPDATE listings SET status='expired', updated_at=datetime('now') WHERE status='active' AND is_permanent=0 AND expires_at IS NOT NULL AND expires_at < datetime('now')"
     ).run();
     // featured_until süresi dolmuş "öne çıkan" ilanları normale döndür —
     // aksi halde sıralama öncelikleri süresiz olarak takılı kalır.

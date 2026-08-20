@@ -2191,6 +2191,7 @@ async function loadAdminListings(filters) {
             (l.status==='active'  ? '<button type="button" class="btn btn-ghost btn-sm" data-reject="' + l.id + '">Pasifleştir</button>' : '') +
             '<button type="button" class="btn btn-sm ' + (l.is_featured ? 'btn-accent' : 'btn-ghost') + '" data-feature="' + l.id + '" title="Öne Çıkar">' + (l.is_featured ? '⭐' : '☆') + '</button>' +
             '<button type="button" class="btn btn-sm ' + (l.in_showcase ? 'btn-accent' : 'btn-ghost') + '" data-showcase="' + l.id + '" title="Vitrine Ekle/Çıkar">' + (l.in_showcase ? '🖼️ Vitrinde' : '🖼️ Vitrine Ekle') + '</button>' +
+            '<button type="button" class="btn btn-sm ' + (l.is_permanent ? 'btn-accent' : 'btn-ghost') + '" data-permanent="' + l.id + '" title="Sonsuza Kadar Yayında Kalsın">' + (l.is_permanent ? '♾️ Süresiz' : '♾️ Süresiz Yap') + '</button>' +
             '<button type="button" class="btn btn-danger btn-sm" data-admindel="' + l.id + '">Sil</button>' +
           '</div></td>' +
         '</tr>';
@@ -2242,6 +2243,15 @@ async function loadAdminListings(filters) {
       btn.addEventListener('click', async function() {
         try {
           var res = await api('PATCH', '/admin/listings/' + btn.dataset.showcase + '/showcase');
+          toast(res.message, 'success');
+          loadAdminListings(filters);
+        } catch(e) { toast(e.message,'error'); }
+      });
+    });
+    c.querySelectorAll('[data-permanent]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        try {
+          var res = await api('PATCH', '/admin/listings/' + btn.dataset.permanent + '/permanent');
           toast(res.message, 'success');
           loadAdminListings(filters);
         } catch(e) { toast(e.message,'error'); }

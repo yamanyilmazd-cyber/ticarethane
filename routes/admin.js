@@ -696,6 +696,26 @@ router.patch('/listings/:id/feature', (req, res) => {
   }
 });
 
+// ---- Sonsuza kadar yayında kalsın (süresiz ilan) ----
+// Sadece is_permanent ve expires_at alanlarina dokunur — baslik, aciklama
+// vb. hicbir ilan icerigi degismez.
+router.patch('/listings/:id/permanent', (req, res) => {
+  try {
+    const db = getDb();
+    const listing = db.prepare('SELECT id, is_permanent FROM listings WHERE id=?').get(req.params.id);
+    if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
+    const newState = listing.is_permanent ? 0 : 1;
+    if (newState) {
+      db.prepare('UPDATE listings SET is_permanent=1, expires_at=NULL WHERE id=?').run(req.params.id);
+    } else {
+      db.prepare("UPDATE listings SET is_permanent=0, expires_at=datetime('now', '+30 days') WHERE id=?").run(req.params.id);
+    }
+    res.json({ message: newState ? 'İlan sonsuza kadar yayında kalacak.' : 'Süresiz yayın kaldırıldı.', is_permanent: newState });
+  } catch(err) {
+    res.status(500).json({ error: 'İşlem başarısız.' });
+  }
+});
+
 // ================================================================
 // VITRIN — admin'in elle sectigi ilanlar (listings tablosuna dokunmaz)
 // ================================================================
