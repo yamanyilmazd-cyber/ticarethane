@@ -51,7 +51,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc:     ["'self'", 'data:', 'blob:', 'https://www.google.com', 'https://www.googleadservices.com', 'https://googleads.g.doubleclick.net', 'https://www.googletagmanager.com'],
+      imgSrc:     ["'self'", 'data:', 'blob:', 'https://www.google.com', 'https://www.google.com.tr', 'https://www.googleadservices.com', 'https://googleads.g.doubleclick.net', 'https://www.googletagmanager.com'],
       scriptSrc:  ["'self'", "'unsafe-inline'", 'https://accounts.google.com/gsi/client', 'https://www.googletagmanager.com', 'https://googleads.g.doubleclick.net'],
       connectSrc: ["'self'", 'https://open.er-api.com', 'https://accounts.google.com', 'https://www.googletagmanager.com', 'https://www.google.com', 'https://googleads.g.doubleclick.net', 'https://ad.doubleclick.net'],
       frameSrc:   ['https://accounts.google.com', 'https://www.googletagmanager.com', 'https://td.doubleclick.net'],
@@ -246,7 +246,7 @@ process.on('unhandledRejection', (reason) => {
     setTimeout(runExpiryCron, 5000);
     
 const server = app.listen(PORT, () => {
-      console.log(`[SERVER] Ticaret-hane http://localhost:${PORT} adresinde çalışıyor`);
+      console.log(`[SERVER] Toptango http://localhost:${PORT} adresinde çalışıyor`);
       if (!isProd) console.log(`[SERVER] Admin: http://localhost:${PORT}/#/admin`);
     });
 

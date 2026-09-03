@@ -412,7 +412,7 @@ router.post('/forgot-password', async (req, res) => {
     if (RESEND_API_KEY) {
       // Resend HTTP API (SMTP port bloklarina takilmaz)
       try {
-        const fromAddr = process.env.SMTP_FROM || 'Ticarethane <onboarding@resend.dev>';
+        const fromAddr = process.env.SMTP_FROM || 'Toptango <onboarding@resend.dev>';
         console.info('[MAIL] Gonderiliyor:', email, '| FROM:', fromAddr);
         const resp = await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -420,11 +420,11 @@ router.post('/forgot-password', async (req, res) => {
           body: JSON.stringify({
             from: fromAddr,
             to: [email],
-            subject: 'Şifre Sıfırlama - Ticarethane',
+            subject: 'Şifre Sıfırlama - Toptango',
             html: [
               '<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">',
               '<div style="background:#1e3a8a;padding:24px 32px;">',
-              '<h1 style="color:#ffffff;font-size:20px;margin:0;font-weight:700;">Ticarethane</h1>',
+              '<h1 style="color:#ffffff;font-size:20px;margin:0;font-weight:700;">Toptango</h1>',
               '<p style="color:#93c5fd;font-size:13px;margin:6px 0 0;">B2B Ticaret Platformu</p>',
               '</div>',
               '<div style="padding:32px;">',
@@ -440,7 +440,7 @@ router.post('/forgot-password', async (req, res) => {
               '<p style="color:#9ca3af;font-size:12px;margin:0;">Bu talebi siz yapmadıysanız bu e-postayı dikkate almayınız. Hesabınız güvende kalmaya devam edecektir.</p>',
               '</div>',
               '<div style="background:#f9fafb;padding:16px 32px;text-align:center;">',
-              '<p style="color:#9ca3af;font-size:11px;margin:0;">&copy; 2025 Ticarethane &middot; <a href="https://ticaret-hane.net" style="color:#6b7280;text-decoration:none;">ticaret-hane.net</a></p>',
+              '<p style="color:#9ca3af;font-size:11px;margin:0;">&copy; 2025 Toptango &middot; <a href="https://ticaret-hane.net" style="color:#6b7280;text-decoration:none;">ticaret-hane.net</a></p>',
               '</div>',
               '</div>',
             ].join(''),

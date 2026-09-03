@@ -1,5 +1,5 @@
 /* v2 =========================================================
-   Ticaret-hane — Frontend SPA
+   Toptango — Frontend SPA
    ============================================================ */
 
 const API = '/api';
@@ -260,7 +260,7 @@ function router() {
   _pendingFiles = [];
   _toDeleteImgs = new Set();
 
-  document.title = 'Ticaret-hane | Ticari Mal Platformu';
+  document.title = 'Toptango | Ticari Mal Platformu';
   window.scrollTo(0, 0);
 
   var app = document.getElementById('app');
@@ -687,7 +687,7 @@ async function renderHome() {
     var vitrinHTML = vitrinListings.length > 0
       ? '<section class="section vitrin-section" style="padding-top:0;">' +
           '<div class="container">' +
-            '<div class="section-header"><div><div class="section-title">★ Vitrin</div><div class="section-sub">Ticaret-hane ekibinin özenle seçtiği ilanlar</div></div><a href="#/vitrin" class="btn btn-ghost btn-sm">Vitrini Gör</a></div>' +
+            '<div class="section-header"><div><div class="section-title">★ Vitrin</div><div class="section-sub">Toptango ekibinin özenle seçtiği ilanlar</div></div><a href="#/vitrin" class="btn btn-ghost btn-sm">Vitrini Gör</a></div>' +
             '<div class="vitrin-scroll">' + vitrinListings.map(listingCardHTML).join('') + '</div>' +
           '</div>' +
         '</section>'
@@ -1064,7 +1064,7 @@ async function renderVitrin() {
         '<span class="cat-icon-wrap ic-4 cat-hero-icon">' + VITRIN_ICON + '</span>' +
         '<div><div class="cat-hero-label"><a href="#/" style="color:inherit;opacity:.7;">Ana Sayfa</a> / Vitrin</div>' +
         '<h1 class="cat-hero-title">Vitrin</h1>' +
-        '<p class="cat-hero-desc">Ticaret-hane ekibinin özenle seçtiği öne çıkan ilanlar.</p></div>' +
+        '<p class="cat-hero-desc">Toptango ekibinin özenle seçtiği öne çıkan ilanlar.</p></div>' +
       '</div></div></div>' +
       '<div class="container" style="padding-top:24px;">' +
         (listings.length
@@ -1799,7 +1799,7 @@ async function renderLogin() {
     '<div class="auth-page">' +
       '<div class="auth-card">' +
         '<h2>Giriş Yap</h2>' +
-        '<p>Ticaret-hane hesabınıza giriş yapın.</p>' +
+        '<p>Toptango hesabınıza giriş yapın.</p>' +
         '<form id="loginForm">' +
           '<div class="form-group mb-4"><label class="form-label">E-posta <span class="req">*</span></label><input type="email" name="email" class="form-control" placeholder="ornek@firma.com" required autofocus /></div>' +
           '<div class="form-group mb-4"><label class="form-label">Şifre <span class="req">*</span></label><div style="position:relative;display:flex"><div style="position:relative;display:flex"><input type="password" name="password" class="form-control" placeholder="Şifreniz" required style="border-radius:4px 0 0 4px" /><button type="button" class="pw-toggle-btn" style="border:1px solid #ced4da;border-left:0;border-radius:0 4px 4px 0;background:#f8f9fa;cursor:pointer;padding:0 12px;white-space:nowrap;font-size:13px">Göster</button></div></div></div>' +
@@ -1951,7 +1951,7 @@ async function renderAdmin() {
   }
 
   document.getElementById('app').innerHTML =
-    '<div class="dash-header"><div class="container" style="display:flex;align-items:center;justify-content:space-between;"><div><h1>Yönetim Paneli</h1><p>Ticaret-hane Moderatör Ekranı</p></div></div></div>' +
+    '<div class="dash-header"><div class="container" style="display:flex;align-items:center;justify-content:space-between;"><div><h1>Yönetim Paneli</h1><p>Toptango Moderatör Ekranı</p></div></div></div>' +
     '<div class="admin-layout">' +
       '<nav class="admin-sidebar">' +
         '<div class="admin-sidebar-item active" data-tab="dashboard">Genel Bakış</div>' +
@@ -3105,14 +3105,14 @@ function renderSozlesme() {
   s += '<h1 style="font-size:1.9rem;font-weight:800;border-bottom:2px solid #e8eaf0;padding-bottom:16px;margin-bottom:8px;">Kullanım Koşulları ve Üyelik Sözleşmesi</h1>';
   s += '<p style="color:#888;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Haziran 2026</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">1. Taraflar ve Konu</h2>';
-  s += '<p>Bu Kullanım Koşulları ve Üyelik Sözleşmesi (&#34;Sözleşme&#34;), <strong>Ticaret-hane</strong> (&#34;Platform&#34;) ile Platform&#39;a üye olan gerçek veya tüzel kişi (&#34;Kullanıcı&#34;) arasında akdedilmektedir. Platform; kimya, hammadde, demir-çelik, tarım, plastik, tekstil ve inşaat malzemeleri kategorilerinde ticari mal alım-satım ilanı yayımlanan bir çevrimiçi pazar yeridir.</p>';
+  s += '<p>Bu Kullanım Koşulları ve Üyelik Sözleşmesi (&#34;Sözleşme&#34;), <strong>Toptango</strong> (&#34;Platform&#34;) ile Platform&#39;a üye olan gerçek veya tüzel kişi (&#34;Kullanıcı&#34;) arasında akdedilmektedir. Platform; kimya, hammadde, demir-çelik, tarım, plastik, tekstil ve inşaat malzemeleri kategorilerinde ticari mal alım-satım ilanı yayımlanan bir çevrimiçi pazar yeridir.</p>';
   s += '<p>Kayıt işlemini tamamlayarak veya Platform&#39;u kullanmaya devam ederek bu Sözleşme&#39;nin tüm hükümlerini okuyup anladığınızı ve kabul ettiğinizi beyan etmiş olursunuz.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">2. Üyelik Şartları</h2>';
   s += '<p>Platform&#39;a üye olabilmek için aşağıdaki şartların sağlanması gerekmektedir:</p>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>18 yaşını doldurmuş olmak veya kanuni temsilci onayına sahip olmak,</li><li>Gerçek, doğru ve güncel bilgilerle kayıt olmak,</li><li>Geçerli bir e-posta adresine ve Türkiye&#39;de kayıtlı bir GSM numarasına sahip olmak,</li><li>Daha önce Platform tarafından üyeliği askıya alınmamış ya da sona erdirilmemiş olmak.</li></ul>';
   s += '<p>Platform, herhangi bir üyelik başvurusunu gerekçe göstermeksizin reddetme veya mevcut üyelikleri askıya alma hakkını saklı tutar.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">3. Hizmetin Kapsamı</h2>';
-  s += '<p>Ticaret-hane; üyelerine ilan oluşturma, düzenleme, arama ve mesajlaşma hizmetleri sunmaktadır. Platform, alıcı ile satıcı arasındaki işlemlere doğrudan taraf olmaz ve herhangi bir ödeme işlemini gerçekleştirmez ya da garanti etmez.</p>';
+  s += '<p>Toptango; üyelerine ilan oluşturma, düzenleme, arama ve mesajlaşma hizmetleri sunmaktadır. Platform, alıcı ile satıcı arasındaki işlemlere doğrudan taraf olmaz ve herhangi bir ödeme işlemini gerçekleştirmez ya da garanti etmez.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">4. Kullanıcı Yükümlülükleri</h2>';
   s += '<p>Kullanıcı, Platform&#39;u kullanırken aşağıdaki yükümlülüklere uymayı kabul eder:</p>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Yayımladığı ilanların gerçek, doğru ve güncel bilgiler içermesini sağlamak,</li><li>Ürün fiyat, miktar ve özelliklerini eksiksiz ve dürüstçe belirtmek,</li><li>Yayımladığı görsellerin yalnızca ilgili ürüne ait olduğunu doğrulamak,</li><li>Yürürlükteki tüm kanun, yönetmelik ve mevzuata uymak,</li><li>Üçüncü kişilerin kişisel verilerini yetkisiz biçimde paylaşmamak,</li><li>Platform altyapısına zarar verecek yazılım, bot veya otomatik sistem kullanmamak.</li></ul>';
@@ -3121,11 +3121,11 @@ function renderSozlesme() {
   s += '<ul style="margin:10px 0 10px 24px;"><li>Yasadışı, çalıntı veya kaçak ürünler,</li><li>Silah, mühimmat veya patlayıcı maddeler,</li><li>Uyuşturucu ve bağımlılık yapıcı maddeler,</li><li>Sahte veya taklit ürünler,</li><li>Telif hakkı ihlali barındıran içerikler,</li><li>Yanıltıcı, hakaret içeren veya ayrımcı ifadeler.</li></ul>';
   s += '<p>Bu kurallara aykırı ilanlar bildirim yapılmaksızın Platform&#39;dan kaldırılır; ilgili hesap askıya alınabilir veya kalıcı olarak kapatılabilir.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">6. Dolandırıcılık ve Güvenlik Uyarısı</h2>';
-  s += '<p>Platformda yayımlanan tüm ilanlar, yayına alınmadan önce moderatörlerimiz tarafından incelenir ve onaylanır. Ancak bu inceleme; satıcı ile alıcı arasındaki işlemlerin güvenliğini garanti etmez ve Platform, alıcı ile satıcı arasındaki ödeme işlemlerine aracılık etmez. Tanımadığınız kişilere peşin ödeme yapmaktan kaçınınız; ürünü teslim almadan işlem gerçekleştirmeyiniz. Şüpheli ilanları ve kullanıcıları Platform&#39;a bildirmenizi öneririz. Ticaret-hane, Platform üzerindeki işlemlerden doğan maddi kayıplardan sorumlu tutulamaz.</p>';
+  s += '<p>Platformda yayımlanan tüm ilanlar, yayına alınmadan önce moderatörlerimiz tarafından incelenir ve onaylanır. Ancak bu inceleme; satıcı ile alıcı arasındaki işlemlerin güvenliğini garanti etmez ve Platform, alıcı ile satıcı arasındaki ödeme işlemlerine aracılık etmez. Tanımadığınız kişilere peşin ödeme yapmaktan kaçınınız; ürünü teslim almadan işlem gerçekleştirmeyiniz. Şüpheli ilanları ve kullanıcıları Platform&#39;a bildirmenizi öneririz. Toptango, Platform üzerindeki işlemlerden doğan maddi kayıplardan sorumlu tutulamaz.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">7. Sorumluluk Sınırlaması</h2>';
   s += '<p>Platform, kullanıcılar arasındaki işlemlerin hukuka uygunluğunu, ürünlerin kalitesini veya satıcıların güvenilirliğini garanti etmez. Teknik sorunlar, sunucu kesintileri veya üçüncü taraf kaynaklı aksaklıklar nedeniyle uğranılan zararlardan sorumlu değildir.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">8. Sözleşme Değişiklikleri</h2>';
-  s += '<p>Ticaret-hane, bu Sözleşme&#39;yi dilediği zaman güncelleme hakkını saklı tutar. Değişiklikler Platform&#39;da yayımlandığı tarihten itibaren yürürlüğe girer.</p>';
+  s += '<p>Toptango, bu Sözleşme&#39;yi dilediği zaman güncelleme hakkını saklı tutar. Değişiklikler Platform&#39;da yayımlandığı tarihten itibaren yürürlüğe girer.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">9. Uygulanacak Hukuk</h2>';
   s += '<p>Bu Sözleşme, Türkiye Cumhuriyeti kanunlarına tabidir. Sözleşme&#39;den doğabilecek uyuşmazlıklarda İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">10. İletişim</h2>';
@@ -3140,9 +3140,9 @@ function renderKvkk() {
   s += '<a href="#/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:28px;">&larr; Ana Sayfaya Dön</a>';
   s += '<h1 style="font-size:1.9rem;font-weight:800;border-bottom:2px solid #e8eaf0;padding-bottom:16px;margin-bottom:8px;">KVKK Aydınlatma Metni</h1>';
   s += '<p style="color:#888;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Haziran 2026</p>';
-  s += '<p>6698 sayılı Kişisel Verilerin Korunması Kanunu (&#34;KVKK&#34;) kapsamında veri sorumlusu sıfatıyla <strong>Ticaret-hane</strong>, kişisel verilerinizin işlenmesine ilişkin sizi bilgilendirmek amacıyla bu Aydınlatma Metnini hazırlamıştır.</p>';
+  s += '<p>6698 sayılı Kişisel Verilerin Korunması Kanunu (&#34;KVKK&#34;) kapsamında veri sorumlusu sıfatıyla <strong>Toptango</strong>, kişisel verilerinizin işlenmesine ilişkin sizi bilgilendirmek amacıyla bu Aydınlatma Metnini hazırlamıştır.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">1. Veri Sorumlusu</h2>';
-  s += '<p>Ticaret-hane, 6698 sayılı KVKK uyarınca veri sorumlusu olarak faaliyet göstermektedir. İletişim: <strong>destek@ticaret-hane.net</strong></p>';
+  s += '<p>Toptango, 6698 sayılı KVKK uyarınca veri sorumlusu olarak faaliyet göstermektedir. İletişim: <strong>destek@ticaret-hane.net</strong></p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">2. İşlenen Kişisel Veriler</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li><strong>Kimlik verileri:</strong> Ad, soyad, firma adı,</li><li><strong>İletişim verileri:</strong> E-posta adresi, telefon numarası, şehir bilgisi,</li><li><strong>Hesap verileri:</strong> Kullanıcı adı, şifreli hesap bilgileri,</li><li><strong>İlan verileri:</strong> Yayımladığınız ürün, fiyat, açıklama ve görsel bilgileri,</li><li><strong>Teknik veriler:</strong> IP adresi, tarayıcı bilgisi, oturum süresi, platform kullanım istatistikleri.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">3. Kişisel Verilerin İşlenme Amacı</h2>';
@@ -3160,10 +3160,10 @@ function renderKvkk() {
 }
 
 function renderIletisim() {
-  document.title = 'İletişim - Ticaret-hane';
+  document.title = 'İletişim - Toptango';
   var s = '<div class="container" style="padding:60px 15px;max-width:700px;margin:0 auto">';
   s += '<h1 class="mb-4">İletişim</h1>';
-  s += '<p>Ticaret-hane platformu hakkında sorularınız, önerileriniz veya şikayetleriniz için bizimle iletişime geçebilirsiniz.</p>';
+  s += '<p>Toptango platformu hakkında sorularınız, önerileriniz veya şikayetleriniz için bizimle iletişime geçebilirsiniz.</p>';
   s += '<div style="background:#f8f9fa;border-radius:8px;padding:24px;margin-top:20px">';
   s += '<p><strong>Destek E-postası:</strong><br><a href="mailto:destek@ticaret-hane.net">destek@ticaret-hane.net</a></p>';
   s += '<p class="mb-0"><strong>Çalışma Saatleri:</strong><br>Pazartesi - Cuma, 09:00 - 18:00</p>';
@@ -3172,10 +3172,10 @@ function renderIletisim() {
 }
 
 function renderIlanKurallari() {
-  document.title = 'İlan Kuralları - Ticaret-hane';
+  document.title = 'İlan Kuralları - Toptango';
   var s = '<div class="container" style="padding:60px 15px;max-width:800px;margin:0 auto">';
   s += '<h1 class="mb-4">İlan Kuralları</h1>';
-  s += '<p>Ticaret-hane&#39;de ilan vermek için aşağıdaki kurallara uymanız gerekmektedir.</p>';
+  s += '<p>Toptango&#39;da ilan vermek için aşağıdaki kurallara uymanız gerekmektedir.</p>';
   s += '<h4>1. Genel Kurallar</h4>';
   s += '<p>Yalnızca gerçek ticari mal ve hammadde ilanları yayınlanabilir. Hizmet, kişisel eşya veya yasadışı ürün ilanları kabul edilmez.</p>';
   s += '<h4>2. İlan İçeriği</h4>';
