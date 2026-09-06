@@ -44,6 +44,17 @@ if (isProd) {
   });
 }
 
+// Eski domain (ticaret-hane.net) -> yeni domain (www.toptango.com.tr) yönlendirmesi
+if (isProd) {
+  app.use((req, res, next) => {
+    const host = (req.headers.host || '').toLowerCase();
+    if (host === 'ticaret-hane.net' || host === 'www.ticaret-hane.net') {
+      return res.redirect(301, 'https://www.toptango.com.tr' + req.originalUrl);
+    }
+    next();
+  });
+}
+
 // ---------- Güvenlik başlıkları ----------
 app.use(helmet({
   contentSecurityPolicy: {
