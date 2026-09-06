@@ -440,7 +440,7 @@ router.post('/forgot-password', async (req, res) => {
               '<p style="color:#9ca3af;font-size:12px;margin:0;">Bu talebi siz yapmadıysanız bu e-postayı dikkate almayınız. Hesabınız güvende kalmaya devam edecektir.</p>',
               '</div>',
               '<div style="background:#f9fafb;padding:16px 32px;text-align:center;">',
-              '<p style="color:#9ca3af;font-size:11px;margin:0;">&copy; 2025 Toptango &middot; <a href="https://ticaret-hane.net" style="color:#6b7280;text-decoration:none;">ticaret-hane.net</a></p>',
+              '<p style="color:#9ca3af;font-size:11px;margin:0;">&copy; 2025 Toptango &middot; <a href="https://www.toptango.com.tr" style="color:#6b7280;text-decoration:none;">toptango.com.tr</a></p>',
               '</div>',
               '</div>',
             ].join(''),

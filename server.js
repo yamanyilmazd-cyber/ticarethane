@@ -161,7 +161,7 @@ app.all('/api/*', (_req, res) => {
 app.get('/sitemap.xml', (_req, res) => {
   try {
     const db = require('./database/db').getDb();
-    const base = 'https://ticaret-hane.net';
+    const base = 'https://www.toptango.com.tr';
     const today = new Date().toISOString().slice(0, 10);
 
     const staticPaths = ['/', '/ara', '/vitrin', '/sozlesme', '/kvkk', '/ilan-kurallari', '/iletisim'];
@@ -190,7 +190,7 @@ app.get('/sitemap.xml', (_req, res) => {
 // ---------- SEO: robots.txt ----------
 app.get('/robots.txt', (_req, res) => {
   res.header('Content-Type', 'text/plain');
-  res.send('User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://ticaret-hane.net/sitemap.xml\n');
+  res.send('User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://www.toptango.com.tr/sitemap.xml\n');
 });
 
 // ---------- SPA fallback ----------
