@@ -3129,7 +3129,7 @@ function renderSozlesme() {
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">9. Uygulanacak Hukuk</h2>';
   s += '<p>Bu Sözleşme, Türkiye Cumhuriyeti kanunlarına tabidir. Sözleşme&#39;den doğabilecek uyuşmazlıklarda İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">10. İletişim</h2>';
-  s += '<p>Soru ve talepleriniz için: <strong>destek@ticaret-hane.net</strong></p>';
+  s += '<p>Soru ve talepleriniz için: <strong>destek@toptango.com.tr</strong></p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
 }
@@ -3142,7 +3142,7 @@ function renderKvkk() {
   s += '<p style="color:#888;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Haziran 2026</p>';
   s += '<p>6698 sayılı Kişisel Verilerin Korunması Kanunu (&#34;KVKK&#34;) kapsamında veri sorumlusu sıfatıyla <strong>Toptango</strong>, kişisel verilerinizin işlenmesine ilişkin sizi bilgilendirmek amacıyla bu Aydınlatma Metnini hazırlamıştır.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">1. Veri Sorumlusu</h2>';
-  s += '<p>Toptango, 6698 sayılı KVKK uyarınca veri sorumlusu olarak faaliyet göstermektedir. İletişim: <strong>destek@ticaret-hane.net</strong></p>';
+  s += '<p>Toptango, 6698 sayılı KVKK uyarınca veri sorumlusu olarak faaliyet göstermektedir. İletişim: <strong>destek@toptango.com.tr</strong></p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">2. İşlenen Kişisel Veriler</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li><strong>Kimlik verileri:</strong> Ad, soyad, firma adı,</li><li><strong>İletişim verileri:</strong> E-posta adresi, telefon numarası, şehir bilgisi,</li><li><strong>Hesap verileri:</strong> Kullanıcı adı, şifreli hesap bilgileri,</li><li><strong>İlan verileri:</strong> Yayımladığınız ürün, fiyat, açıklama ve görsel bilgileri,</li><li><strong>Teknik veriler:</strong> IP adresi, tarayıcı bilgisi, oturum süresi, platform kullanım istatistikleri.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">3. Kişisel Verilerin İşlenme Amacı</h2>';
@@ -3154,7 +3154,7 @@ function renderKvkk() {
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">6. Haklarınız (KVKK Madde 11)</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li><li>Verilerinize ilişkin bilgi talep etme,</li><li>İşlenme amacını öğrenme,</li><li>Verilerin aktarıldığı üçüncü kişileri öğrenme,</li><li>Eksik veya yanlış verilerin düzeltilmesini isteme,</li><li>Verilerin silinmesini veya yok edilmesini isteme,</li><li>Otomatik sistemler sonucu aleyhe kararınıza itiraz etme,</li><li>Kanuna aykırı işleme nedeniyle uğradığınız zararın tazminini talep etme.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">7. Başvuru Hakkı</h2>';
-  s += '<p>Haklarınızı kullanmak için <strong>destek@ticaret-hane.net</strong> adresine e-posta gönderebilir ya da Platform&#39;daki &#34;Hesabım&#34; sayfasından başvurabilirsiniz. Başvurularınız en geç 30 gün içinde yanıtlanacaktır.</p>';
+  s += '<p>Haklarınızı kullanmak için <strong>destek@toptango.com.tr</strong> adresine e-posta gönderebilir ya da Platform&#39;daki &#34;Hesabım&#34; sayfasından başvurabilirsiniz. Başvurularınız en geç 30 gün içinde yanıtlanacaktır.</p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
 }
@@ -3165,7 +3165,7 @@ function renderIletisim() {
   s += '<h1 class="mb-4">İletişim</h1>';
   s += '<p>Toptango platformu hakkında sorularınız, önerileriniz veya şikayetleriniz için bizimle iletişime geçebilirsiniz.</p>';
   s += '<div style="background:#f8f9fa;border-radius:8px;padding:24px;margin-top:20px">';
-  s += '<p><strong>Destek E-postası:</strong><br><a href="mailto:destek@ticaret-hane.net">destek@ticaret-hane.net</a></p>';
+  s += '<p><strong>Destek E-postası:</strong><br><a href="mailto:destek@toptango.com.tr">destek@toptango.com.tr</a></p>';
   s += '<p class="mb-0"><strong>Çalışma Saatleri:</strong><br>Pazartesi - Cuma, 09:00 - 18:00</p>';
   s += '</div></div>';
   document.getElementById('app').innerHTML = s;
@@ -3184,7 +3184,7 @@ function renderIlanKurallari() {
   s += '<p>Sahte ürünler, kopyalar, sağlık/güvenlik açısından tehlikeli maddeler ve kanunen yasaklı ürünlerin ilanı kesinlikle yasaktır.</p>';
   s += '<h4>4. Kural İhlali</h4>';
   s += '<p>Kurallara aykırı ilanlar yönetim tarafından kaldırılır. Tekrarlayan ihlallerde hesap askıya alınabilir.</p>';
-  s += '<p>Sorularınız için: <a href="mailto:destek@ticaret-hane.net">destek@ticaret-hane.net</a></p>';
+  s += '<p>Sorularınız için: <a href="mailto:destek@toptango.com.tr">destek@toptango.com.tr</a></p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
 }
