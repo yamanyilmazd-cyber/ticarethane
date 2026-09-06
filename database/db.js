@@ -421,14 +421,24 @@ async function initDatabase() {
   if (adminEmail && adminPw) {
     const adminHash = bcrypt.hashSync(adminPw, 12);
     const existingAdmin = dbProxy.prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
-    if (!existingAdmin) {
-      dbProxy.prepare(`INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')`)
-        .run('Yonetici', adminEmail, adminHash);
-      console.log(`[DB] Admin oluşturuldu: ${adminEmail}`);
-    } else {
+    if (existingAdmin) {
       dbProxy.prepare(`UPDATE users SET password_hash = ?, role = 'admin' WHERE email = ?`)
         .run(adminHash, adminEmail);
       console.log(`[DB] Admin güncellendi: ${adminEmail}`);
+    } else {
+      // ADMIN_EMAIL degismis olabilir (ör. domain gecisi) — mevcut admin
+      // hesabini silip yeniden olusturmak yerine e-postasini guncelle,
+      // boylece isim/gecmis korunur.
+      const otherAdmin = dbProxy.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get();
+      if (otherAdmin) {
+        dbProxy.prepare(`UPDATE users SET email = ?, password_hash = ? WHERE id = ?`)
+          .run(adminEmail, adminHash, otherAdmin.id);
+        console.log(`[DB] Admin e-postasi guncellendi: ${adminEmail}`);
+      } else {
+        dbProxy.prepare(`INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')`)
+          .run('Yonetici', adminEmail, adminHash);
+        console.log(`[DB] Admin oluşturuldu: ${adminEmail}`);
+      }
     }
   } else {
     console.warn('[DB] ADMIN_EMAIL/ADMIN_PASSWORD ayarli degil, admin atlandı.');
