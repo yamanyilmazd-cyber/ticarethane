@@ -60,9 +60,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://www.gstatic.com'],
+      styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://www.gstatic.com', 'https://translate.googleapis.com'],
       fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc:     ["'self'", 'data:', 'blob:', 'https://www.google.com', 'https://www.google.com.tr', 'https://www.googleadservices.com', 'https://googleads.g.doubleclick.net', 'https://www.googletagmanager.com', 'https://www.gstatic.com', 'https://fonts.gstatic.com'],
+      imgSrc:     ["'self'", 'data:', 'blob:', 'https://www.google.com', 'https://www.google.com.tr', 'https://www.googleadservices.com', 'https://googleads.g.doubleclick.net', 'https://www.googletagmanager.com', 'https://www.gstatic.com', 'https://fonts.gstatic.com', 'https://translate.googleapis.com', 'https://translate.google.com'],
       scriptSrc:  ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://accounts.google.com/gsi/client', 'https://www.googletagmanager.com', 'https://googleads.g.doubleclick.net', 'https://translate.google.com', 'https://translate.googleapis.com'],
       connectSrc: ["'self'", 'https://open.er-api.com', 'https://accounts.google.com', 'https://www.googletagmanager.com', 'https://www.google.com', 'https://googleads.g.doubleclick.net', 'https://ad.doubleclick.net', 'https://translate.googleapis.com'],
       frameSrc:   ['https://accounts.google.com', 'https://www.googletagmanager.com', 'https://td.doubleclick.net', 'https://translate.google.com', 'https://translate.googleapis.com'],
