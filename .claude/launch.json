@@ -6,12 +6,6 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["server.js"],
       "port": 3000
-    },
-    {
-      "name": "translate-test",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8123", "--directory", "C:/Users/Admin/AppData/Local/Temp/claude/C--Users-Admin-AppData-Roaming-Claude-local-agent-mode-sessions-1589a074-aed2-445d-84df-b24ac956d876-7f6f7691-ad6b-440b-969f-6bfe9e83d160-local-896c5b47-d65b-48dd-811c-76754611941a-outputs-ticarethane/40841f83-fba6-4b75-8164-dda063beffe8/scratchpad"],
-      "port": 8123
     }
   ]
 }
