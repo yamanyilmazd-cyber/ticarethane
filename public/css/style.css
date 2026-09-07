@@ -96,36 +96,7 @@ ul, ol { list-style: none; }
 }
 .navbar-search button:hover { background: var(--amber-lt); }
 
-/* navbar-right: cevirmen + giris/uye butonlarini birlikte tutup sag kenara
-   sabitler; arama kutusu anasayfada gizlenince (display:none) tek basina
-   margin-left:auto'ya guvenmek riskliydi, bu wrapper her durumda sagda kalir. */
-.navbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-shrink: 0; }
-.navbar-translate { display: flex; align-items: center; }
-.navbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
-/* Google Translate widget'i: ust banner cerceveyi CSS ile gizlemeye/
-   sikistirmaya calismak (display:none veya height:0) Google'in kendi
-   konumlandirma scriptini bozuyor ve acilir dil menusu hic acilmiyor
-   ("Cannot read properties of undefined (height)" hatasi). Bu yuzden
-   banner cerceveye DOKUNMUYORUZ -- sadece dil degistirildiginde kisa
-   sureligine ust tarafta kucuk bir "X diline cevrildi" serit gorunur,
-   bu Google'in standart davranisi ve zararsiz. */
-.goog-text-highlight { background: none !important; box-shadow: none !important; }
-/* Google'in kendi scripti ikon gorseli yuklenene kadar gadget'i display:none
-   birakiyor; CSP ikon istegini engelleyince kalici gizli kaliyordu -- CSP
-   duzeltildi ama garanti olsun diye burada da acikca gosteriyoruz. */
-#google_translate_element .goog-te-gadget { display: block !important; font-size: 0; }
-#google_translate_element .goog-te-gadget-simple {
-  background: rgba(255,255,255,.09);
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: var(--r);
-  padding: 6px 10px;
-  display: inline-flex; align-items: center;
-}
-#google_translate_element .goog-te-gadget-simple .goog-te-menu-value span {
-  color: #fff; font-size: .82rem;
-}
-#google_translate_element img { display: none; }
+.navbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
 .btn-nav {
   padding: 7px 16px; border-radius: var(--r);
   font-size: .85rem; font-weight: 600; border: none;
@@ -753,7 +724,6 @@ tbody td { padding: 11px 14px; color: var(--text); }
 
 @media (max-width: 768px) {
   .hero h1 { font-size: 1.7rem; }
-  .navbar-search { display: none; }
   .listing-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .listing-card-img, .listing-card-img-placeholder { height: 145px; }
   .admin-layout { grid-template-columns: 1fr; }
@@ -1029,14 +999,13 @@ tbody td { padding: 11px 14px; color: var(--text); }
   .hero p { font-size: .9rem; margin-bottom: 18px; }
   .hero-stats { gap: 16px; margin-top: 18px; }
   .hero-stat-val { font-size: 1.2rem; }
-  .hero-search { max-width: 100%; }
-  .hero-search input { padding: 13px 14px; }
-  .hero-search button { padding: 13px 18px; }
 
-  /* Navbar biraz sıkıştır — butonlar sığmazsa alt satıra insin */
-  /* Tek satır navbar: butonlar alt satıra inmez, yazılar gizlenir ikon kalır */
-  .navbar-inner { gap: 6px; flex-wrap: nowrap; height: auto; min-height: 52px; padding: 8px 12px; justify-content: space-between; }
+  /* Navbar: logo + butonlar ust satirda, arama kutusu kendi tam genislikteki
+     satirina taşiyor (mobilde arama kutusunu ust satira sigdirmaya calismak
+     ekrandan tasiyordu). */
+  .navbar-inner { gap: 6px; flex-wrap: wrap; height: auto; min-height: 52px; padding: 8px 12px; justify-content: space-between; }
   .navbar-logo { font-size: 1.3rem; white-space: nowrap; flex-shrink: 0; }
+  .navbar-search { order: 3; flex-basis: 100%; max-width: none; margin-top: 8px; }
   .navbar-actions { flex-wrap: nowrap; gap: 3px; margin-left: auto; justify-content: flex-end; }
   .navbar-actions .nav-txt { display: none; }
   .btn-nav { padding: 6px 8px; font-size: .74rem; white-space: nowrap; }
