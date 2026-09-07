@@ -99,10 +99,30 @@ body.is-home .navbar-search { display: none; }
 }
 .navbar-search button:hover { background: var(--amber-lt); }
 
-/* margin-left:auto -- arama kutusu (flex:1) anasayfada gizlenince (display:none)
-   bosluk kaybolup logo+butonlar sola yapisiyordu; auto margin butonlari her
-   zaman sag kenara iter, arama kutusu gorunur/gizli fark etmeksizin. */
-.navbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
+/* navbar-right: cevirmen + giris/uye butonlarini birlikte tutup sag kenara
+   sabitler; arama kutusu anasayfada gizlenince (display:none) tek basina
+   margin-left:auto'ya guvenmek riskliydi, bu wrapper her durumda sagda kalir. */
+.navbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-shrink: 0; }
+.navbar-translate { display: flex; align-items: center; }
+.navbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* Google Translate widget'i: ust banner cerceve ve sari vurgu efektini
+   gizleyip sadece kucuk dil secim kutusunu birakiyoruz. */
+.goog-te-banner-frame.skiptranslate { display: none !important; }
+body { top: 0 !important; }
+.goog-text-highlight { background: none !important; box-shadow: none !important; }
+#google_translate_element .goog-te-gadget { font-size: 0; }
+#google_translate_element .goog-te-gadget-simple {
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: var(--r);
+  padding: 6px 10px;
+  display: inline-flex; align-items: center;
+}
+#google_translate_element .goog-te-gadget-simple .goog-te-menu-value span {
+  color: #fff; font-size: .82rem;
+}
+#google_translate_element img { display: none; }
 .btn-nav {
   padding: 7px 16px; border-radius: var(--r);
   font-size: .85rem; font-weight: 600; border: none;

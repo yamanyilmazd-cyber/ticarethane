@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=4" />
+  <link rel="stylesheet" href="/css/style.css?v=5" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <!-- SEO -->
   <meta name="description" content="Toptango - Türkiye'nin ticaret platformu. Toplu mal, hammadde, sanayi ürünü ilan verin ve alın." />
@@ -50,7 +50,10 @@
       </form>
     </div>
 
-    <div class="navbar-actions" id="navActions"></div>
+    <div class="navbar-right">
+      <div class="navbar-translate" id="google_translate_element"></div>
+      <div class="navbar-actions" id="navActions"></div>
+    </div>
   </div>
 </nav>
 
@@ -109,6 +112,16 @@
 
 <div class="toast-container" id="toastContainer"></div>
 <div id="modalContainer"></div>
+
+<script>
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement(
+      { pageLanguage: 'tr', includedLanguages: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE, autoDisplay: false },
+      'google_translate_element'
+    );
+  }
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
 
 <script src="/js/app.js?v=3"></script>
 </body>
