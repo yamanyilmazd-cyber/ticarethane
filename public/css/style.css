@@ -111,7 +111,10 @@ body.is-home .navbar-search { display: none; }
 .goog-te-banner-frame.skiptranslate { display: none !important; }
 body { top: 0 !important; }
 .goog-text-highlight { background: none !important; box-shadow: none !important; }
-#google_translate_element .goog-te-gadget { font-size: 0; }
+/* Google'in kendi scripti ikon gorseli yuklenene kadar gadget'i display:none
+   birakiyor; CSP ikon istegini engelleyince kalici gizli kaliyordu -- CSP
+   duzeltildi ama garanti olsun diye burada da acikca gosteriyoruz. */
+#google_translate_element .goog-te-gadget { display: block !important; font-size: 0; }
 #google_translate_element .goog-te-gadget-simple {
   background: rgba(255,255,255,.09);
   border: 1px solid rgba(255,255,255,.14);
