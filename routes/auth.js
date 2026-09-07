@@ -337,7 +337,8 @@ router.put('/profile', authenticate, async (req, res) => {
        WHERE id = ?`
     ).run(name, company_name || null, phone || null, city || null, req.userId);
 
-    res.json({ message: 'Profil güncellendi.' });
+    const updated = db.prepare('SELECT id, name, company_name, email, role FROM users WHERE id = ?').get(req.userId);
+    res.json({ message: 'Profil güncellendi.', user: updated });
   } catch (err) {
     console.error('[AUTH] profil güncelleme hatası:', err.message);
     res.status(500).json({ error: 'Güncelleme sırasında hata oluştu.' });

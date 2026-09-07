@@ -1783,7 +1783,13 @@ async function renderDashboard() {
     var btn = document.getElementById('profileBtn');
     btn.disabled = true; btn.textContent = 'Kaydediliyor...';
     try {
-      await api('PUT', '/auth/profile', Object.fromEntries(new FormData(e.target)));
+      var res = await api('PUT', '/auth/profile', Object.fromEntries(new FormData(e.target)));
+      if (res.user) {
+        State.user = res.user;
+        var store = localStorage.getItem('tc_user') ? localStorage : sessionStorage;
+        store.setItem('tc_user', JSON.stringify(res.user));
+        updateNavbar();
+      }
       toast('Profil güncellendi.','success');
     } catch(err) { toast(err.message,'error'); }
     finally { btn.disabled = false; btn.textContent = 'Kaydet'; }
