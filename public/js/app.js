@@ -362,14 +362,14 @@ function updateNavbar() {
   if (isLoggedIn()) {
     var name = (State.user && State.user.name) ? State.user.name : 'Hesabım';
     el.innerHTML =
-      '<a href="#/favorilerim" class="btn-nav btn-nav-ghost" title="Favorilerim" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;flex-shrink:0;">' +
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round" style="display:block;flex-shrink:0;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>' +
+      '<a href="#/favorilerim" class="btn-nav btn-nav-ghost btn-nav-icon" title="Favorilerim">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>' +
       '</a>' +
-      '<a href="#/bildirimler" class="btn-nav btn-nav-ghost" title="Bildirimler" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;flex-shrink:0;position:relative;">' +
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:99px;font-size:.6rem;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;"></span>' +
+      '<a href="#/bildirimler" class="btn-nav btn-nav-ghost btn-nav-icon" title="Bildirimler">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:99px;font-size:.6rem;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;"></span>' +
       '</a>' +
-      '<a href="#/mesajlar" class="btn-nav btn-nav-ghost" title="Mesajlar" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;flex-shrink:0;position:relative;">' +
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block;flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' +
+      '<a href="#/mesajlar" class="btn-nav btn-nav-ghost btn-nav-icon" title="Mesajlar">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' +
         '<span id="msgBadge" style="display:none;position:absolute;top:-4px;right:-6px;background:var(--red);color:#fff;border-radius:99px;font-size:.65rem;font-weight:700;width:17px;height:17px;align-items:center;justify-content:center;"></span>' +
       '</a>' +
       '<a href="#/hesabim" class="btn-nav btn-nav-ghost" title="Hesabım" style="display:inline-flex;align-items:center;gap:5px;">' +
@@ -378,7 +378,7 @@ function updateNavbar() {
       (isAdmin() ? '<a href="#/admin" class="btn-nav btn-nav-ghost" title="Yönetim" style="display:inline-flex;align-items:center;gap:5px;">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>' +
         '<span class="nav-txt">Yönetim</span></a>' : '') +
-      '<a href="#/ilan-ver" class="btn-nav btn-nav-accent" style="white-space:nowrap;">+ İlan Ver</a>' +
+      '<a href="#/ilan-ver" class="btn-nav btn-nav-accent" style="white-space:nowrap;">+<span class="nav-txt"> İlan Ver</span></a>' +
       '<button class="btn-nav btn-nav-ghost" id="logoutBtn" title="Çıkış" style="display:inline-flex;align-items:center;gap:5px;">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>' +
         '<span class="nav-txt">Çıkış</span></button>';

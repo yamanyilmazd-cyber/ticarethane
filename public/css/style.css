@@ -105,6 +105,11 @@ ul, ol { list-style: none; }
 .btn-nav-ghost { background: rgba(255,255,255,.1); color: #fff; }
 .btn-nav-ghost:hover { background: rgba(255,255,255,.18); }
 .btn-nav-accent { background: var(--amber); color: #fff; }
+.btn-nav-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; padding: 0; flex-shrink: 0; position: relative;
+}
+.btn-nav-icon svg { display: block; flex-shrink: 0; }
 .btn-nav-accent:hover { background: var(--amber-lt); }
 
 /* Kategori şeridi */
@@ -1006,11 +1011,13 @@ tbody td { padding: 11px 14px; color: var(--text); }
   .navbar-inner { gap: 6px; flex-wrap: wrap; height: auto; min-height: 52px; padding: 8px 12px; justify-content: space-between; }
   .navbar-logo { font-size: 1.3rem; white-space: nowrap; flex-shrink: 0; }
   .navbar-search { order: 3; flex-basis: 100%; max-width: none; margin-top: 8px; }
-  .navbar-actions { flex-wrap: nowrap; gap: 3px; margin-left: auto; justify-content: flex-end; }
+  .navbar-actions { flex-wrap: nowrap; gap: 2px; margin-left: auto; justify-content: flex-end; }
   .navbar-actions .nav-txt { display: none; }
-  .btn-nav { padding: 6px 8px; font-size: .74rem; white-space: nowrap; }
-  .btn-nav-accent { padding: 6px 10px; }
+  .btn-nav { padding: 6px 7px; font-size: .74rem; white-space: nowrap; }
+  .btn-nav-icon { width: 30px; height: 30px; }
+  .btn-nav-accent { padding: 6px 9px; }
   .navbar-actions.nav-guest .nav-txt { display: inline; }
+  .navbar-actions.nav-guest { gap: 6px; }
 
 
   /* Modal — mobilde alttan açılan sheet */
