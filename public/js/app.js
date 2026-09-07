@@ -233,9 +233,6 @@ function router() {
   var result = matchRoute(hash);
   updateNavbar();
   updateCatBar(hash);
-  // Anasayfada zaten buyuk bir hero arama kutusu var — navbar aramasi
-  // tekrar oluyor, sadece anasayfa disinda gosterelim.
-  document.body.classList.toggle('is-home', hash === '#/');
 
   if (!result) { render404(); return; }
 
@@ -703,10 +700,6 @@ async function renderHome() {
             '<div class="hero-label">Ticari Mal Platformu</div>' +
             '<h1>Türkiye Ticari Mal<br><span>İlan Merkezi</span></h1>' +
             '<p>Kimyadan demire, tarımdan plastiğe — alıcı ve satıcıları sektörel kategorilerle buluşturuyoruz.</p>' +
-            '<form class="hero-search" id="heroSearchForm">' +
-              '<input type="text" id="heroSearchInput" placeholder="Ürün, hammadde veya sektör arayın..." />' +
-              '<button type="submit">Ara</button>' +
-            '</form>' +
             '<div class="hero-stats">' +
               '<div><em class="hero-stat-val">' + (data.pagination ? data.pagination.total : (data.total || 0)) + '</em><span class="hero-stat-lbl">Aktif İlan</span></div>' +
               '<div><em class="hero-stat-val">' + State.categories.length + '</em><span class="hero-stat-lbl">Sektör</span></div>' +
@@ -728,12 +721,6 @@ async function renderHome() {
           listings +
         '</div>' +
       '</section>';
-
-    document.getElementById('heroSearchForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      var q = document.getElementById('heroSearchInput').value.trim();
-      if (q) goTo('/ara?search=' + encodeURIComponent(q));
-    });
 
     updateFxCards((data.listings || []).concat(vitrinListings));
   } catch(err) {
