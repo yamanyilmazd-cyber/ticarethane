@@ -63,6 +63,10 @@ ul, ol { list-style: none; }
 .navbar-inner {
   display: flex; align-items: center; gap: 20px;
   height: 64px;
+  /* .container'in max-width'ini ez — navbar tam genislikte olsun,
+     Giris Yap/Uye Ol gibi butonlar genis ekranlarda gercek sag
+     kenara yasin, ortadaki container'in kenarinda kalmasin. */
+  max-width: none; width: 100%; padding-left: 24px; padding-right: 24px;
 }
 .navbar-logo {
   font-size: 1.4rem; font-weight: 800; color: #fff;
@@ -71,6 +75,9 @@ ul, ol { list-style: none; }
 .navbar-logo span { color: var(--amber-lt); }
 
 .navbar-search { flex: 1; max-width: 500px; }
+/* Anasayfada zaten buyuk bir hero arama kutusu var — ayni sayfada
+   iki arama kutusu birden gostermeyelim. */
+body.is-home .navbar-search { display: none; }
 .navbar-search form { display: flex; }
 .navbar-search input {
   flex: 1; padding: 9px 16px;

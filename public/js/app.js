@@ -233,6 +233,9 @@ function router() {
   var result = matchRoute(hash);
   updateNavbar();
   updateCatBar(hash);
+  // Anasayfada zaten buyuk bir hero arama kutusu var — navbar aramasi
+  // tekrar oluyor, sadece anasayfa disinda gosterelim.
+  document.body.classList.toggle('is-home', hash === '#/');
 
   if (!result) { render404(); return; }
 
