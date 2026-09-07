@@ -360,7 +360,7 @@ function updateNavbar() {
   var el = document.getElementById('navActions');
   el.classList.toggle('nav-guest', !isLoggedIn());
   if (isLoggedIn()) {
-    var name = (State.user && State.user.name) ? State.user.name.split(' ')[0] : 'Hesabım';
+    var name = (State.user && State.user.name) ? State.user.name : 'Hesabım';
     el.innerHTML =
       '<a href="#/favorilerim" class="btn-nav btn-nav-ghost" title="Favorilerim" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;">' +
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>' +

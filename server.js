@@ -128,7 +128,15 @@ app.use('/api/auth/register', rateLimit({
 }));
 
 // ---------- Statik dosyalar ----------
-app.use(express.static(path.join(__dirname, 'public')));
+// index.html hic cachelenmesin — icindeki /js/app.js ve /css/style.css
+// referanslari (cache-busting query'leri dahil) her zaman guncel gelsin.
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
 // Yüklenen görseller — cache 7 gün
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   maxAge: isProd ? '7d' : 0,
@@ -206,6 +214,7 @@ app.get('/robots.txt', (_req, res) => {
 
 // ---------- SPA fallback ----------
 app.get('*', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
