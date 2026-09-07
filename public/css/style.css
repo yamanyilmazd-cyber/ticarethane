@@ -106,16 +106,13 @@ body.is-home .navbar-search { display: none; }
 .navbar-translate { display: flex; align-items: center; }
 .navbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-/* Google Translate widget'i: ust banner cerceveyi display:none ile
-   gizlemek Google'in kendi konumlandirma scriptini bozuyordu (menu
-   acilirken "Cannot read properties of undefined (height)" hatasi
-   verip acilir listeyi hic gostermiyordu). Bunun yerine cerceveyi
-   gorunmez ama DOM'da olcumlenebilir birakiyoruz (yukseklik 0'a
-   sikistirilip disariya tasan icerik gizleniyor) -- Google kendi
-   script'i icin gereken boyut bilgisini hala okuyabiliyor.
-   https://ile ilgili GitHub issue'larda da onerilen guvenli yontem. */
-.goog-te-banner-frame.skiptranslate { height: 0 !important; min-height: 0 !important; border: 0 !important; overflow: hidden !important; }
-body { top: 0 !important; }
+/* Google Translate widget'i: ust banner cerceveyi CSS ile gizlemeye/
+   sikistirmaya calismak (display:none veya height:0) Google'in kendi
+   konumlandirma scriptini bozuyor ve acilir dil menusu hic acilmiyor
+   ("Cannot read properties of undefined (height)" hatasi). Bu yuzden
+   banner cerceveye DOKUNMUYORUZ -- sadece dil degistirildiginde kisa
+   sureligine ust tarafta kucuk bir "X diline cevrildi" serit gorunur,
+   bu Google'in standart davranisi ve zararsiz. */
 .goog-text-highlight { background: none !important; box-shadow: none !important; }
 /* Google'in kendi scripti ikon gorseli yuklenene kadar gadget'i display:none
    birakiyor; CSP ikon istegini engelleyince kalici gizli kaliyordu -- CSP
