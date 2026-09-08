@@ -122,6 +122,11 @@ function initGoogleSignIn(containerId) {
     if (!el) return;
     google.accounts.id.initialize({
       client_id: cfg.googleClientId,
+      // Eski akis google.com'un actigi bir popup penceresine dayanir; 3.
+      // taraf cerezleri engellenince (artik tarayicilarda varsayilan) popup
+      // acilamiyor ve kullanici "hata" goruyordu. FedCM tarayicinin kendi
+      // kimlik dogrulama API'sini kullanir, popup'a ihtiyac duymaz.
+      use_fedcm_for_button: true,
       callback: async function(response) {
         try {
           var res = await api('POST', '/auth/google', { credential: response.credential });
