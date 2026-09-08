@@ -60,7 +60,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com'],
       fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
       imgSrc:     ["'self'", 'data:', 'blob:', 'https://www.google.com', 'https://www.google.com.tr', 'https://www.googleadservices.com', 'https://googleads.g.doubleclick.net', 'https://www.googletagmanager.com'],
       scriptSrc:  ["'self'", "'unsafe-inline'", 'https://accounts.google.com/gsi/client', 'https://www.googletagmanager.com', 'https://googleads.g.doubleclick.net'],
