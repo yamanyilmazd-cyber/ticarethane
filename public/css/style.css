@@ -72,7 +72,7 @@ ul, ol { list-style: none; }
   font-size: 1.4rem; font-weight: 800; color: #fff;
   letter-spacing: -0.5px; white-space: nowrap; flex-shrink: 0;
 }
-.navbar-logo span { color: var(--amber-lt); }
+.navbar-logo span { color: var(--amber-lt); font-size: 1.3em; text-transform: uppercase; }
 
 .navbar-search { flex: 1; max-width: 500px; }
 .navbar-search form { display: flex; }
@@ -701,7 +701,7 @@ tbody td { padding: 11px 14px; color: var(--text); }
 .footer-col ul li a:hover { color: var(--amber-lt); }
 .footer-bottom { padding-top: 20px; border-top: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 .footer-logo { font-size: 1.1rem; font-weight: 800; color: #fff; }
-.footer-logo span { color: var(--amber-lt); }
+.footer-logo span { color: var(--amber-lt); font-size: 1.3em; text-transform: uppercase; }
 
 /* ================================================================
    YARDIMCI
