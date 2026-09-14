@@ -5,7 +5,7 @@ const path     = require('path');
 const fs       = require('fs');
 const { getDb }                    = require('../database/db');
 const { authenticate, optionalAuth } = require('../middleware/auth');
-const { upload, convertHeic }       = require('../middleware/upload');
+const { upload, convertHeic, resizeIfNeeded } = require('../middleware/upload');
 const { createNotification }        = require('./notifications');
 
 const router = express.Router();
@@ -323,7 +323,7 @@ router.get('/:id', optionalAuth, (req, res) => {
 // -----------------------------------------------------------------------
 // POST /api/listings  — ilan olustur
 // -----------------------------------------------------------------------
-router.post('/', authenticate, upload.array('images', 8), convertHeic, (req, res) => {
+router.post('/', authenticate, upload.array('images', 8), convertHeic, resizeIfNeeded, (req, res) => {
   try {
     const db = getDb();
     const {
@@ -337,6 +337,12 @@ router.post('/', authenticate, upload.array('images', 8), convertHeic, (req, res
     if (!title || !description || !category_id || !city) {
       cleanupFiles(req.files);
       return res.status(400).json({ error: 'Başlık, açıklama, kategori ve şehir zorunludur.' });
+    }
+    // Yeni ilanlarda en az 1 fotograf zorunlu — mevcut fotografsiz ilanlari
+    // etkilememek icin bu kontrol yalnizca OLUSTURMA (POST) asamasinda var,
+    // duzenleme (PUT) tarafina eklenmedi.
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'En az 1 fotoğraf eklemelisiniz.' });
     }
     if (title.trim().length < 5 || title.trim().length > 150) {
       cleanupFiles(req.files);
@@ -432,7 +438,7 @@ router.post('/', authenticate, upload.array('images', 8), convertHeic, (req, res
 // -----------------------------------------------------------------------
 // PUT /api/listings/:id  — ilan guncelle
 // -----------------------------------------------------------------------
-router.put('/:id', authenticate, upload.array('images', 8), convertHeic, (req, res) => {
+router.put('/:id', authenticate, upload.array('images', 8), convertHeic, resizeIfNeeded, (req, res) => {
   try {
     const db      = getDb();
     const listing = db.prepare('SELECT * FROM listings WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);

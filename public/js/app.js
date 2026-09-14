@@ -1507,7 +1507,7 @@ function listingFormHTML(l) {
     '<div class="form-group" style="grid-column:1/-1;"><label class="form-label">Web Sitesi</label><input type="text" name="website" autocomplete="off" class="form-control" value="' + esc(l.website||'') + '" placeholder="https://www.firma.com" /></div>' +
     '<div class="form-group" style="grid-column:1/-1;"><label class="form-label">Açıklama <span class="req">*</span></label><textarea name="description" class="form-control" rows="7" placeholder="Ürün özellikleri, kalite standardı, ambalaj türü, teslimat koşulları..." required>' + esc(l.description||'') + '</textarea></div>' +
     '<div class="form-group" style="grid-column:1/-1;">' +
-      '<label class="form-label">Görseller (en fazla 8, her biri 5 MB)</label>' +
+      '<label class="form-label">Görseller' + (l.id ? '' : ' <span class="req">*</span>') + ' (en az 1, en fazla 8, her biri 5 MB — büyük görseller otomatik küçültülür)</label>' +
       '<div class="upload-area" id="uploadArea"><p><strong>Tıklayın veya sürükleyin</strong><br/>JPG, PNG veya WebP</p></div>' +
       '<div class="upload-previews" id="uploadPreviews"></div>' +
       '<input type="file" id="imgInput" accept="image/*,.heic,.heif" multiple style="display:none" />' +
@@ -1580,6 +1580,7 @@ async function renderCreateListing() {
       var fd = new FormData(e.target);
       var phoneErr = validateTurkishPhone(fd.get('contact_phone'));
       if (phoneErr) { toast(phoneErr, 'error'); btn.disabled = false; btn.textContent = 'İlanı Gönder'; return; }
+      if (!_pendingFiles.length) { toast('En az 1 fotoğraf eklemelisiniz.', 'error'); btn.disabled = false; btn.textContent = 'İlanı Gönder'; return; }
       _pendingFiles.forEach(function(f) { fd.append('images', f); });
       var res = await api('POST', '/listings', fd, true);
       toast(res.message, 'success');

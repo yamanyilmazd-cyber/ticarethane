@@ -85,4 +85,38 @@ async function convertHeic(req, res, next) {
   }
 }
 
-module.exports = { upload, convertHeic };
+// Ilana konulan fotograflar icin mantikli, sabit bir boyutlandirma sinirli —
+// telefon kameralari genelde 3000-4000px eninde cekim yapiyor, bu da gereksiz
+// depolama/yavas yukleme demek. En uzun kenari MAX_DIMENSION'i asan gorseller
+// oranti korunarak kucultuluyor (kucultme, hic buyutme yok). Sadece YENI
+// yuklenen dosyalara uygulanir — diskte zaten duran eski ilan gorsellerine
+// dokunulmaz, boylece mevcut ilanlar hicbir sekilde etkilenmez.
+const MAX_DIMENSION = 1600;
+
+async function resizeIfNeeded(req, res, next) {
+  if (!sharp || !req.files || !req.files.length) return next();
+  try {
+    for (const file of req.files) {
+      const meta = await sharp(file.path).metadata();
+      if (!meta.width || !meta.height) continue;
+      if (meta.width <= MAX_DIMENSION && meta.height <= MAX_DIMENSION) continue;
+      const buffer = await sharp(file.path)
+        .rotate()
+        .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: 'inside', withoutEnlargement: true })
+        .toBuffer();
+      // Ayni dosyaya dogrudan yazmak Windows'ta "sharing violation" hatasi
+      // veriyor (sharp'in okuma handle'i henuz serbest kalmamis oluyor) —
+      // once ayri bir gecici dosyaya yazip sonra orijinal path'in uzerine
+      // atomik olarak tasiyoruz.
+      const tmpPath = file.path + '.tmp';
+      fs.writeFileSync(tmpPath, buffer);
+      fs.renameSync(tmpPath, file.path);
+    }
+  } catch (e) {
+    // Kucultme basarisiz olursa ilani engelleme — orijinal dosyayla devam et.
+    console.error('[UPLOAD] Boyutlandirma hatasi:', e.message);
+  }
+  next();
+}
+
+module.exports = { upload, convertHeic, resizeIfNeeded };
