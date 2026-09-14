@@ -4,7 +4,7 @@ const express  = require('express');
 const path     = require('path');
 const fs       = require('fs');
 const { getDb }                       = require('../database/db');
-const { authenticate, requireAdmin }  = require('../middleware/auth');
+const { authenticate, requireAdmin, requireFullAdmin } = require('../middleware/auth');
 const { createNotification }          = require('./notifications');
 
 const router = express.Router();
@@ -499,8 +499,8 @@ router.get('/users/:id', (req, res) => {
   res.json({ ...user, listings });
 });
 
-// ---- Askıya al / aktifleştir ----
-router.patch('/users/:id/toggle', (req, res) => {
+// ---- Askıya al / aktifleştir ---- (yalnizca tam admin)
+router.patch('/users/:id/toggle', requireFullAdmin, (req, res) => {
   const db   = getDb();
   const user = db.prepare('SELECT id, is_active FROM users WHERE id=? AND role!="admin"').get(req.params.id);
   if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
@@ -527,12 +527,14 @@ router.patch('/users/:id/name', (req, res) => {
   } catch(err) { res.status(500).json({ error: 'İşlem başarısız.' }); }
 });
 
-// ---- Kullanıcı sil (admin) ----
-router.delete('/users/:id', (req, res) => {
+// ---- Kullanıcı sil (admin) ---- (yalnizca tam admin)
+// Normal kullanicilar ve kisitli adminler (can_manage_users=0) silinebilir;
+// tam adminler (can_manage_users=1) hicbir admin tarafindan silinemez.
+router.delete('/users/:id', requireFullAdmin, (req, res) => {
   try {
     const db  = getDb();
     const uid = parseInt(req.params.id);
-    const user = db.prepare('SELECT id FROM users WHERE id=? AND role!="admin"').get(uid);
+    const user = db.prepare('SELECT id FROM users WHERE id=? AND (role!="admin" OR can_manage_users=0)').get(uid);
     if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı veya silme izni yok.' });
 
     // Görselleri sil

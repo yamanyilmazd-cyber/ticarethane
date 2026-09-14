@@ -291,6 +291,9 @@ const COLUMN_MIGRATIONS = [
   'ALTER TABLE users ADD COLUMN google_id TEXT',
   'ALTER TABLE listings ADD COLUMN vat_included INTEGER DEFAULT 1',
   'ALTER TABLE listings ADD COLUMN is_permanent INTEGER DEFAULT 0',
+  // Kisitli admin hesaplari icin: 0 ise bu admin kullanici silme/askiya alma
+  // yapamaz (bkz. requireFullAdmin). Tam adminler icin varsayilan 1'dir.
+  'ALTER TABLE users ADD COLUMN can_manage_users INTEGER DEFAULT 1',
 ];
 
 // ── Turso arka plan başlatma (sunucu başladıktan sonra) ────────────────────
@@ -442,6 +445,25 @@ async function initDatabase() {
     }
   } else {
     console.warn('[DB] ADMIN_EMAIL/ADMIN_PASSWORD ayarli degil, admin atlandı.');
+  }
+
+  // Kisitli admin (ör. reklamci/harici kisi) — kullanici silme/askiya alma
+  // yapamaz (bkz. requireFullAdmin), diger yetkileri tam adminle aynidir.
+  // Bu hesabi tam admin (ör. ADMIN_EMAIL) istediginde silebilir.
+  const limitedAdminEmail = process.env.LIMITED_ADMIN_EMAIL;
+  const limitedAdminPw    = process.env.LIMITED_ADMIN_PASSWORD;
+  if (limitedAdminEmail && limitedAdminPw) {
+    const limitedHash = bcrypt.hashSync(limitedAdminPw, 12);
+    const existingLimited = dbProxy.prepare('SELECT id FROM users WHERE email = ?').get(limitedAdminEmail);
+    if (existingLimited) {
+      dbProxy.prepare(`UPDATE users SET password_hash = ?, role = 'admin', can_manage_users = 0 WHERE email = ?`)
+        .run(limitedHash, limitedAdminEmail);
+      console.log(`[DB] Kisitli admin güncellendi: ${limitedAdminEmail}`);
+    } else {
+      dbProxy.prepare(`INSERT INTO users (name, email, password_hash, role, can_manage_users) VALUES (?, ?, ?, 'admin', 0)`)
+        .run('Reklam Yetkilisi', limitedAdminEmail, limitedHash);
+      console.log(`[DB] Kisitli admin oluşturuldu: ${limitedAdminEmail}`);
+    }
   }
 
   process.on('exit',    persistDb);

@@ -26,6 +26,19 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// Kisitli adminler (can_manage_users=0) icin kullanici silme/askiya alma
+// gibi hassas islemleri engeller. JWT'ye guvenmek yerine veritabanindan
+// taze okuyoruz — izin sonradan degistirilirse eski token hemen yansisin.
+function requireFullAdmin(req, res, next) {
+  const { getDb } = require('../database/db');
+  const db = getDb();
+  const row = db.prepare('SELECT can_manage_users FROM users WHERE id = ?').get(req.userId);
+  if (!row || row.can_manage_users === 0) {
+    return res.status(403).json({ error: 'Bu işlem için yetkiniz yok.' });
+  }
+  next();
+}
+
 // Opsiyonel auth: token varsa ayrisstirir, yoksa devam eder
 function optionalAuth(req, _res, next) {
   const header = req.headers.authorization;
@@ -39,4 +52,4 @@ function optionalAuth(req, _res, next) {
   next();
 }
 
-module.exports = { authenticate, requireAdmin, optionalAuth };
+module.exports = { authenticate, requireAdmin, requireFullAdmin, optionalAuth };

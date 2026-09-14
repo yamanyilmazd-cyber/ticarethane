@@ -209,11 +209,12 @@ router.post('/login', async (req, res) => {
     res.json({
       token,
       user: {
-        id:           user.id,
-        name:         user.name,
-        company_name: user.company_name,
-        email:        user.email,
-        role:         user.role,
+        id:               user.id,
+        name:             user.name,
+        company_name:     user.company_name,
+        email:            user.email,
+        role:             user.role,
+        can_manage_users: user.role === 'admin' ? !!user.can_manage_users : undefined,
       },
     });
   } catch (err) {
@@ -260,11 +261,12 @@ router.post('/google', async (req, res) => {
     res.json({
       token,
       user: {
-        id:           user.id,
-        name:         user.name,
-        company_name: user.company_name,
-        email:        user.email,
-        role:         user.role,
+        id:               user.id,
+        name:             user.name,
+        company_name:     user.company_name,
+        email:            user.email,
+        role:             user.role,
+        can_manage_users: user.role === 'admin' ? !!user.can_manage_users : undefined,
       },
     });
   } catch (err) {
@@ -337,7 +339,8 @@ router.put('/profile', authenticate, async (req, res) => {
        WHERE id = ?`
     ).run(name, company_name || null, phone || null, city || null, req.userId);
 
-    const updated = db.prepare('SELECT id, name, company_name, email, role FROM users WHERE id = ?').get(req.userId);
+    const updated = db.prepare('SELECT id, name, company_name, email, role, can_manage_users FROM users WHERE id = ?').get(req.userId);
+    updated.can_manage_users = updated.role === 'admin' ? !!updated.can_manage_users : undefined;
     res.json({ message: 'Profil güncellendi.', user: updated });
   } catch (err) {
     console.error('[AUTH] profil güncelleme hatası:', err.message);

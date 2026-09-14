@@ -110,6 +110,10 @@ function clearAuth() {
 }
 function isLoggedIn() { return !!State.token; }
 function isAdmin()    { return State.user && State.user.role === 'admin'; }
+// Kisitli adminler (can_manage_users=false) icin kullanici silme/askiya alma
+// butonlari gizlenir — sunucu tarafi zaten bu istekleri reddediyor, burada
+// sadece gereksiz 403 hatasi gormesinler diye butonlari kaldiriyoruz.
+function isFullAdmin() { return isAdmin() && State.user.can_manage_users !== false; }
 
 // ── Google ile Giriş ─────────────────────────────────────────────────────────
 var _googleConfigPromise = null;
@@ -2335,9 +2339,9 @@ async function loadAdminUsers(filters) {
           '<td style="white-space:nowrap;font-size:.78rem;">' + parseUTC(u.created_at).toLocaleDateString('tr-TR') + '</td>' +
           '<td><span class="badge ' + (u.is_active?'badge-active':'badge-rejected') + '">' + (u.is_active?'Aktif':'Askıda') + '</span></td>' +
           '<td style="display:flex;gap:4px;flex-wrap:wrap;">' +
-            '<button type="button" class="btn btn-ghost btn-sm" data-ban="' + u.id + '">' + (u.is_active?'Askıya Al':'Aktifleştir') + '</button>' +
+            (isFullAdmin() ? '<button type="button" class="btn btn-ghost btn-sm" data-ban="' + u.id + '">' + (u.is_active?'Askıya Al':'Aktifleştir') + '</button>' : '') +
             '<button type="button" class="btn btn-sm ' + (u.is_verified?'btn-accent':'btn-ghost') + '" data-verify="' + u.id + '" title="Doğrula">' + (u.is_verified?'✓ Onaylı':'Onayla') + '</button>' +
-            '<button type="button" class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" data-del-user="' + u.id + '" title="Sil">🗑</button>' +
+            (isFullAdmin() ? '<button type="button" class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;" data-del-user="' + u.id + '" title="Sil">🗑</button>' : '') +
           '</td>' +
         '</tr>';
       }).join('') +
