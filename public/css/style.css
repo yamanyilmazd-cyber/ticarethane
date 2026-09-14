@@ -113,7 +113,10 @@ ul, ol { list-style: none; }
 .btn-nav-accent:hover { background: var(--amber-lt); }
 
 /* Kategori şeridi */
-.cat-bar { background: var(--navy-mid); overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scrollbar-width: none; border-bottom: 1px solid rgba(255,255,255,.05); }
+/* touch-action:pan-x + overflow-y:hidden -- telefonda kesin yatay kaydirma
+   olmayan bir dokunusta serit hem yatay hem dikey oynuyordu (sayfa da
+   birlikte kayiyordu); artik bu serit sadece yatay yonde tepki veriyor. */
+.cat-bar { background: var(--navy-mid); overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: none; border-bottom: 1px solid rgba(255,255,255,.05); }
 .cat-bar::-webkit-scrollbar { display: none; }
 .cat-bar-inner { display: flex; min-width: max-content; padding: 0 12px; }
 .cat-bar-item {
