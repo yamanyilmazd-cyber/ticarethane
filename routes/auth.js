@@ -24,6 +24,28 @@ function sanitize(str) {
   return str.replace(/<[^>]*>/g, '').trim().substring(0, 500);
 }
 
+// Yonetim/sistem izlenimi veren kullanici adlari — normal kayitta alinamaz.
+// Gercek adminler bu route'tan degil, ortam degiskenleri uzerinden (bkz.
+// database/db.js) ayri bir kodla olusturuldugu icin bu kontrolden etkilenmez.
+const RESERVED_NAMES = new Set([
+  'admin', 'administrator', 'yönetici', 'yonetici', 'owner', 'sahip',
+  'support', 'destek', 'moderator', 'moderatör', 'mod', 'root',
+  'superadmin', 'süperadmin', 'system', 'sistem', 'staff', 'personel',
+  'official', 'resmi', 'test', 'toptango', 'toptangoadmin', 'toptangodestek',
+]);
+
+function isReservedName(name) {
+  // Turkce "tr" locale'inde "I".toLowerCase() -> "ı" (noktasiz) verir, bu da
+  // "ADMIN" gibi girdilerin "admin" ile eslesmesini engelliyordu. Once I/İ
+  // harflerini duz "i"ye cevirip sonra standart (locale'siz) kucuk harfe
+  // ceviriyoruz ki hem "ADMIN" hem "YÖNETİCİ" gibi tum varyasyonlar yakalansin.
+  const normalized = name.trim()
+    .replace(/İ/g, 'i').replace(/I/g, 'i')
+    .toLowerCase()
+    .replace(/\s+/g, '');
+  return RESERVED_NAMES.has(normalized);
+}
+
 // Geçici/sahte e-posta domain kara listesi
 const BLOCKED_DOMAINS = new Set([
   'mailinator.com','guerrillamail.com','guerrillamail.net','guerrillamail.org',
@@ -73,8 +95,10 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Ad, e-posta, telefon ve şifre zorunludur.' });
 
     // Uzunluk kontrolleri
-    if (name.length < 2 || name.length > 100)
-      return res.status(400).json({ error: 'Ad alanı 2-100 karakter arasında olmalıdır.' });
+    if (name.length < 6 || name.length > 100)
+      return res.status(400).json({ error: 'Ad alanı en az 6 karakter olmalıdır.' });
+    if (isReservedName(name))
+      return res.status(400).json({ error: 'Bu ad kullanılamaz, lütfen başka bir ad seçin.' });
     if (password.length < 8)
       return res.status(400).json({ error: 'Şifre en az 8 karakter olmalıdır.' });
     if (password.length > 128)
@@ -317,6 +341,16 @@ router.put('/profile', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Ad alanı boş bırakılamaz.' });
 
     const db = getDb();
+
+    // Admin hesaplari (iki admin) bu kisitlamadan muaf — kendi adlarini
+    // "Yonetici" / "Reklam Yetkilisi" gibi serbestce tutabilirler.
+    const requester = db.prepare('SELECT role FROM users WHERE id = ?').get(req.userId);
+    if (!requester || requester.role !== 'admin') {
+      if (name.length < 6)
+        return res.status(400).json({ error: 'Ad alanı en az 6 karakter olmalıdır.' });
+      if (isReservedName(name))
+        return res.status(400).json({ error: 'Bu ad kullanılamaz, lütfen başka bir ad seçin.' });
+    }
 
     if (new_pw) {
       if (new_pw.length < 8)

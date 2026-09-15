@@ -1709,7 +1709,7 @@ async function renderDashboard() {
           '<div class="card-header">Profil Bilgileri</div>' +
           '<div class="card-body">' +
             '<form id="profileForm">' +
-              '<div class="form-group mb-4"><label class="form-label">Ad Soyad <span class="req">*</span></label><input type="text" name="name" class="form-control" value="' + esc(me.name) + '" required /></div>' +
+              '<div class="form-group mb-4"><label class="form-label">Ad Soyad <span class="req">*</span></label><input type="text" name="name" class="form-control" value="' + esc(me.name) + '" required minlength="6" /></div>' +
               '<div class="form-group mb-4"><label class="form-label">Firma Adı</label><input type="text" name="company_name" class="form-control" value="' + esc(me.company_name||'') + '" /></div>' +
               '<div class="form-group mb-4"><label class="form-label">Telefon</label><input type="tel" name="phone" class="form-control" value="' + esc(me.phone||'+90 ') + '" /></div>' +
               '<div class="form-group mb-4"><label class="form-label">Şehir</label>' + citySelectHTML('city', me.city) + '</div>' +
@@ -1860,7 +1860,7 @@ async function renderRegister() {
         '<p>Ücretsiz hesap oluşturun, ilan verin.</p>' +
         '<form id="regForm">' +
           '<div class="grid-2">' +
-            '<div class="form-group mb-4"><label class="form-label">Ad Soyad <span class="req">*</span></label><input type="text" name="name" class="form-control" placeholder="Ad Soyad" required /></div>' +
+            '<div class="form-group mb-4"><label class="form-label">Ad Soyad <span class="req">*</span></label><input type="text" name="name" class="form-control" placeholder="Ad Soyad" required minlength="6" /></div>' +
             '<div class="form-group mb-4"><label class="form-label">Firma Adı</label><input type="text" name="company_name" class="form-control" placeholder="Firma Adı A.Ş." /></div>' +
           '</div>' +
           '<div class="form-group mb-4"><label class="form-label">E-posta <span class="req">*</span></label><input type="email" name="email" class="form-control" placeholder="ornek@firma.com" required /></div>' +
