@@ -160,6 +160,18 @@ app.use('/api/auth/forgot-password', rateLimit({
   max: 5,
   message: { error: 'Çok fazla şifre sıfırlama talebi. Lütfen 1 saat sonra tekrar deneyin.' },
 }));
+// Ilan verme dogrulama kodu: 1 saatte en fazla 5 kod gonderimi (spam/mail masrafi engeli)
+app.use('/api/auth/send-verification-code', rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: 'Çok fazla kod talebi. Lütfen 1 saat sonra tekrar deneyin.' },
+}));
+// Kod dogrulama: 15 dk'da en fazla 10 deneme (kaba kuvvet engeli)
+app.use('/api/auth/verify-code', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Çok fazla kod denemesi. Lütfen biraz sonra tekrar deneyin.' },
+}));
 app.use('/api/auth',       authRoutes);
 app.use('/api/listings',   listingRoutes);
 app.use('/api/admin',      adminRoutes);
@@ -183,7 +195,7 @@ app.get('/sitemap.xml', (_req, res) => {
     const base = 'https://www.toptango.com.tr';
     const today = new Date().toISOString().slice(0, 10);
 
-    const staticPaths = ['/', '/ara', '/vitrin', '/sozlesme', '/kvkk', '/ilan-kurallari', '/iletisim'];
+    const staticPaths = ['/', '/ara', '/vitrin', '/sozlesme', '/kvkk', '/ilan-kurallari', '/iletisim', '/hakkimizda'];
     const categories = db.prepare('SELECT slug FROM categories').all();
     const listings   = db.prepare("SELECT id, updated_at FROM listings WHERE status='active'").all();
 

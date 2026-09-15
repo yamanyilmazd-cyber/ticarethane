@@ -294,6 +294,14 @@ const COLUMN_MIGRATIONS = [
   // Kisitli admin hesaplari icin: 0 ise bu admin kullanici silme/askiya alma
   // yapamaz (bkz. requireFullAdmin). Tam adminler icin varsayilan 1'dir.
   'ALTER TABLE users ADD COLUMN can_manage_users INTEGER DEFAULT 1',
+  // Ilk ilan verme oncesi e-posta dogrulama kodu sistemi icin. DEFAULT 1
+  // bilerek secildi: ALTER TABLE ile eklenen kolon mevcut TUM satirlara bu
+  // varsayilani atar, boylece ozellik eklenmeden once kayitli kullanicilar
+  // geriye donuk dogrulama istenmeden etkilenmez. Yeni kayitlarda
+  // routes/auth.js bu degeri acikca 0 olarak INSERT eder.
+  'ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 1',
+  'ALTER TABLE users ADD COLUMN verification_code TEXT',
+  'ALTER TABLE users ADD COLUMN verification_code_expires TEXT',
 ];
 
 // ── Turso arka plan başlatma (sunucu başladıktan sonra) ────────────────────

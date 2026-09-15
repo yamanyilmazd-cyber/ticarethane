@@ -210,6 +210,7 @@ var routes = {
   '/kvkk':               renderKvkk,
   '/iletisim':        renderIletisim,
   '/ilan-kurallari':   renderIlanKurallari,
+  '/hakkimizda':       renderHakkimizda,
 };
 
 function getHash() {
@@ -710,7 +711,6 @@ async function renderHome() {
             '<h1>Türkiye Ticari Mal<br><span>İlan Merkezi</span></h1>' +
             '<p>Kimyadan demire, tarımdan plastiğe — alıcı ve satıcıları sektörel kategorilerle buluşturuyoruz.</p>' +
             '<div class="hero-stats">' +
-              '<div><em class="hero-stat-val">' + (data.pagination ? data.pagination.total : (data.total || 0)) + '</em><span class="hero-stat-lbl">Aktif İlan</span></div>' +
               '<div><em class="hero-stat-val">' + State.categories.length + '</em><span class="hero-stat-lbl">Sektör</span></div>' +
               '<div><em class="hero-stat-val">81 İl</em><span class="hero-stat-lbl">Hizmet Bölgesi</span></div>' +
             '</div>' +
@@ -1556,6 +1556,23 @@ function addFiles(files) {
   });
 }
 async function renderCreateListing() {
+  if (!isLoggedIn()) { goTo('/giris'); return; }
+
+  // Ilk ilan vermeden once e-posta dogrulamasi gerekiyor mu — sunucudan
+  // taze kontrol ediyoruz ki State.user localStorage'da eski kalmis olsa
+  // bile dogru sonuc alinsin.
+  var me;
+  try { me = await api('GET', '/auth/me'); } catch(e) { me = null; }
+  if (me) {
+    State.user.email_verified = me.email_verified;
+    var store = localStorage.getItem('tc_user') ? localStorage : sessionStorage;
+    store.setItem('tc_user', JSON.stringify(State.user));
+  }
+  if (me && me.email_verified === false) {
+    renderEmailVerificationGate();
+    return;
+  }
+
   _pendingFiles = [];
   document.getElementById('app').innerHTML =
     '<div class="container" style="max-width:820px;padding:32px 24px;">' +
@@ -1590,6 +1607,59 @@ async function renderCreateListing() {
       btn.disabled = false; btn.textContent = 'İlanı Gönder';
     }
   };
+}
+
+// İlk ilan vermeden once e-posta dogrulama kodu ekrani
+function renderEmailVerificationGate() {
+  document.getElementById('app').innerHTML =
+    '<div class="container" style="max-width:520px;padding:60px 24px;">' +
+      '<div class="breadcrumb"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>İlan Ver</span></div>' +
+      '<div class="card"><div class="card-header">E-posta Doğrulama</div><div class="card-body">' +
+        '<p style="color:var(--text-mid);margin:0 0 20px;line-height:1.6;">İlk ilanınızı verebilmek için önce e-posta adresinizi doğrulamanız gerekiyor. Aşağıdaki butona tıklayarak <strong>' + esc((State.user && State.user.email) || '') + '</strong> adresine bir doğrulama kodu gönderin.</p>' +
+        '<div id="verifyStep1">' +
+          '<button type="button" class="btn btn-accent" id="sendCodeBtn">Doğrulama Kodu Gönder</button>' +
+        '</div>' +
+        '<form id="verifyCodeForm" style="display:none;margin-top:20px;">' +
+          '<div class="form-group mb-4"><label class="form-label">E-postanıza gelen 6 haneli kod</label><input type="text" name="code" class="form-control" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" placeholder="123456" required /></div>' +
+          '<div class="d-flex gap-3 align-center"><button type="submit" class="btn btn-accent" id="verifyBtn">Doğrula</button><button type="button" class="btn btn-ghost" id="resendCodeBtn">Kodu Tekrar Gönder</button></div>' +
+        '</form>' +
+      '</div></div>' +
+    '</div>';
+
+  function sendCode() {
+    api('POST', '/auth/send-verification-code').then(function(res) {
+      if (res.already_verified) {
+        toast('E-posta zaten doğrulanmış.', 'success');
+        if (State.user) State.user.email_verified = true;
+        renderCreateListing();
+        return;
+      }
+      toast(res.dev_code ? ('Mail yapılandırılmamış. Dev kod: ' + res.dev_code) : (res.message || 'Kod gönderildi.'), 'success');
+      document.getElementById('verifyStep1').style.display = 'none';
+      document.getElementById('verifyCodeForm').style.display = '';
+    }).catch(function(err) { toast(err.message, 'error'); });
+  }
+
+  document.getElementById('sendCodeBtn').addEventListener('click', sendCode);
+  document.getElementById('resendCodeBtn').addEventListener('click', sendCode);
+  document.getElementById('verifyCodeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var code = new FormData(e.target).get('code');
+    var btn  = document.getElementById('verifyBtn');
+    btn.disabled = true; btn.textContent = 'Doğrulanıyor...';
+    api('POST', '/auth/verify-code', { code: code }).then(function() {
+      toast('E-posta adresiniz doğrulandı.', 'success');
+      if (State.user) {
+        State.user.email_verified = true;
+        var store = localStorage.getItem('tc_user') ? localStorage : sessionStorage;
+        store.setItem('tc_user', JSON.stringify(State.user));
+      }
+      renderCreateListing();
+    }).catch(function(err) {
+      toast(err.message, 'error');
+      btn.disabled = false; btn.textContent = 'Doğrula';
+    });
+  });
 }
 
 // ================================================================
@@ -3161,6 +3231,20 @@ function renderKvkk() {
   s += '<ul style="margin:10px 0 10px 24px;"><li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li><li>Verilerinize ilişkin bilgi talep etme,</li><li>İşlenme amacını öğrenme,</li><li>Verilerin aktarıldığı üçüncü kişileri öğrenme,</li><li>Eksik veya yanlış verilerin düzeltilmesini isteme,</li><li>Verilerin silinmesini veya yok edilmesini isteme,</li><li>Otomatik sistemler sonucu aleyhe kararınıza itiraz etme,</li><li>Kanuna aykırı işleme nedeniyle uğradığınız zararın tazminini talep etme.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">7. Başvuru Hakkı</h2>';
   s += '<p>Haklarınızı kullanmak için <strong>destek@toptango.com.tr</strong> adresine e-posta gönderebilir ya da Platform&#39;daki &#34;Hesabım&#34; sayfasından başvurabilirsiniz. Başvurularınız en geç 30 gün içinde yanıtlanacaktır.</p>';
+  s += '</div>';
+  document.getElementById('app').innerHTML = s;
+}
+
+function renderHakkimizda() {
+  document.title = 'Hakkımızda - Toptango';
+  var s = '<div class="container" style="padding:60px 15px;max-width:800px;margin:0 auto">';
+  s += '<h1 class="mb-4">Hakkımızda</h1>';
+  s += '<p>Toptango, Türkiye genelinde toptan ve toplu ticari mal alım-satımını dijitalleştirmek amacıyla kurulmuş bir B2B ilan platformudur. Kimya, demir-çelik, tarım, plastik ve daha birçok sektörden alıcı ve satıcıyı tek bir çatı altında buluşturuyoruz.</p>';
+  s += '<h4>Misyonumuz</h4>';
+  s += '<p>Türkiye&#39;nin 81 ilindeki üretici, tedarikçi ve toptancıların birbirine kolayca ulaşabildiği, güvenilir ve şeffaf bir ticaret ortamı sunmak.</p>';
+  s += '<h4>Neden Toptango?</h4>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li>Sektörel kategorilerle hızlı ve doğru eşleşme,</li><li>Doğrulanmış firma profilleri ile güvenilir alışveriş,</li><li>Kolay ilan verme ve yönetim araçları,</li><li>Türkiye genelinde geniş kullanıcı ağı.</li></ul>';
+  s += '<p>Sorularınız veya iş birliği talepleriniz için bizimle <a href="#/iletisim">iletişime</a> geçebilirsiniz.</p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
 }

@@ -4,7 +4,7 @@ const express  = require('express');
 const path     = require('path');
 const fs       = require('fs');
 const { getDb }                    = require('../database/db');
-const { authenticate, optionalAuth } = require('../middleware/auth');
+const { authenticate, optionalAuth, requireEmailVerified } = require('../middleware/auth');
 const { upload, convertHeic, resizeIfNeeded } = require('../middleware/upload');
 const { createNotification }        = require('./notifications');
 
@@ -323,7 +323,7 @@ router.get('/:id', optionalAuth, (req, res) => {
 // -----------------------------------------------------------------------
 // POST /api/listings  — ilan olustur
 // -----------------------------------------------------------------------
-router.post('/', authenticate, upload.array('images', 8), convertHeic, resizeIfNeeded, (req, res) => {
+router.post('/', authenticate, requireEmailVerified, upload.array('images', 8), convertHeic, resizeIfNeeded, (req, res) => {
   try {
     const db = getDb();
     const {

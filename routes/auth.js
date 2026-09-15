@@ -124,9 +124,11 @@ router.post('/register', async (req, res) => {
 
     // Şifre hash'i
     const hash   = await bcrypt.hash(password, 12);
+    // email_verified acikca 0: yeni kayitlar ilk ilanini vermeden once
+    // e-posta kodu ile dogrulamak zorunda (bkz. requireEmailVerified).
     const result = db.prepare(
-      `INSERT INTO users (name, company_name, email, phone, password_hash, city)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (name, company_name, email, phone, password_hash, city, email_verified)
+       VALUES (?, ?, ?, ?, ?, ?, 0)`
     ).run(
       name,
       company_name || null,
@@ -148,6 +150,7 @@ router.post('/register', async (req, res) => {
         name,
         email,
         role: 'user',
+        email_verified: false,
       },
     });
   } catch (err) {
@@ -239,6 +242,7 @@ router.post('/login', async (req, res) => {
         email:            user.email,
         role:             user.role,
         can_manage_users: user.role === 'admin' ? !!user.can_manage_users : undefined,
+        email_verified:   !!user.email_verified,
       },
     });
   } catch (err) {
@@ -291,6 +295,7 @@ router.post('/google', async (req, res) => {
         email:            user.email,
         role:             user.role,
         can_manage_users: user.role === 'admin' ? !!user.can_manage_users : undefined,
+        email_verified:   !!user.email_verified,
       },
     });
   } catch (err) {
@@ -318,10 +323,12 @@ router.get('/me', authenticate, (req, res) => {
   try {
   const db   = getDb();
   const user = db.prepare(
-    'SELECT id, name, company_name, email, phone, city, role, created_at, google_id FROM users WHERE id = ?'
+    'SELECT id, name, company_name, email, phone, city, role, created_at, google_id, email_verified, can_manage_users FROM users WHERE id = ?'
   ).get(req.userId);
   if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
   user.google_linked = !!user.google_id;
+  user.email_verified = !!user.email_verified;
+  user.can_manage_users = user.role === 'admin' ? !!user.can_manage_users : undefined;
   delete user.google_id;
   res.json(user);
   } catch(err) { res.status(500).json({ error: 'Sunucu hatası.' }); }
@@ -534,5 +541,106 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// Ortak Resend e-posta gonderme yardimcisi — sifre sifirlama maili de
+// pratikte ayni HTTP API'yi kullaniyor, bu yeni dogrulama kodu icin de
+// ayni servisten (kullandigimiz mail programindan) gonderim yapiyoruz.
+async function sendResendMail(to, subject, html) {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) return { sent: false };
+  try {
+    const fromAddr = process.env.SMTP_FROM || 'Toptango <onboarding@resend.dev>';
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: fromAddr, to: [to], subject, html }),
+    });
+    const result = await resp.json();
+    if (!resp.ok) { console.error('[MAIL] Resend hatasi:', JSON.stringify(result)); return { sent: false }; }
+    console.info('[MAIL] gonderildi:', result.id);
+    return { sent: true };
+  } catch (e) {
+    console.error('[MAIL] gonderim hatasi:', e.message);
+    return { sent: false };
+  }
+}
+
+// ---- Ilk ilan icin e-posta dogrulama kodu gonder ----
+router.post('/send-verification-code', authenticate, async (req, res) => {
+  try {
+    const db   = getDb();
+    const user = db.prepare('SELECT id, name, email, email_verified FROM users WHERE id = ?').get(req.userId);
+    if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+    if (user.email_verified) return res.json({ message: 'E-posta zaten doğrulanmış.', already_verified: true });
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const exp  = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    db.prepare('UPDATE users SET verification_code = ?, verification_code_expires = ? WHERE id = ?')
+      .run(code, exp, user.id);
+
+    const html = [
+      '<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">',
+      '<div style="background:#1e3a8a;padding:24px 32px;">',
+      '<h1 style="color:#ffffff;font-size:20px;margin:0;font-weight:700;">Toptango</h1>',
+      '<p style="color:#93c5fd;font-size:13px;margin:6px 0 0;">B2B Ticaret Platformu</p>',
+      '</div>',
+      '<div style="padding:32px;">',
+      '<h2 style="color:#111827;font-size:18px;margin:0 0 16px;">E-posta Doğrulama Kodu</h2>',
+      '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 12px;">Merhaba <strong>' + user.name + '</strong>,</p>',
+      '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">İlk ilanınızı verebilmek için e-posta adresinizi doğrulamanız gerekiyor. Aşağıdaki kodu ilan verme ekranına girin. Kod <strong>15 dakika</strong> geçerlidir.</p>',
+      '<div style="text-align:center;margin:0 0 28px;">',
+      '<span style="display:inline-block;background:#f3f4f6;color:#1e3a8a;letter-spacing:6px;font-size:28px;font-weight:700;padding:14px 28px;border-radius:6px;">' + code + '</span>',
+      '</div>',
+      '<hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;" />',
+      '<p style="color:#9ca3af;font-size:12px;margin:0;">Bu talebi siz yapmadıysanız bu e-postayı dikkate almayınız.</p>',
+      '</div>',
+      '<div style="background:#f9fafb;padding:16px 32px;text-align:center;">',
+      '<p style="color:#9ca3af;font-size:11px;margin:0;">&copy; 2025 Toptango &middot; <a href="https://www.toptango.com.tr" style="color:#6b7280;text-decoration:none;">toptango.com.tr</a></p>',
+      '</div>',
+      '</div>',
+    ].join('');
+
+    const result = await sendResendMail(user.email, 'Doğrulama Kodu - Toptango', html);
+    if (!result.sent) {
+      console.info('[AUTH] Dogrulama kodu (MAIL YOK):', user.email, code);
+      if (process.env.NODE_ENV !== 'production')
+        return res.json({ message: 'Mail yapılandırılmamış. Dev kod:', dev_code: code });
+      return res.status(500).json({ error: 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.' });
+    }
+
+    res.json({ message: 'Doğrulama kodu e-posta adresinize gönderildi.' });
+  } catch (err) {
+    console.error('[AUTH] send-verification-code hatasi:', err.message);
+    res.status(500).json({ error: 'Kod gönderilirken hata oluştu.' });
+  }
+});
+
+// ---- Ilk ilan icin e-posta dogrulama kodunu kontrol et ----
+router.post('/verify-code', authenticate, (req, res) => {
+  try {
+    const code = sanitize(req.body.code);
+    if (!code || !/^\d{6}$/.test(code))
+      return res.status(400).json({ error: 'Geçerli bir 6 haneli kod giriniz.' });
+
+    const db   = getDb();
+    const user = db.prepare(
+      'SELECT id, verification_code, verification_code_expires, email_verified FROM users WHERE id = ?'
+    ).get(req.userId);
+    if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+    if (user.email_verified) return res.json({ message: 'E-posta zaten doğrulanmış.', verified: true });
+
+    if (!user.verification_code || user.verification_code !== code)
+      return res.status(400).json({ error: 'Kod hatalı.' });
+    if (!user.verification_code_expires || new Date(user.verification_code_expires) < new Date())
+      return res.status(400).json({ error: 'Kodun süresi dolmuş. Lütfen yeni kod isteyin.' });
+
+    db.prepare('UPDATE users SET email_verified = 1, verification_code = NULL, verification_code_expires = NULL WHERE id = ?')
+      .run(user.id);
+
+    res.json({ message: 'E-posta adresiniz doğrulandı.', verified: true });
+  } catch (err) {
+    console.error('[AUTH] verify-code hatasi:', err.message);
+    res.status(500).json({ error: 'Kod doğrulanırken hata oluştu.' });
+  }
+});
 
 module.exports = router;
