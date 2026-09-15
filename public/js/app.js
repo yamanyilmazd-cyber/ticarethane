@@ -1670,7 +1670,7 @@ async function renderCreateListing(params) {
       store.setItem('tc_user', JSON.stringify(State.user));
     }
     if (me && me.email_verified === false) {
-      renderEmailVerificationGate();
+      renderEmailVerificationGate({ autoSend: true });
       return;
     }
   }
@@ -1725,13 +1725,20 @@ async function renderCreateListing(params) {
   };
 }
 
-// İlk ilan vermeden once e-posta dogrulama kodu ekrani
-function renderEmailVerificationGate() {
+// E-posta dogrulama kodu ekrani — hem kayit/giris sonrasi ZORUNLU adim
+// olarak, hem de (nadir bir gecmis-kayit senaryosu icin) ilk ilan vermeden
+// once tek basina gosterilebilir. opts.autoSend true ise (kayit/giris
+// sonrasi akis) sayfaya girer girmez kod otomatik gonderilir — kullanicinin
+// ayrica bir butona basmasi beklenmez. opts.onVerified, kod dogrulandiktan
+// SONRA calisacak fonksiyondur (varsayilan: ilan verme sayfasina donmek).
+function renderEmailVerificationGate(opts) {
+  opts = opts || {};
+  var onVerified = opts.onVerified || function() { renderCreateListing(); };
+
   document.getElementById('app').innerHTML =
     '<div class="container" style="max-width:520px;padding:60px 24px;">' +
-      '<div class="breadcrumb"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>İlan Ver</span></div>' +
       '<div class="card"><div class="card-header">E-posta Doğrulama</div><div class="card-body">' +
-        '<p style="color:var(--text-mid);margin:0 0 20px;line-height:1.6;">İlk ilanınızı verebilmek için önce e-posta adresinizi doğrulamanız gerekiyor. Aşağıdaki butona tıklayarak <strong>' + esc((State.user && State.user.email) || '') + '</strong> adresine bir doğrulama kodu gönderin.</p>' +
+        '<p style="color:var(--text-mid);margin:0 0 20px;line-height:1.6;">Hesabınızı kullanmaya başlamadan önce e-posta adresinizi doğrulamanız gerekiyor. <strong>' + esc((State.user && State.user.email) || '') + '</strong> adresine bir doğrulama kodu gönderdik.</p>' +
         '<div id="verifyStep1">' +
           '<button type="button" class="btn btn-accent" id="sendCodeBtn">Doğrulama Kodu Gönder</button>' +
         '</div>' +
@@ -1747,7 +1754,7 @@ function renderEmailVerificationGate() {
       if (res.already_verified) {
         toast('E-posta zaten doğrulanmış.', 'success');
         if (State.user) State.user.email_verified = true;
-        renderCreateListing();
+        onVerified();
         return;
       }
       toast(res.dev_code ? ('Mail yapılandırılmamış. Dev kod: ' + res.dev_code) : (res.message || 'Kod gönderildi.'), 'success');
@@ -1770,12 +1777,14 @@ function renderEmailVerificationGate() {
         var store = localStorage.getItem('tc_user') ? localStorage : sessionStorage;
         store.setItem('tc_user', JSON.stringify(State.user));
       }
-      renderCreateListing();
+      onVerified();
     }).catch(function(err) {
       toast(err.message, 'error');
       btn.disabled = false; btn.textContent = 'Doğrula';
     });
   });
+
+  if (opts.autoSend) sendCode();
 }
 
 // ================================================================
@@ -2025,6 +2034,21 @@ async function renderLogin() {
       setAuth(res.token, res.user, remember);
       updateNavbar();
 
+      // Kayit sirasinda dogrulamayi yarim birakip sekmeyi kapatmis olan
+      // (nadir) bir kullanici tekrar giris yaparsa, panele gecmeden once
+      // yine kod dogrulamasi istiyoruz — e-posta dogrulamasi zorunlu.
+      if (res.user.email_verified === false) {
+        renderEmailVerificationGate({
+          autoSend: true,
+          onVerified: async function() {
+            if (res.user.role !== 'admin' && await trySubmitPendingDraft()) return;
+            toast('Hoş geldiniz, ' + res.user.name + '!', 'success');
+            goTo(res.user.role === 'admin' ? '/admin' : '/hesabim');
+          }
+        });
+        return;
+      }
+
       // Hizli ilan (pazarlama) linkinden gelip zaten hesabi olan bir
       // kullanici "Giriş Yap"i secmis olabilir — bekleyen taslak varsa
       // otomatik gonder.
@@ -2096,16 +2120,11 @@ async function renderRegister() {
       var remember = fd.has('remember');
       fd.delete('remember');
 
-      // Hizli ilan (pazarlama) akisindan bekleyen bir taslak varsa: bu
-      // kaydin ilk ilanini kayit olur olmaz otomatik gonderecegiz, bu
-      // yuzden e-posta dogrulama kodu adimini atlatan bayragi da
-      // gonderiyoruz — aksi halde "otomatik onaya dusme" akisi kod
-      // bekleme ekraniyla kesintiye ugrardi.
+      // Hizli ilan (pazarlama) akisindan bekleyen bir taslak olabilir —
+      // kod dogrulandiktan SONRA bu taslagi otomatik gonderecegiz.
       var draft = await idbLoadDraft().catch(function() { return null; });
-      var payload = Object.fromEntries(fd);
-      if (draft) payload.quick_listing = true;
 
-      var res = await api('POST', '/auth/register', payload);
+      var res = await api('POST', '/auth/register', Object.fromEntries(fd));
       setAuth(res.token, res.user, remember);
       updateNavbar();
       // Google Ads donusum: uye kaydi tamamlandi (AW-18285393404)
@@ -2113,10 +2132,17 @@ async function renderRegister() {
         gtag('event', 'conversion', { send_to: 'AW-18285393404/nVjBCNbyh9kcEPzrk49E' });
       }
 
-      if (await trySubmitPendingDraft(draft)) return;
-
-      toast('Hoş geldiniz! İlk ilanınızı oluşturun.', 'success');
-      goTo('/hesabim');
+      // E-posta dogrulamasi artik kayitta ZORUNLU — hesap olusturulur
+      // olusturulmaz dogrulama ekranina geciyoruz, kod girilmeden ne
+      // panele ne de bekleyen ilan taslagina gecilebiliyor.
+      renderEmailVerificationGate({
+        autoSend: true,
+        onVerified: async function() {
+          if (draft && await trySubmitPendingDraft(draft)) return;
+          toast('Hoş geldiniz! İlk ilanınızı oluşturun.', 'success');
+          goTo('/hesabim');
+        }
+      });
     } catch(err) {
       errEl.textContent = err.message;
       errEl.style.display = 'block';

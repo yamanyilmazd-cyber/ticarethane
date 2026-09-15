@@ -6,9 +6,31 @@ const fs       = require('fs');
 const { getDb }                       = require('../database/db');
 const { authenticate, requireAdmin, requireFullAdmin } = require('../middleware/auth');
 const { createNotification }          = require('./notifications');
+const { sendResendMail, mailTemplate } = require('../utils/mailer');
 
 const router = express.Router();
 router.use(authenticate, requireAdmin);
+
+function escMail(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// İlan onaylandiginda sahibine bilgilendirme maili gonderir. Mail servisi
+// yapilandirilmamis veya gonderim basarisiz olursa onay islemini engellemez
+// — en kotu ihtimalle kullanici sadece site ici bildirimi gorur.
+async function sendListingApprovedEmail(user, listing) {
+  if (!user || !user.email) return;
+  try {
+    const base = process.env.APP_URL || 'https://www.toptango.com.tr';
+    const link = base + '/#/ilan/' + listing.id;
+    const html = mailTemplate('İlanınız Onaylandı', [
+      '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 12px;">Merhaba <strong>' + escMail(user.name) + '</strong>,</p>',
+      '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">"<strong>' + escMail(listing.title) + '</strong>" başlıklı ilanınız moderasyon onayından geçti ve artık Toptango üzerinde yayında.</p>',
+      '<div style="text-align:center;margin:0 0 12px;"><a href="' + link + '" style="background:#1e3a8a;color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600;display:inline-block;">İlanımı Görüntüle</a></div>',
+    ].join(''));
+    await sendResendMail(user.email, 'İlanınız Onaylandı - Toptango', html);
+  } catch (e) { console.error('[ADMIN] onay maili gonderilemedi:', e.message); }
+}
 
 // ================================================================
 // ÖZET İSTATİSTİKLER
@@ -369,10 +391,13 @@ router.get('/listings/:id', (req, res) => {
 });
 
 // ---- Onayla ----
-router.patch('/listings/:id/approve', (req, res) => {
+router.patch('/listings/:id/approve', async (req, res) => {
   try {
     const db = getDb();
-    const listing = db.prepare('SELECT id, user_id, title FROM listings WHERE id=?').get(req.params.id);
+    const listing = db.prepare(
+      `SELECT l.id, l.user_id, l.title, u.email, u.name AS owner_name
+       FROM listings l JOIN users u ON u.id = l.user_id WHERE l.id=?`
+    ).get(req.params.id);
     if (!listing) return res.status(404).json({ error: 'İlan bulunamadı.' });
     db.prepare(
       "UPDATE listings SET status='active', rejection_reason=NULL, updated_at=datetime('now'), " +
@@ -385,6 +410,7 @@ router.patch('/listings/:id/approve', (req, res) => {
         '/ilan/' + listing.id
       );
     } catch(e) {}
+    sendListingApprovedEmail({ email: listing.email, name: listing.owner_name }, listing);
     res.json({ message: 'İlan onaylandı.' });
   } catch(err) { res.status(500).json({ error: "İşlem başarısız." }); }
 });
@@ -432,10 +458,25 @@ router.post('/listings/bulk-approve', (req, res) => {
   if (ids.length > 100) return res.status(400).json({ error: 'En fazla 100 ilan onaylanabilir.' });
   const validIds = ids.map(Number).filter(id => Number.isInteger(id) && id > 0);
   if (!validIds.length) return res.status(400).json({ error: 'Geçersiz ID listesi.' });
+  let approved = 0;
   validIds.forEach(id => {
-    db.prepare("UPDATE listings SET status='active', updated_at=datetime('now') WHERE id=? AND status='pending'").run(id);
+    const listing = db.prepare(
+      `SELECT l.id, l.user_id, l.title, u.email, u.name AS owner_name
+       FROM listings l JOIN users u ON u.id = l.user_id WHERE l.id=? AND l.status='pending'`
+    ).get(id);
+    if (!listing) return;
+    db.prepare("UPDATE listings SET status='active', updated_at=datetime('now') WHERE id=?").run(id);
+    approved++;
+    try {
+      createNotification(db, listing.user_id, 'listing_approved',
+        'İlanınız Onaylandı',
+        `"${listing.title}" ilanınız moderasyon onayından geçti ve yayına alındı.`,
+        '/ilan/' + listing.id
+      );
+    } catch(e) {}
+    sendListingApprovedEmail({ email: listing.email, name: listing.owner_name }, listing);
   });
-  res.json({ message: `${validIds.length} ilan onaylandı.` });
+  res.json({ message: `${approved} ilan onaylandı.` });
 });
 
 // ---- Sil ----

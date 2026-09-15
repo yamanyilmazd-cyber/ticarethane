@@ -7,6 +7,7 @@ const crypto  = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const { getDb }        = require('../database/db');
 const { authenticate } = require('../middleware/auth');
+const { sendResendMail } = require('../utils/mailer');
 
 const router     = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -124,26 +125,19 @@ router.post('/register', async (req, res) => {
 
     // Şifre hash'i
     const hash = await bcrypt.hash(password, 12);
-    // "Hizli ilan" pazarlama linkinden (/hizli-ilan/:sektor) doldurulup
-    // kayit sirasinda otomatik gonderilecek bir ilan taslagi varsa
-    // frontend bu isteğe quick_listing:true ekliyor — bu durumda e-posta
-    // dogrulama kodu adimini atlatiyoruz (email_verified=1), aksi halde
-    // kayit olur olmaz otomatik gonderilen ilan requireEmailVerified
-    // tarafindan reddedilir ve "otomatik onaya dusme" akisi bozulurdu.
-    // Ilan yine de normal moderasyon onayindan gecmeden yayina girmez,
-    // bu yuzden bu kisayolun kotuye kullanim riski sinirli.
-    const quickListing = req.body.quick_listing === true || req.body.quick_listing === 'true';
+    // email_verified acikca 0: e-posta dogrulamasi artik kayitta ZORUNLU —
+    // frontend kayit basarili olur olmaz dogrulama kodu ekranini gosterir,
+    // hesap kod girilene kadar (ilan verme dahil) tam kullanilamaz sayilir.
     const result = db.prepare(
       `INSERT INTO users (name, company_name, email, phone, password_hash, city, email_verified)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, 0)`
     ).run(
       name,
       company_name || null,
       email,
       phone || null,
       hash,
-      city  || null,
-      quickListing ? 1 : 0
+      city  || null
     );
 
     if (!result.lastInsertRowid)
@@ -158,7 +152,7 @@ router.post('/register', async (req, res) => {
         name,
         email,
         role: 'user',
-        email_verified: quickListing,
+        email_verified: false,
       },
     });
   } catch (err) {
@@ -548,29 +542,6 @@ router.post('/reset-password', async (req, res) => {
     res.status(500).json({ error: 'Şifre sıfırlanamadı.' });
   }
 });
-
-// Ortak Resend e-posta gonderme yardimcisi — sifre sifirlama maili de
-// pratikte ayni HTTP API'yi kullaniyor, bu yeni dogrulama kodu icin de
-// ayni servisten (kullandigimiz mail programindan) gonderim yapiyoruz.
-async function sendResendMail(to, subject, html) {
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  if (!RESEND_API_KEY) return { sent: false };
-  try {
-    const fromAddr = process.env.SMTP_FROM || 'Toptango <onboarding@resend.dev>';
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fromAddr, to: [to], subject, html }),
-    });
-    const result = await resp.json();
-    if (!resp.ok) { console.error('[MAIL] Resend hatasi:', JSON.stringify(result)); return { sent: false }; }
-    console.info('[MAIL] gonderildi:', result.id);
-    return { sent: true };
-  } catch (e) {
-    console.error('[MAIL] gonderim hatasi:', e.message);
-    return { sent: false };
-  }
-}
 
 // ---- Ilk ilan icin e-posta dogrulama kodu gonder ----
 router.post('/send-verification-code', authenticate, async (req, res) => {
