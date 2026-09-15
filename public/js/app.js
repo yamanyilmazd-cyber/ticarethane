@@ -271,14 +271,27 @@ function router() {
   _toDeleteImgs = new Set();
 
   document.title = 'Toptango | Ticari Mal Platformu';
-  window.scrollTo(0, 0);
+  // html { scroll-behavior: smooth } genel CSS kuralindan dolayi normal
+  // scrollTo(0,0) animasyonlu calisiyor — sayfa icerigi (spinner, sonra
+  // gercek sayfa) degisirken bu animasyon yarida kesilip kullanici eski
+  // sayfanin ortasinda/altinda kalabiliyordu (ozellikle uzun anasayfadan
+  // kisa bir sayfaya gecerken, mobilde belirginlesiyordu). "instant" ile
+  // rota degisimlerinde her zaman aninda en uste ziplatiyoruz.
+  var scrollTop = function() { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); };
+  scrollTop();
 
   var app = document.getElementById('app');
   app.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
 
-  Promise.resolve(result.fn(result.params)).catch(function(err) {
+  // Sayfa icerigi geldikten SONRA tekrar en uste ziplatiyoruz — spinner'dan
+  // gercek icerige gecince dokuman boyu degisiyor, ilk cagrinin etkisini
+  // silebiliyordu.
+  Promise.resolve(result.fn(result.params)).then(function() {
+    scrollTop();
+  }).catch(function(err) {
     console.error('[Router]', err);
     app.innerHTML = '<div class="container" style="padding:60px 0;text-align:center;"><p class="text-muted">Sayfa yüklenemedi.</p><a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
+    scrollTop();
   });
 }
 
