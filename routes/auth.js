@@ -123,19 +123,27 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ error: 'Bu e-posta adresi zaten kayıtlı.' });
 
     // Şifre hash'i
-    const hash   = await bcrypt.hash(password, 12);
-    // email_verified acikca 0: yeni kayitlar ilk ilanini vermeden once
-    // e-posta kodu ile dogrulamak zorunda (bkz. requireEmailVerified).
+    const hash = await bcrypt.hash(password, 12);
+    // "Hizli ilan" pazarlama linkinden (/hizli-ilan/:sektor) doldurulup
+    // kayit sirasinda otomatik gonderilecek bir ilan taslagi varsa
+    // frontend bu isteğe quick_listing:true ekliyor — bu durumda e-posta
+    // dogrulama kodu adimini atlatiyoruz (email_verified=1), aksi halde
+    // kayit olur olmaz otomatik gonderilen ilan requireEmailVerified
+    // tarafindan reddedilir ve "otomatik onaya dusme" akisi bozulurdu.
+    // Ilan yine de normal moderasyon onayindan gecmeden yayina girmez,
+    // bu yuzden bu kisayolun kotuye kullanim riski sinirli.
+    const quickListing = req.body.quick_listing === true || req.body.quick_listing === 'true';
     const result = db.prepare(
       `INSERT INTO users (name, company_name, email, phone, password_hash, city, email_verified)
-       VALUES (?, ?, ?, ?, ?, ?, 0)`
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     ).run(
       name,
       company_name || null,
       email,
       phone || null,
       hash,
-      city  || null
+      city  || null,
+      quickListing ? 1 : 0
     );
 
     if (!result.lastInsertRowid)
@@ -150,7 +158,7 @@ router.post('/register', async (req, res) => {
         name,
         email,
         role: 'user',
-        email_verified: false,
+        email_verified: quickListing,
       },
     });
   } catch (err) {

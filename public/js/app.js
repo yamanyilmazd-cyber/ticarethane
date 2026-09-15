@@ -211,6 +211,7 @@ var routes = {
   '/iletisim':        renderIletisim,
   '/ilan-kurallari':   renderIlanKurallari,
   '/hakkimizda':       renderHakkimizda,
+  '/hizli-ilan/:slug': renderCreateListing,
 };
 
 function getHash() {
@@ -1466,6 +1467,82 @@ function setupFormListeners() {
 }
 
 // ================================================================
+// HIZLI İLAN (pazarlama linkleri) — taslak deposu
+// ================================================================
+// /hizli-ilan/:slug uzerinden gelen, henuz uye olmamis bir ziyaretcinin
+// doldurdugu formu (fotograflar dahil) kayit olana kadar tarayicida
+// saklamak icin IndexedDB kullaniyoruz. localStorage/sessionStorage
+// fotograflari (File/Blob) dogrudan tutamaz ve boyut siniri cok dusuk;
+// IndexedDB hem File nesnelerini oldugu gibi saklayabiliyor hem de
+// kotalari (yuzlerce MB) coktan yeterli.
+var IDB_NAME = 'tc_draft_db', IDB_STORE = 'drafts', IDB_KEY = 'quick_listing';
+function idbSaveDraft(draft) {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = function() { req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = function() {
+      var db = req.result;
+      var tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(draft, IDB_KEY);
+      tx.oncomplete = function() { db.close(); resolve(); };
+      tx.onerror = function() { db.close(); reject(tx.error); };
+    };
+    req.onerror = function() { reject(req.error); };
+  });
+}
+function idbLoadDraft() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = function() { req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = function() {
+      var db = req.result;
+      var tx = db.transaction(IDB_STORE, 'readonly');
+      var getReq = tx.objectStore(IDB_STORE).get(IDB_KEY);
+      getReq.onsuccess = function() { db.close(); resolve(getReq.result || null); };
+      getReq.onerror = function() { db.close(); reject(getReq.error); };
+    };
+    req.onerror = function() { reject(req.error); };
+  });
+}
+function idbClearDraft() {
+  return new Promise(function(resolve) {
+    var req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = function() { req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = function() {
+      var db = req.result;
+      var tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(IDB_KEY);
+      tx.oncomplete = function() { db.close(); resolve(); };
+      tx.onerror = function() { db.close(); resolve(); };
+    };
+    req.onerror = function() { resolve(); };
+  });
+}
+
+// Kayit/giris sonrasi bekleyen hizli ilan taslagi varsa otomatik gonderir.
+// true donerse cagiran taraf kendi normal yonlendirmesini YAPMAMALI —
+// bu fonksiyon zaten goTo ile yonlendirme yapti.
+async function trySubmitPendingDraft(preloadedDraft) {
+  var draft;
+  try { draft = preloadedDraft !== undefined ? preloadedDraft : await idbLoadDraft(); } catch(e) { draft = null; }
+  if (!draft) return false;
+  try {
+    var dfd = new FormData();
+    Object.keys(draft.fields || {}).forEach(function(k) { dfd.append(k, draft.fields[k]); });
+    (draft.files || []).forEach(function(f) { dfd.append('images', f); });
+    var lres = await api('POST', '/listings', dfd, true);
+    await idbClearDraft();
+    toast(lres.message, 'success');
+    goTo('/ilan/' + lres.listing_id);
+  } catch (lerr) {
+    await idbClearDraft();
+    toast('Hesabınız oluşturuldu ancak ilanınız otomatik gönderilemedi (' + lerr.message + '). Lütfen "İlan Ver" üzerinden tekrar deneyin.', 'error', 6000);
+    goTo('/hesabim');
+  }
+  return true;
+}
+
+// ================================================================
 // İLAN FORMU (ortak)
 // ================================================================
 var _pendingFiles  = [];
@@ -1568,22 +1645,34 @@ function addFiles(files) {
     reader.readAsDataURL(file);
   });
 }
-async function renderCreateListing() {
-  if (!isLoggedIn()) { goTo('/giris'); return; }
+async function renderCreateListing(params) {
+  // /hizli-ilan/:slug — pazarlama linkleri icin: sektoru onceden dolu
+  // getiren, henuz uye olmayan ziyaretcilerin de gorebildigi form. Normal
+  // /ilan-ver route'unda params yok, bu yuzden asagidaki tum "quick"
+  // davranisi sadece pazarlama linkinden gelindiginde devreye giriyor.
+  var presetSlug = params && params.slug;
+  var isQuickFunnel = !!presetSlug;
+  var presetCat = isQuickFunnel ? State.categories.find(function(c) { return c.slug === presetSlug; }) : null;
 
-  // Ilk ilan vermeden once e-posta dogrulamasi gerekiyor mu — sunucudan
-  // taze kontrol ediyoruz ki State.user localStorage'da eski kalmis olsa
-  // bile dogru sonuc alinsin.
-  var me;
-  try { me = await api('GET', '/auth/me'); } catch(e) { me = null; }
-  if (me) {
-    State.user.email_verified = me.email_verified;
-    var store = localStorage.getItem('tc_user') ? localStorage : sessionStorage;
-    store.setItem('tc_user', JSON.stringify(State.user));
-  }
-  if (me && me.email_verified === false) {
-    renderEmailVerificationGate();
-    return;
+  if (!isLoggedIn() && !isQuickFunnel) { goTo('/giris'); return; }
+  if (isQuickFunnel && !presetCat) { render404(); return; }
+
+  if (isLoggedIn()) {
+    // Ilk ilan vermeden once e-posta dogrulamasi gerekiyor mu — sunucudan
+    // taze kontrol ediyoruz ki State.user localStorage'da eski kalmis olsa
+    // bile dogru sonuc alinsin. Anonim (hizli ilan) ziyaretci icin henuz
+    // hesap olmadigindan bu kontrol atlanir.
+    var me;
+    try { me = await api('GET', '/auth/me'); } catch(e) { me = null; }
+    if (me) {
+      State.user.email_verified = me.email_verified;
+      var store = localStorage.getItem('tc_user') ? localStorage : sessionStorage;
+      store.setItem('tc_user', JSON.stringify(State.user));
+    }
+    if (me && me.email_verified === false) {
+      renderEmailVerificationGate();
+      return;
+    }
   }
 
   _pendingFiles = [];
@@ -1591,10 +1680,10 @@ async function renderCreateListing() {
     '<div class="container" style="max-width:820px;padding:32px 24px;">' +
       '<div class="breadcrumb"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>İlan Ver</span></div>' +
       '<div class="card"><div class="card-header">Yeni İlan Oluştur</div><div class="card-body">' +
-        '<div class="alert alert-info">İlanınız moderasyon onayından sonra yayına alınır.</div>' +
-        '<form id="createForm">' + listingFormHTML(null) +
+        '<div class="alert alert-info">İlanınız moderasyon onayından sonra yayına alınır.' + (isQuickFunnel ? ' Formu doldurup gönderdiğinizde ilanınızı yayınlamak için ücretsiz üyelik oluşturmanız istenecek.' : '') + '</div>' +
+        '<form id="createForm">' + listingFormHTML(presetCat ? { category_id: presetCat.id } : null) +
           '<hr style="border:none;border-top:1px solid var(--border);margin:22px 0;" />' +
-          '<div class="d-flex gap-3 align-center"><button type="submit" class="btn btn-accent btn-lg" id="createBtn">İlanı Gönder</button><a href="#/hesabim" class="btn btn-ghost">İptal</a></div>' +
+          '<div class="d-flex gap-3 align-center"><button type="submit" class="btn btn-accent btn-lg" id="createBtn">İlanı Gönder</button>' + (isQuickFunnel ? '' : '<a href="#/hesabim" class="btn btn-ghost">İptal</a>') + '</div>' +
         '</form>' +
       '</div></div>' +
     '</div>';
@@ -1602,6 +1691,7 @@ async function renderCreateListing() {
   setupUpload();
   setupFormListeners();
   togglePriceInput();
+  if (presetCat) await loadSubcats(presetCat.id);
 
   document.getElementById('createForm').onsubmit = async function(e) {    e.preventDefault();
     var btn = document.getElementById('createBtn');
@@ -1611,6 +1701,19 @@ async function renderCreateListing() {
       var phoneErr = validateTurkishPhone(fd.get('contact_phone'));
       if (phoneErr) { toast(phoneErr, 'error'); btn.disabled = false; btn.textContent = 'İlanı Gönder'; return; }
       if (!_pendingFiles.length) { toast('En az 1 fotoğraf eklemelisiniz.', 'error'); btn.disabled = false; btn.textContent = 'İlanı Gönder'; return; }
+
+      if (!isLoggedIn()) {
+        // Anonim + hizli ilan akisi: formu (fotograflar dahil) tarayicida
+        // saklayip uyelik olusturmaya yonlendiriyoruz. Kayit basarili
+        // olunca trySubmitPendingDraft() bu taslagi otomatik gonderecek.
+        var fields = {};
+        fd.forEach(function(val, key) { if (key !== 'images') fields[key] = val; });
+        await idbSaveDraft({ fields: fields, files: _pendingFiles.slice() });
+        toast('İlanınızı yayınlamak için son adım: ücretsiz üye olun.', 'success', 4500);
+        goTo('/kayit');
+        return;
+      }
+
       _pendingFiles.forEach(function(f) { fd.append('images', f); });
       var res = await api('POST', '/listings', fd, true);
       toast(res.message, 'success');
@@ -1921,6 +2024,12 @@ async function renderLogin() {
       var res = await api('POST', '/auth/login', Object.fromEntries(fd));
       setAuth(res.token, res.user, remember);
       updateNavbar();
+
+      // Hizli ilan (pazarlama) linkinden gelip zaten hesabi olan bir
+      // kullanici "Giriş Yap"i secmis olabilir — bekleyen taslak varsa
+      // otomatik gonder.
+      if (res.user.role !== 'admin' && await trySubmitPendingDraft()) return;
+
       toast('Hoş geldiniz, ' + res.user.name + '!', 'success');
       goTo(res.user.role === 'admin' ? '/admin' : '/hesabim');
     } catch(err) {
@@ -1986,13 +2095,26 @@ async function renderRegister() {
       if (phoneErr) { errEl.textContent = phoneErr; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Üye Ol'; return; }
       var remember = fd.has('remember');
       fd.delete('remember');
-      var res = await api('POST', '/auth/register', Object.fromEntries(fd));
+
+      // Hizli ilan (pazarlama) akisindan bekleyen bir taslak varsa: bu
+      // kaydin ilk ilanini kayit olur olmaz otomatik gonderecegiz, bu
+      // yuzden e-posta dogrulama kodu adimini atlatan bayragi da
+      // gonderiyoruz — aksi halde "otomatik onaya dusme" akisi kod
+      // bekleme ekraniyla kesintiye ugrardi.
+      var draft = await idbLoadDraft().catch(function() { return null; });
+      var payload = Object.fromEntries(fd);
+      if (draft) payload.quick_listing = true;
+
+      var res = await api('POST', '/auth/register', payload);
       setAuth(res.token, res.user, remember);
       updateNavbar();
       // Google Ads donusum: uye kaydi tamamlandi (AW-18285393404)
       if (typeof gtag === 'function') {
         gtag('event', 'conversion', { send_to: 'AW-18285393404/nVjBCNbyh9kcEPzrk49E' });
       }
+
+      if (await trySubmitPendingDraft(draft)) return;
+
       toast('Hoş geldiniz! İlk ilanınızı oluşturun.', 'success');
       goTo('/hesabim');
     } catch(err) {
