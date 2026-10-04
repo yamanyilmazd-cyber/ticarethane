@@ -127,6 +127,27 @@ app.use('/api/auth/register', rateLimit({
   message: { error: 'Bu IP adresinden çok fazla kayıt denemesi yapıldı. Lütfen 1 saat sonra tekrar deneyin.' },
 }));
 
+// ---------- Universal Links (iOS) ----------
+// iOS uygulamasi paylasilan toptango.com.tr linklerini Safari yerine dogrudan
+// kendi icinde acabilsin diye. appIDs'teki TEAM_ID_BURAYA kismini Apple
+// Developer hesabindaki gercek Team ID ile degistirmek gerekiyor (Xcode'da
+// Signing & Capabilities sekmesinde, "Team" secildikten sonra gorunur).
+app.get(['/.well-known/apple-app-site-association', '/apple-app-site-association'], (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json({
+    applinks: {
+      details: [
+        {
+          appIDs: ['TEAM_ID_BURAYA.com.toptango.app'],
+          components: [
+            { '/': '/*' },
+          ],
+        },
+      ],
+    },
+  });
+});
+
 // ---------- Statik dosyalar ----------
 // index.html hic cachelenmesin — icindeki /js/app.js ve /css/style.css
 // referanslari (cache-busting query'leri dahil) her zaman guncel gelsin.
