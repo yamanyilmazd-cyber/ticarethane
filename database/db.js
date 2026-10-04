@@ -302,6 +302,8 @@ const COLUMN_MIGRATIONS = [
   'ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 1',
   'ALTER TABLE users ADD COLUMN verification_code TEXT',
   'ALTER TABLE users ADD COLUMN verification_code_expires TEXT',
+  // iOS uygulamasindaki "Sign in with Apple" girisi icin (bkz. routes/auth.js /apple)
+  'ALTER TABLE users ADD COLUMN apple_id TEXT',
 ];
 
 // ── Turso arka plan başlatma (sunucu başladıktan sonra) ────────────────────
@@ -417,6 +419,7 @@ async function initDatabase() {
     }
   });
   try { _db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)'); } catch (e) {}
+  try { _db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_apple_id ON users(apple_id)'); } catch (e) {}
 
   // Kategorileri seed et
   const catCount = dbProxy.prepare('SELECT COUNT(*) AS c FROM categories').get();

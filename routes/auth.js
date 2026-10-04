@@ -5,6 +5,7 @@ const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const crypto  = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
+const appleSignin     = require('apple-signin-auth');
 const { getDb }        = require('../database/db');
 const { authenticate } = require('../middleware/auth');
 const { sendResendMail } = require('../utils/mailer');
@@ -306,6 +307,62 @@ router.post('/google', async (req, res) => {
   }
 });
 
+// ---- Apple ile giriş (iOS uygulaması) ----
+// credential: ASAuthorizationAppleIDCredential.identityToken (native taraftan gelir, bkz. MainViewController.swift)
+router.post('/apple', async (req, res) => {
+  try {
+    if (!process.env.APPLE_CLIENT_ID) return res.status(500).json({ error: 'Apple ile giriş yapılandırılmamış.' });
+    const { identityToken, fullName } = req.body;
+    if (!identityToken) return res.status(400).json({ error: 'Apple kimlik bilgisi eksik.' });
+
+    let payload;
+    try {
+      payload = await appleSignin.verifyIdToken(identityToken, { audience: process.env.APPLE_CLIENT_ID });
+    } catch (e) {
+      return res.status(401).json({ error: 'Apple girişi doğrulanamadı.' });
+    }
+
+    const email = (payload.email || '').toLowerCase();
+    if (!email) return res.status(400).json({ error: 'Apple hesabınızdan e-posta alınamadı.' });
+
+    const db = getDb();
+    let user = db.prepare('SELECT * FROM users WHERE apple_id = ? OR email = ?').get(payload.sub, email);
+
+    if (user) {
+      if (!user.is_active)
+        return res.status(403).json({ error: 'Hesabınız askıya alınmıştır. Yönetici ile iletişime geçin.' });
+      if (!user.apple_id)
+        db.prepare('UPDATE users SET apple_id = ? WHERE id = ?').run(payload.sub, user.id);
+    } else {
+      // Apple sadece ilk girişte isim bilgisi gönderir (identityToken icinde yer almaz,
+      // native taraf ayrica ASAuthorizationAppleIDCredential.fullName'den gonderir).
+      const randomHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+      const name = sanitize(fullName || email.split('@')[0]);
+      const result = db.prepare(
+        `INSERT INTO users (name, email, password_hash, apple_id, is_verified, email_verified) VALUES (?, ?, ?, ?, 1, 1)`
+      ).run(name, email, randomHash, payload.sub);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    }
+
+    const token = signToken(user.id, user.role);
+    res.json({
+      token,
+      user: {
+        id:               user.id,
+        name:             user.name,
+        company_name:     user.company_name,
+        email:            user.email,
+        role:             user.role,
+        can_manage_users: user.role === 'admin' ? !!user.can_manage_users : undefined,
+        email_verified:   !!user.email_verified,
+      },
+    });
+  } catch (err) {
+    console.error('[AUTH] apple giris hatasi:', err.message);
+    res.status(500).json({ error: 'Apple ile giriş sırasında hata oluştu.' });
+  }
+});
+
 // ---- Mevcut kullanıcı ----
 // GET /api/auth/seller/:id — herkese açık firma profili
 router.get('/seller/:id', (req, res) => {
@@ -325,13 +382,15 @@ router.get('/me', authenticate, (req, res) => {
   try {
   const db   = getDb();
   const user = db.prepare(
-    'SELECT id, name, company_name, email, phone, city, role, created_at, google_id, email_verified, can_manage_users FROM users WHERE id = ?'
+    'SELECT id, name, company_name, email, phone, city, role, created_at, google_id, apple_id, email_verified, can_manage_users FROM users WHERE id = ?'
   ).get(req.userId);
   if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
   user.google_linked = !!user.google_id;
+  user.apple_linked = !!user.apple_id;
   user.email_verified = !!user.email_verified;
   user.can_manage_users = user.role === 'admin' ? !!user.can_manage_users : undefined;
   delete user.google_id;
+  delete user.apple_id;
   res.json(user);
   } catch(err) { res.status(500).json({ error: 'Sunucu hatası.' }); }
 });
