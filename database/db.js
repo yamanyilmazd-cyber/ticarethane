@@ -270,6 +270,12 @@ const SCHEMA_DDL = [
   `CREATE TABLE IF NOT EXISTS showcase_listings (
     id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL UNIQUE,
     added_by INTEGER, created_at TEXT DEFAULT (datetime('now')))`,
+  // iOS uygulamasindan push bildirimi gonderebilmek icin cihaz token'lari.
+  // Bir kullanicinin birden fazla cihazi olabilir, o yuzden ayri tablo.
+  `CREATE TABLE IF NOT EXISTS device_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+    token TEXT NOT NULL UNIQUE, platform TEXT DEFAULT 'ios',
+    created_at TEXT DEFAULT (datetime('now')))`,
   `CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_city     ON listings(city)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_status   ON listings(status)`,
@@ -282,6 +288,7 @@ const SCHEMA_DDL = [
   `CREATE INDEX IF NOT EXISTS idx_favorites_user    ON favorites(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_favorites_listing ON favorites(listing_id)`,
   `CREATE INDEX IF NOT EXISTS idx_showcase_listing   ON showcase_listings(listing_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_device_tokens_user ON device_tokens(user_id)`,
 ];
 
 // Mevcut tablolara sonradan eklenen kolonlar — hem yerel hem Turso semasina
@@ -346,7 +353,7 @@ async function initTursoBackground() {
       'users', 'categories', 'subcategories', 'listings', 'listing_images',
       'conversations', 'messages', 'favorites', 'notifications',
       'listing_reports', 'password_reset_tokens', 'listing_tags', 'admin_notes',
-      'showcase_listings'
+      'showcase_listings', 'device_tokens'
     ];
 
     let totalRows = 0;
