@@ -129,16 +129,14 @@ app.use('/api/auth/register', rateLimit({
 
 // ---------- Universal Links (iOS) ----------
 // iOS uygulamasi paylasilan toptango.com.tr linklerini Safari yerine dogrudan
-// kendi icinde acabilsin diye. appIDs'teki TEAM_ID_BURAYA kismini Apple
-// Developer hesabindaki gercek Team ID ile degistirmek gerekiyor (Xcode'da
-// Signing & Capabilities sekmesinde, "Team" secildikten sonra gorunur).
+// kendi icinde aciyor. Team ID: 6L45J22C3F (Apple Developer Program hesabi).
 app.get(['/.well-known/apple-app-site-association', '/apple-app-site-association'], (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.json({
     applinks: {
       details: [
         {
-          appIDs: ['TEAM_ID_BURAYA.com.toptango.app'],
+          appIDs: ['6L45J22C3F.com.toptango.app'],
           components: [
             { '/': '/*' },
           ],
