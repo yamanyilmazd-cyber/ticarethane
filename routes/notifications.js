@@ -2,6 +2,7 @@
 const express = require('express');
 const { getDb } = require('../database/db');
 const { authenticate } = require('../middleware/auth');
+const { sendPushToUser } = require('../utils/push');
 const router = express.Router();
 router.use(authenticate);
 
@@ -47,6 +48,9 @@ function createNotification(db, userId, type, title, body, link) {
     db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?,?,?,?,?)')
       .run(userId, type, title, body || null, link || null);
   } catch(e) {}
+  // iOS push bildirimi — kayitli cihaz yoksa ya da APNs yapilandirilmamissa
+  // sessizce atlanir, yukaridaki veritabani yazisini etkilemez.
+  sendPushToUser(userId, { title, body, link }).catch(() => {});
 }
 
 module.exports = router;

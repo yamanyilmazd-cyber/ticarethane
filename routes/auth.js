@@ -378,6 +378,28 @@ router.get('/seller/:id', (req, res) => {
   }
 });
 
+// ---- Push bildirimi cihaz token'i kaydet (iOS uygulamasi) ----
+router.post('/device-token', authenticate, (req, res) => {
+  try {
+    const token = sanitize(req.body.token);
+    if (!token) return res.status(400).json({ error: 'Token eksik.' });
+
+    const db = getDb();
+    // Token baska bir hesaba kayitliysa (ayni cihaz, farkli kullanici ile
+    // giris) once oradan silinir, UNIQUE constraint hatasi almamak icin.
+    db.prepare('DELETE FROM device_tokens WHERE token = ? AND user_id != ?').run(token, req.userId);
+    db.prepare(
+      'INSERT INTO device_tokens (user_id, token, platform) VALUES (?, ?, ?) ' +
+      'ON CONFLICT(token) DO UPDATE SET user_id = excluded.user_id'
+    ).run(req.userId, token, 'ios');
+
+    res.json({ message: 'Token kaydedildi.' });
+  } catch (err) {
+    console.error('[AUTH] device-token hatasi:', err.message);
+    res.status(500).json({ error: 'Token kaydedilemedi.' });
+  }
+});
+
 router.get('/me', authenticate, (req, res) => {
   try {
   const db   = getDb();
