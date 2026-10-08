@@ -447,7 +447,7 @@ router.put('/profile', authenticate, async (req, res) => {
         return res.status(400).json({ error: 'Yeni şifre en az 8 karakter olmalıdır.' });
       if (new_pw.length > 128)
         return res.status(400).json({ error: 'Yeni şifre en fazla 128 karakter olabilir.' });
-      const user = db.prepare('SELECT password_hash, google_id FROM users WHERE id = ?').get(req.userId);
+      const user = db.prepare('SELECT password_hash, google_id, apple_id FROM users WHERE id = ?').get(req.userId);
       if (!user.google_id && !user.apple_id) {
         const valid = await bcrypt.compare(current_pw || '', user.password_hash);
         if (!valid)
