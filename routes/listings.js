@@ -427,6 +427,7 @@ router.post('/', authenticate, requireEmailVerified, upload.array('images', 8), 
       } catch(tagErr) { console.error('[LISTINGS] tag insert:', tagErr.message); }
     }
 
+    try { var admins = db.prepare('SELECT id FROM users WHERE role="admin"').all(); admins.forEach(function(a) { createNotification(db, a.id, 'new_listing', 'Yeni Ilan Onay Bekliyor', title.trim() + ' baslikli yeni bir ilan moderasyon onayi bekliyor.', '/admin'); }); } catch (notifErr) { console.error('[LISTINGS] admin bildirim hatasi:', notifErr.message); }
     res.status(201).json({ message: 'İlanınız moderasyon onayına gönderildi.', listing_id: lid });
   } catch (err) {
     cleanupFiles(req.files);
