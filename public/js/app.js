@@ -267,7 +267,8 @@ function router() {
     return;
   }
 
-  // Form state temizle — eski sayfa kalıntısı yüklenmesin
+  if (isLoggedIn() && !isAdmin() && State.user && !State.user.phone) { renderPhoneCompletionGate(); return; }
+   // Form state temizle — eski sayfa kalıntısı yüklenmesin
   _pendingFiles = [];
   _toDeleteImgs = new Set();
 
@@ -1787,6 +1788,7 @@ function renderEmailVerificationGate(opts) {
   if (opts.autoSend) sendCode();
 }
 
+function renderPhoneCompletionGate(opts) { opts = opts || {}; var onDone = opts.onDone || function() { goTo('/hesabim'); }; document.getElementById('app').innerHTML = '<div class="container" style="max-width:520px;padding:60px 24px;"><div class="card"><div class="card-header">Profilinizi Tamamlayin</div><div class="card-body"><p style="color:var(--text-mid);margin:0 0 20px;line-height:1.6;">Hesabinizi kullanmaya devam etmeden once telefon numaranizi eklemeniz gerekiyor.</p><form id="phoneGateForm"><div class="form-group mb-4"><label class="form-label">Telefon <span class="req">*</span></label><input type="tel" name="phone" class="form-control" value="+90 " placeholder="+90 5XX XXX XX XX" required /></div><div id="phoneGateError" class="alert alert-error" style="display:none;"></div><button type="submit" class="btn btn-accent w-100" id="phoneGateBtn">Kaydet ve Devam Et</button></form></div></div></div>'; document.getElementById('phoneGateForm').addEventListener('submit', function(e) { e.preventDefault(); var fd = new FormData(e.target); var phoneErr = validateTurkishPhone(fd.get('phone')); var errEl = document.getElementById('phoneGateError'); var btn = document.getElementById('phoneGateBtn'); if (phoneErr) { errEl.textContent = phoneErr; errEl.style.display = 'block'; return; } btn.disabled = true; btn.textContent = 'Kaydediliyor...'; api('PUT', '/auth/profile', { name: State.user.name, phone: fd.get('phone') }).then(function() { if (State.user) { State.user.phone = fd.get('phone'); var store = localStorage.getItem('tc_user') ? localStorage : sessionStorage; store.setItem('tc_user', JSON.stringify(State.user)); } toast('Profiliniz tamamlandi.', 'success'); onDone(); }).catch(function(err) { errEl.textContent = err.message; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Kaydet ve Devam Et'; }); }); }
 // ================================================================
 // İLAN DÜZENLE
 // ================================================================
