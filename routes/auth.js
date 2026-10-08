@@ -241,7 +241,7 @@ router.post('/login', async (req, res) => {
       user: {
         id:               user.id,
         name:             user.name,
-        company_name:     user.company_name,
+        company_name:     user.company_name, phone: user.phone,
         email:            user.email,
         role:             user.role,
         can_manage_users: user.role === 'admin' ? !!user.can_manage_users : undefined,
@@ -294,7 +294,7 @@ router.post('/google', async (req, res) => {
       user: {
         id:               user.id,
         name:             user.name,
-        company_name:     user.company_name,
+        company_name:     user.company_name, phone: user.phone,
         email:            user.email,
         role:             user.role,
         can_manage_users: user.role === 'admin' ? !!user.can_manage_users : undefined,
@@ -350,7 +350,7 @@ router.post('/apple', async (req, res) => {
       user: {
         id:               user.id,
         name:             user.name,
-        company_name:     user.company_name,
+        company_name:     user.company_name, phone: user.phone,
         email:            user.email,
         role:             user.role,
         can_manage_users: user.role === 'admin' ? !!user.can_manage_users : undefined,
