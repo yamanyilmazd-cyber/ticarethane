@@ -448,7 +448,7 @@ router.put('/profile', authenticate, async (req, res) => {
       if (new_pw.length > 128)
         return res.status(400).json({ error: 'Yeni şifre en fazla 128 karakter olabilir.' });
       const user = db.prepare('SELECT password_hash, google_id FROM users WHERE id = ?').get(req.userId);
-      if (!user.google_id) {
+      if (!user.google_id && !user.apple_id) {
         const valid = await bcrypt.compare(current_pw || '', user.password_hash);
         if (!valid)
           return res.status(401).json({ error: 'Mevcut şifre hatalı.' });
@@ -483,7 +483,7 @@ router.delete('/account', authenticate, async (req, res) => {
     const user = db.prepare('SELECT * FROM users WHERE id=? AND role!="admin"').get(uid);
     if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
 
-    if (!user.google_id) {
+    if (!user.google_id && !user.apple_id) {
       if (!password) return res.status(400).json({ error: 'Şifre zorunludur.' });
       const valid = await bcrypt.compare(password, user.password_hash);
       if (!valid) return res.status(401).json({ error: 'Şifre hatalı.' });
