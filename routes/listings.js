@@ -72,7 +72,7 @@ function fuzzySearchFallback(db, searchWords, limitNum) {
        l.listing_type, l.views, l.created_at, l.description,
        c.name AS category_name, c.slug AS category_slug,
        sc.name AS subcategory_name,
-       u.name AS seller_name, u.company_name,
+       u.name AS seller_name, u.company_name, u.logo AS seller_logo,
        (SELECT filename FROM listing_images
         WHERE listing_id = l.id ORDER BY sort_order ASC LIMIT 1) AS thumbnail
      FROM listings l
@@ -207,7 +207,7 @@ router.get('/', (req, res) => {
          l.listing_type, l.views, l.created_at,
          c.name AS category_name, c.slug AS category_slug,
          sc.name AS subcategory_name,
-         u.name AS seller_name, u.company_name,
+         u.name AS seller_name, u.company_name, u.logo AS seller_logo,
          (SELECT filename FROM listing_images
           WHERE listing_id = l.id ORDER BY sort_order ASC LIMIT 1) AS thumbnail
        FROM listings l
@@ -287,7 +287,7 @@ router.get('/:id', optionalAuth, (req, res) => {
       `SELECT l.*,
          c.name AS category_name, c.slug AS category_slug,
          sc.name AS subcategory_name,
-         u.name AS seller_name, u.company_name, u.city AS seller_city,
+         u.name AS seller_name, u.company_name, u.logo AS seller_logo, u.city AS seller_city,
          u.is_verified AS seller_verified,
          u.phone AS seller_phone
        FROM listings l

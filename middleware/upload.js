@@ -119,4 +119,55 @@ async function resizeIfNeeded(req, res, next) {
   next();
 }
 
-module.exports = { upload, convertHeic, resizeIfNeeded };
+// ---- Firma logosu (kayit/profil) ----
+// Tek dosya, 2 MB sinir. Ilan gorselleriyle ayni uzanti/mime filtresi.
+const uploadLogoSingle = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 2 * 1024 * 1024, files: 1 }
+}).single('logo');
+
+// multer hatalarini (boyut vb.) JSON olarak dondurur.
+function uploadLogo(req, res, next) {
+  uploadLogoSingle(req, res, function(err) {
+    if (!err) return next();
+    const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Logo en fazla 2 MB olabilir.' : (err.message || 'Logo yüklenemedi.');
+    res.status(400).json({ error: msg });
+  });
+}
+
+// Yuklenen logoyu 400x400'u gecmeyecek sekilde kucultup PNG'ye cevirir
+// (HEIC dahil). Orijinal dosya silinir, req.file yeni dosyayi gosterir.
+// sharp yoksa dosya oldugu gibi birakilir (HEIC haric reddedilir).
+async function processLogo(req, res, next) {
+  if (!req.file) return next();
+  const original = req.file.path;
+  const ext = path.extname(req.file.filename).toLowerCase();
+  if (!sharp) {
+    if (ext === '.heic' || ext === '.heif') {
+      try { fs.unlinkSync(original); } catch {}
+      return res.status(400).json({ error: 'Lütfen logoyu JPG, PNG veya WebP olarak yükleyin.' });
+    }
+    return next();
+  }
+  try {
+    const newFilename = 'logo-' + req.file.filename.replace(/\.[^.]+$/, '') + '.png';
+    const newPath = path.join(UPLOAD_DIR, newFilename);
+    const buffer = await sharp(original)
+      .rotate()
+      .resize({ width: 400, height: 400, fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toBuffer();
+    fs.writeFileSync(newPath, buffer);
+    try { fs.unlinkSync(original); } catch {}
+    req.file.filename = newFilename;
+    req.file.path = newPath;
+    next();
+  } catch (e) {
+    console.error('[UPLOAD] Logo isleme hatasi:', e.message);
+    try { fs.unlinkSync(original); } catch {}
+    res.status(400).json({ error: 'Logo işlenemedi. Lütfen geçerli bir görsel yükleyin.' });
+  }
+}
+
+module.exports = { upload, convertHeic, resizeIfNeeded, uploadLogo, processLogo };

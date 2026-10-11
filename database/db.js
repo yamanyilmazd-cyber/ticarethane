@@ -311,6 +311,9 @@ const COLUMN_MIGRATIONS = [
   'ALTER TABLE users ADD COLUMN verification_code_expires TEXT',
   // iOS uygulamasindaki "Sign in with Apple" girisi icin (bkz. routes/auth.js /apple)
   'ALTER TABLE users ADD COLUMN apple_id TEXT',
+  // Opsiyonel firma logosu (uploads/ icindeki dosya adi). NULL = logo yok;
+  // mevcut kullanicilar ve ilanlar etkilenmez.
+  'ALTER TABLE users ADD COLUMN logo TEXT',
 ];
 
 // ── Turso arka plan başlatma (sunucu başladıktan sonra) ────────────────────

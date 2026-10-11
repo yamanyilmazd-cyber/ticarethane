@@ -360,6 +360,12 @@ select.form-control {
 }
 .listing-card-price { font-size: 1.05rem; font-weight: 800; color: var(--navy); }
 .listing-card-seller { font-size: .75rem; color: var(--text-mid); margin: 4px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seller-logo { object-fit: contain; background: #fff; border: 1px solid var(--border); border-radius: 4px; vertical-align: middle; flex-shrink: 0; }
+.seller-logo-sm { width: 20px; height: 20px; margin-right: 6px; }
+.seller-logo-lg { width: 64px; height: 64px; border-radius: 8px; }
+.seller-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.logo-pick { display: flex; align-items: center; gap: 12px; }
+.logo-pick-preview { width: 56px; height: 56px; border: 1px dashed var(--border-mid); border-radius: 8px; object-fit: contain; background: #fff; display: none; }
 .listing-card-fx { font-size: .7rem; color: var(--text-muted); margin: 2px 0; font-style: italic; }
 .listing-card-meta {
   display: flex; align-items: center; justify-content: space-between;

@@ -18,7 +18,7 @@ router.get('/', (_req, res) => {
          l.listing_type, l.views, l.created_at,
          c.name AS category_name, c.slug AS category_slug,
          sc.name AS subcategory_name,
-         u.name AS seller_name, u.company_name,
+         u.name AS seller_name, u.company_name, u.logo AS seller_logo,
          (SELECT filename FROM listing_images
           WHERE listing_id = l.id ORDER BY sort_order ASC LIMIT 1) AS thumbnail
        FROM showcase_listings s

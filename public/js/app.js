@@ -501,6 +501,39 @@ function validateTurkishPhone(val) {
   return null;
 }
 
+// Opsiyonel firma logosu (users.logo). Logo yoksa bos string doner.
+function sellerLogoHTML(logo, size) {
+  if (!logo) return '';
+  return '<img class="seller-logo seller-logo-' + (size || 'sm') + '" src="/uploads/' + encodeURIComponent(logo) + '" alt="" loading="lazy" />';
+}
+
+// Logo secimi dogrulama (2 MB, sadece gorsel). Hata mesaji ya da null doner.
+function validateLogoFile(file) {
+  if (!file) return null;
+  var okType = /^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
+  if (!okType) return 'Logo JPG, PNG veya WebP olmalıdır.';
+  if (file.size > 2 * 1024 * 1024) return 'Logo en fazla 2 MB olabilir.';
+  return null;
+}
+
+// Secilen logonun kucuk onizlemesini gosterir (HEIC tarayicida gosterilemez, sessizce atlanir).
+function bindLogoPreview(inputId, previewId) {
+  var input = document.getElementById(inputId), prev = document.getElementById(previewId);
+  if (!input || !prev) return;
+  input.addEventListener('change', function() {
+    var f = input.files && input.files[0];
+    var err = validateLogoFile(f);
+    if (err) { toast(err, 'error'); input.value = ''; prev.style.display = 'none'; return; }
+    if (f) { prev.src = URL.createObjectURL(f); prev.style.display = 'block'; } else { prev.style.display = 'none'; }
+  });
+}
+
+async function uploadLogoFile(file) {
+  var fd = new FormData();
+  fd.append('logo', file);
+  return api('POST', '/auth/logo', fd, true);
+}
+
 function catSelectHTML(selected, name) {
   name = name || 'category_id';
   return '<select name="' + name + '" class="form-control" id="' + name + '">' +
@@ -655,7 +688,7 @@ function listingCardHTML(l) {
       '<div class="listing-card-cat">' + esc(l.category_name || '') + '</div>' +
       '<div class="listing-card-title">' + (l.is_featured ? '<span class="badge-featured">Öne Çıkan</span> ' : '') + esc(l.title) + '</div>' +
       priceHtml +
-      '<div class="listing-card-seller">' + esc(l.company_name || l.seller_name || '') + '</div>' +
+      '<div class="listing-card-seller">' + sellerLogoHTML(l.seller_logo, 'sm') + esc(l.company_name || l.seller_name || '') + '</div>' +
       (l.price && l.currency && l.currency !== 'TRY' ? '<div class="listing-card-fx" id="fx_' + l.id + '">~₺ hesaplanıyor...</div>' : '') +
       '<div class="listing-card-meta">' +
         '<span class="badge badge-' + l.listing_type + '">' + (l.listing_type === 'sell' ? 'Satılır' : 'Alınır') + '</span>' +
@@ -1307,7 +1340,7 @@ async function renderListingDetail(params) {
             '</div>';
           })() +
           '<div class="listing-contact-card mb-4">' +
-            '<div style="font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:4px;">Satıcı Bilgileri</div>' +
+            '<div class="seller-head">' + sellerLogoHTML(l.seller_logo, 'lg') + '<div style="font-size:.95rem;font-weight:700;color:var(--navy);">Satıcı Bilgileri</div></div>' +
             '<a href="#/satici/' + l.user_id + '" class="btn btn-ghost btn-sm w-100" style="margin-bottom:8px;">🏢 Firmanın Tüm İlanları</a>' +
             infoRow('Firma / Kişi', (l.company_name||l.seller_name||'') + (l.seller_verified ? ' ✓ Doğrulanmış' : '')) + infoRow('Konum', l.seller_city) +
             (l.contact_phone ? '<a href="tel:' + l.contact_phone + '" class="btn btn-primary w-100">' + esc(l.contact_phone) + '</a>' : '') +
@@ -1910,6 +1943,10 @@ async function renderDashboard() {
               '<div class="form-group mb-4"><label class="form-label">Firma Adı</label><input type="text" name="company_name" class="form-control" value="' + esc(me.company_name||'') + '" /></div>' +
               '<div class="form-group mb-4"><label class="form-label">Telefon</label><input type="tel" name="phone" class="form-control" value="' + esc(me.phone||'+90 ') + '" /></div>' +
               '<div class="form-group mb-4"><label class="form-label">Şehir</label>' + citySelectHTML('city', me.city) + '</div>' +
+              '<div class="form-group mb-4"><label class="form-label">Firma Logosu <span style="font-weight:400;color:var(--text-muted);">(isteğe bağlı — ilanlarınızda görünür)</span></label>' +
+                '<div class="logo-pick"><img id="profileLogoPreview" class="logo-pick-preview" alt="" ' + (me.logo ? 'src="/uploads/' + encodeURIComponent(me.logo) + '" style="display:block;"' : '') + ' />' +
+                '<div><input type="file" id="profileLogoInput" class="form-control" accept="image/jpeg,image/png,image/webp" />' +
+                '<button type="button" class="btn btn-ghost btn-sm" id="profileLogoRemove" style="margin-top:6px;' + (me.logo ? '' : 'display:none;') + '">Logoyu Kaldır</button></div></div></div>' +
               '<hr style="border:none;border-top:1px solid var(--border);margin:20px 0;" />' +
               '<div class="fw-semibold mb-4" style="color:var(--navy);">Şifre Değiştir (isteğe bağlı)</div>' +
               (me.google_linked
@@ -1972,6 +2009,33 @@ async function renderDashboard() {
       toast('Hesabınız silindi.', 'success');
       goTo('/');
     } catch(e) { toast(e.message, 'error'); }
+  });
+
+  // Logo: dosya secilince hemen yukle, "Logoyu Kaldır" ile sil
+  var logoInput = document.getElementById('profileLogoInput');
+  var logoPrev  = document.getElementById('profileLogoPreview');
+  var logoRemove = document.getElementById('profileLogoRemove');
+  logoInput.addEventListener('change', async function() {
+    var f = logoInput.files[0];
+    if (!f) return;
+    var err = validateLogoFile(f);
+    if (err) { toast(err, 'error'); logoInput.value = ''; return; }
+    try {
+      var r = await uploadLogoFile(f);
+      logoPrev.src = '/uploads/' + encodeURIComponent(r.logo) + '?t=' + Date.now();
+      logoPrev.style.display = 'block';
+      logoRemove.style.display = '';
+      toast('Logo kaydedildi.', 'success');
+    } catch (e2) { toast(e2.message, 'error'); }
+    logoInput.value = '';
+  });
+  logoRemove.addEventListener('click', async function() {
+    try {
+      await api('DELETE', '/auth/logo');
+      logoPrev.style.display = 'none';
+      logoRemove.style.display = 'none';
+      toast('Logo kaldırıldı.', 'success');
+    } catch (e3) { toast(e3.message, 'error'); }
   });
 
   // Profil formu
@@ -2086,6 +2150,7 @@ async function renderRegister() {
             '<div class="form-group mb-4"><label class="form-label">Telefon <span class="req">*</span></label><input type="tel" name="phone" class="form-control" value="+90 " placeholder="+90 5XX XXX XX XX" required /></div>' +
             '<div class="form-group mb-4"><label class="form-label">Şehir</label>' + citySelectHTML('city','') + '</div>' +
           '</div>' +
+          '<div class="form-group mb-4"><label class="form-label">Firma Logosu <span style="font-weight:400;color:var(--text-muted);">(isteğe bağlı — ilanlarınızda görünür)</span></label><div class="logo-pick"><input type="file" id="regLogoInput" class="form-control" accept="image/jpeg,image/png,image/webp" /><img id="regLogoPreview" class="logo-pick-preview" alt="" /></div></div>' +
           '<div class="form-group mb-4"><label class="form-label">Şifre <span class="req">*</span></label><div style="position:relative;display:flex"><input type="password" name="password" class="form-control" placeholder="En az 8 karakter" required minlength="8" /><button type="button" class="pw-toggle-btn" style="border:1px solid #ced4da;border-left:0;border-radius:0 4px 4px 0;background:#f8f9fa;cursor:pointer;padding:0 12px;white-space:nowrap;font-size:13px">Göster</button></div></div>' +
           '<div class="form-check mb-3">' +
             '<input type="checkbox" class="form-check-input" id="rememberReg" name="remember" value="1" checked />' +
@@ -2108,6 +2173,7 @@ async function renderRegister() {
     '</div>';
 
   initGoogleSignIn('googleSignInDiv');
+  bindLogoPreview('regLogoInput', 'regLogoPreview');
 
   document.getElementById('regForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -2126,9 +2192,20 @@ async function renderRegister() {
       // kod dogrulandiktan SONRA bu taslagi otomatik gonderecegiz.
       var draft = await idbLoadDraft().catch(function() { return null; });
 
+      var logoFile = document.getElementById('regLogoInput').files[0];
+      var logoErr = validateLogoFile(logoFile);
+      if (logoErr) { errEl.textContent = logoErr; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Üye Ol'; return; }
+
       var res = await api('POST', '/auth/register', Object.fromEntries(fd));
       setAuth(res.token, res.user, remember);
       updateNavbar();
+
+      // Logo opsiyonel: hesap olustuktan sonra yuklenir; basarisiz olursa
+      // kaydi bozmaz, kullanici sonradan Hesabim'dan tekrar yukleyebilir.
+      if (logoFile) {
+        try { await uploadLogoFile(logoFile); }
+        catch (le) { toast('Hesabınız oluşturuldu ancak logo yüklenemedi: ' + le.message + ' (Hesabım sayfasından tekrar deneyebilirsiniz.)', 'error', 6000); }
+      }
       // Google Ads donusum: uye kaydi tamamlandi (AW-18285393404)
       if (typeof gtag === 'function') {
         gtag('event', 'conversion', { send_to: 'AW-18285393404/nVjBCNbyh9kcEPzrk49E' });
@@ -2991,7 +3068,7 @@ async function renderSellerPage(params) {
     app.innerHTML =
       '<div class="dash-header"><div class="container">' +
         '<div class="breadcrumb" style="margin-bottom:8px;"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>Firma İlanları</span></div>' +
-        '<h1>' + esc(sellerName) + ((profil && profil.is_verified) ? ' <span style="font-size:.85rem;color:#22c55e;vertical-align:middle;white-space:nowrap;">✓ Doğrulanmış Firma</span>' : '') + '</h1>' +
+        '<h1>' + (profil && profil.logo ? sellerLogoHTML(profil.logo, 'lg') + ' ' : '') + esc(sellerName) + ((profil && profil.is_verified) ? ' <span style="font-size:.85rem;color:#22c55e;vertical-align:middle;white-space:nowrap;">✓ Doğrulanmış Firma</span>' : '') + '</h1>' +
         '<p>' + ((profil && profil.city) ? esc(profil.city) + ' · ' : '') + listings.length + ' aktif ilan</p>' +
       '</div></div>' +
       '<div class="container" style="padding:32px 16px;">' + contentHTML + '</div>';

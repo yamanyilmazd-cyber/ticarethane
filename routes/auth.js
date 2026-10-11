@@ -8,7 +8,10 @@ const { OAuth2Client } = require('google-auth-library');
 const appleSignin     = require('apple-signin-auth');
 const { getDb }        = require('../database/db');
 const { authenticate } = require('../middleware/auth');
-const { sendResendMail } = require('../utils/mailer');
+const { sendResendMail, mailTemplate } = require('../utils/mailer');
+const { uploadLogo, processLogo } = require('../middleware/upload');
+const fs   = require('fs');
+const path = require('path');
 
 const router     = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -246,6 +249,7 @@ router.post('/login', async (req, res) => {
         role:             user.role,
         can_manage_users: user.role === 'admin' ? !!user.can_manage_users : undefined,
         email_verified:   !!user.email_verified,
+        logo:             user.logo || null,
       },
     });
   } catch (err) {
@@ -299,6 +303,7 @@ router.post('/google', async (req, res) => {
         role:             user.role,
         can_manage_users: user.role === 'admin' ? !!user.can_manage_users : undefined,
         email_verified:   !!user.email_verified,
+        logo:             user.logo || null,
       },
     });
   } catch (err) {
@@ -369,7 +374,7 @@ router.get('/seller/:id', (req, res) => {
   try {
     const db = getDb();
     const u  = db.prepare(
-      'SELECT id, name, company_name, city, is_verified, created_at FROM users WHERE id = ? AND is_active = 1'
+      'SELECT id, name, company_name, city, is_verified, logo, created_at FROM users WHERE id = ? AND is_active = 1'
     ).get(parseInt(req.params.id));
     if (!u) return res.status(404).json({ error: 'Firma bulunamadı.' });
     res.json(u);
@@ -404,7 +409,7 @@ router.get('/me', authenticate, (req, res) => {
   try {
   const db   = getDb();
   const user = db.prepare(
-    'SELECT id, name, company_name, email, phone, city, role, created_at, google_id, apple_id, email_verified, can_manage_users FROM users WHERE id = ?'
+    'SELECT id, name, company_name, email, phone, city, role, created_at, google_id, apple_id, email_verified, can_manage_users, logo FROM users WHERE id = ?'
   ).get(req.userId);
   if (!user) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
   user.google_linked = !!user.google_id;
@@ -499,6 +504,8 @@ router.delete('/account', authenticate, async (req, res) => {
       try { fs.unlinkSync(path.join(__dirname, '..', 'uploads', img.filename)); } catch(e) {}
     });
 
+    if (user.logo) { try { fs.unlinkSync(path.join(__dirname, '..', 'uploads', user.logo)); } catch(e) {} }
+
     // Veritabanından sil
     db.prepare('DELETE FROM listing_images WHERE listing_id IN (SELECT id FROM listings WHERE user_id=?)').run(uid);
     db.prepare('DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE user1_id=? OR user2_id=?)').run(uid, uid);
@@ -538,48 +545,18 @@ router.post('/forgot-password', async (req, res) => {
 
     console.info('[MAIL] KEY mevcut:', !!RESEND_API_KEY, '| FROM:', process.env.SMTP_FROM || '(YOK)');
     if (RESEND_API_KEY) {
-      // Resend HTTP API (SMTP port bloklarina takilmaz)
-      try {
-        const fromAddr = process.env.SMTP_FROM || 'Toptango <onboarding@resend.dev>';
-        console.info('[MAIL] Gonderiliyor:', email, '| FROM:', fromAddr);
-        const resp = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            from: fromAddr,
-            to: [email],
-            subject: 'Şifre Sıfırlama - Toptango',
-            html: [
-              '<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">',
-              '<div style="background:#1e3a8a;padding:24px 32px;">',
-              '<h1 style="color:#ffffff;font-size:20px;margin:0;font-weight:700;">Toptango</h1>',
-              '<p style="color:#93c5fd;font-size:13px;margin:6px 0 0;">B2B Ticaret Platformu</p>',
-              '</div>',
-              '<div style="padding:32px;">',
-              '<h2 style="color:#111827;font-size:18px;margin:0 0 16px;">Şifre Sıfırlama Talebi</h2>',
-              '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 12px;">Merhaba <strong>' + user.name + '</strong>,</p>',
-              '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">Hesabınıza ait şifre sıfırlama talebini aldık. Aşağıdaki butona tıklayarak yeni şifrenizi belirleyebilirsiniz. Bağlantı <strong>1 saat</strong> geçerlidir.</p>',
-              '<div style="text-align:center;margin:0 0 28px;">',
-              '<a href="' + resetLink + '" style="background:#1e3a8a;color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600;display:inline-block;">Şifremi Sıfırla</a>',
-              '</div>',
-              '<p style="color:#6b7280;font-size:13px;line-height:1.6;margin:0 0 6px;">Butona tıklayamıyorsanız aşağıdaki bağlantıyı tarayıcınıza kopyalayabilirsiniz:</p>',
-              '<p style="color:#1e3a8a;font-size:12px;word-break:break-all;margin:0 0 24px;">' + resetLink + '</p>',
-              '<hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;" />',
-              '<p style="color:#9ca3af;font-size:12px;margin:0;">Bu talebi siz yapmadıysanız bu e-postayı dikkate almayınız. Hesabınız güvende kalmaya devam edecektir.</p>',
-              '</div>',
-              '<div style="background:#f9fafb;padding:16px 32px;text-align:center;">',
-              '<p style="color:#9ca3af;font-size:11px;margin:0;">&copy; 2025 Toptango &middot; <a href="https://www.toptango.com.tr" style="color:#6b7280;text-decoration:none;">toptango.com.tr</a></p>',
-              '</div>',
-              '</div>',
-            ].join(''),
-          }),
-        });
-        const result = await resp.json();
-        if (!resp.ok) console.error('[AUTH] Resend hatasi:', JSON.stringify(result));
-        else console.info('[AUTH] Mail gonderildi:', result.id);
-      } catch(mailErr) {
-        console.error('[AUTH] mail error:', mailErr.message);
-      }
+      const html = mailTemplate('Şifre Sıfırlama Talebi', [
+        '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 12px;">Merhaba <strong>' + user.name + '</strong>,</p>',
+        '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">Hesabınıza ait şifre sıfırlama talebini aldık. Aşağıdaki butona tıklayarak yeni şifrenizi belirleyebilirsiniz. Bağlantı <strong>1 saat</strong> geçerlidir.</p>',
+        '<div style="text-align:center;margin:0 0 28px;">',
+        '<a href="' + resetLink + '" style="background:#1e3a8a;color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600;display:inline-block;">Şifremi Sıfırla</a>',
+        '</div>',
+        '<p style="color:#6b7280;font-size:13px;line-height:1.6;margin:0 0 6px;">Butona tıklayamıyorsanız aşağıdaki bağlantıyı tarayıcınıza kopyalayabilirsiniz:</p>',
+        '<p style="color:#1e3a8a;font-size:12px;word-break:break-all;margin:0 0 24px;">' + resetLink + '</p>',
+        '<hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;" />',
+        '<p style="color:#9ca3af;font-size:12px;margin:0;">Bu talebi siz yapmadıysanız bu e-postayı dikkate almayınız. Hesabınız güvende kalmaya devam edecektir.</p>',
+      ].join(''));
+      await sendResendMail(email, 'Şifre Sıfırlama - ToptanGO', html);
     } else {
       // Yapilandirilmamis — dev modda linki don
       console.info('[AUTH] Sifre sifirlama linki (MAIL YOK):', resetLink);
@@ -637,29 +614,17 @@ router.post('/send-verification-code', authenticate, async (req, res) => {
     db.prepare('UPDATE users SET verification_code = ?, verification_code_expires = ? WHERE id = ?')
       .run(code, exp, user.id);
 
-    const html = [
-      '<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">',
-      '<div style="background:#1e3a8a;padding:24px 32px;">',
-      '<h1 style="color:#ffffff;font-size:20px;margin:0;font-weight:700;">Toptango</h1>',
-      '<p style="color:#93c5fd;font-size:13px;margin:6px 0 0;">B2B Ticaret Platformu</p>',
-      '</div>',
-      '<div style="padding:32px;">',
-      '<h2 style="color:#111827;font-size:18px;margin:0 0 16px;">E-posta Doğrulama Kodu</h2>',
+    const html = mailTemplate('E-posta Doğrulama Kodu', [
       '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 12px;">Merhaba <strong>' + user.name + '</strong>,</p>',
-      '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">İlk ilanınızı verebilmek için e-posta adresinizi doğrulamanız gerekiyor. Aşağıdaki kodu ilan verme ekranına girin. Kod <strong>15 dakika</strong> geçerlidir.</p>',
+      '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">Hesabınızı kullanmaya başlamak için e-posta adresinizi doğrulamanız gerekiyor. Aşağıdaki kodu doğrulama ekranına girin. Kod <strong>15 dakika</strong> geçerlidir.</p>',
       '<div style="text-align:center;margin:0 0 28px;">',
       '<span style="display:inline-block;background:#f3f4f6;color:#1e3a8a;letter-spacing:6px;font-size:28px;font-weight:700;padding:14px 28px;border-radius:6px;">' + code + '</span>',
       '</div>',
       '<hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;" />',
       '<p style="color:#9ca3af;font-size:12px;margin:0;">Bu talebi siz yapmadıysanız bu e-postayı dikkate almayınız.</p>',
-      '</div>',
-      '<div style="background:#f9fafb;padding:16px 32px;text-align:center;">',
-      '<p style="color:#9ca3af;font-size:11px;margin:0;">&copy; 2025 Toptango &middot; <a href="https://www.toptango.com.tr" style="color:#6b7280;text-decoration:none;">toptango.com.tr</a></p>',
-      '</div>',
-      '</div>',
-    ].join('');
+    ].join(''));
 
-    const result = await sendResendMail(user.email, 'Doğrulama Kodu - Toptango', html);
+    const result = await sendResendMail(user.email, 'Doğrulama Kodu - ToptanGO', html);
     if (!result.sent) {
       console.info('[AUTH] Dogrulama kodu (MAIL YOK):', user.email, code);
       if (process.env.NODE_ENV !== 'production')
@@ -700,6 +665,39 @@ router.post('/verify-code', authenticate, (req, res) => {
   } catch (err) {
     console.error('[AUTH] verify-code hatasi:', err.message);
     res.status(500).json({ error: 'Kod doğrulanırken hata oluştu.' });
+  }
+});
+
+// ---- Firma logosu yukle / degistir (opsiyonel) ----
+router.post('/logo', authenticate, uploadLogo, processLogo, (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Logo dosyası seçilmedi.' });
+    const db  = getDb();
+    const old = db.prepare('SELECT logo FROM users WHERE id = ?').get(req.userId);
+    db.prepare('UPDATE users SET logo = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(req.file.filename, req.userId);
+    if (old && old.logo && old.logo !== req.file.filename) {
+      try { fs.unlinkSync(path.join(__dirname, '..', 'uploads', old.logo)); } catch(e) {}
+    }
+    res.json({ message: 'Logo kaydedildi.', logo: req.file.filename });
+  } catch (err) {
+    console.error('[AUTH] logo kaydetme hatasi:', err.message);
+    try { if (req.file) fs.unlinkSync(req.file.path); } catch(e) {}
+    res.status(500).json({ error: 'Logo kaydedilemedi.' });
+  }
+});
+
+// ---- Firma logosunu kaldir ----
+router.delete('/logo', authenticate, (req, res) => {
+  try {
+    const db  = getDb();
+    const row = db.prepare('SELECT logo FROM users WHERE id = ?').get(req.userId);
+    if (row && row.logo) {
+      try { fs.unlinkSync(path.join(__dirname, '..', 'uploads', row.logo)); } catch(e) {}
+      db.prepare('UPDATE users SET logo = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(req.userId);
+    }
+    res.json({ message: 'Logo kaldırıldı.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Logo kaldırılamadı.' });
   }
 });
 

@@ -25,10 +25,10 @@ async function sendListingApprovedEmail(user, listing) {
     const link = base + '/#/ilan/' + listing.id;
     const html = mailTemplate('İlanınız Onaylandı', [
       '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 12px;">Merhaba <strong>' + escMail(user.name) + '</strong>,</p>',
-      '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">"<strong>' + escMail(listing.title) + '</strong>" başlıklı ilanınız moderasyon onayından geçti ve artık Toptango üzerinde yayında.</p>',
+      '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">"<strong>' + escMail(listing.title) + '</strong>" başlıklı ilanınız moderasyon onayından geçti ve artık ToptanGO üzerinde yayında.</p>',
       '<div style="text-align:center;margin:0 0 12px;"><a href="' + link + '" style="background:#1e3a8a;color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600;display:inline-block;">İlanımı Görüntüle</a></div>',
     ].join(''));
-    await sendResendMail(user.email, 'İlanınız Onaylandı - Toptango', html);
+    await sendResendMail(user.email, 'İlanınız Onaylandı - ToptanGO', html);
   } catch (e) { console.error('[ADMIN] onay maili gonderilemedi:', e.message); }
 }
 

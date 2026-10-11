@@ -3,11 +3,24 @@
 // Resend HTTP API uzerinden mail gonderme — SMTP port bloklarina takilmadigi
 // icin (ör. sifre sifirlama, e-posta dogrulama kodu, ilan onay bildirimi)
 // tum sistem mailleri bu tek yardimciyi kullanir.
+const BRAND_NAME = 'ToptanGO';
+
+// SMTP_FROM ortam degiskeni hala eski marka adini ("Ticarethane <...>")
+// tasiyabilir; gonderen ADRESINI (Resend'de dogrulanmis domain) aynen
+// koruyup sadece gorunen adi marka adiyla degistiriyoruz — boylece teslimat
+// bozulmaz.
+function buildFromAddress() {
+  const raw = process.env.SMTP_FROM || '';
+  const m = raw.match(/<([^>]+)>/);
+  const addr = m ? m[1] : (raw.includes('@') ? raw.trim() : 'onboarding@resend.dev');
+  return BRAND_NAME + ' <' + addr + '>';
+}
+
 async function sendResendMail(to, subject, html) {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) return { sent: false };
   try {
-    const fromAddr = process.env.SMTP_FROM || 'Toptango <onboarding@resend.dev>';
+    const fromAddr = buildFromAddress();
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
@@ -28,7 +41,7 @@ function mailTemplate(title, bodyHtml) {
   return [
     '<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">',
     '<div style="background:#1e3a8a;padding:24px 32px;">',
-    '<h1 style="color:#ffffff;font-size:20px;margin:0;font-weight:700;">Toptango</h1>',
+    '<h1 style="color:#ffffff;font-size:20px;margin:0;font-weight:800;">Toptan<span style="color:#e09a22;">GO</span></h1>',
     '<p style="color:#93c5fd;font-size:13px;margin:6px 0 0;">B2B Ticaret Platformu</p>',
     '</div>',
     '<div style="padding:32px;">',
@@ -36,10 +49,10 @@ function mailTemplate(title, bodyHtml) {
     bodyHtml,
     '</div>',
     '<div style="background:#f9fafb;padding:16px 32px;text-align:center;">',
-    '<p style="color:#9ca3af;font-size:11px;margin:0;">&copy; 2025 Toptango &middot; <a href="https://www.toptango.com.tr" style="color:#6b7280;text-decoration:none;">toptango.com.tr</a></p>',
+    '<p style="color:#9ca3af;font-size:11px;margin:0;">&copy; ' + new Date().getFullYear() + ' ToptanGO &middot; <a href="https://www.toptango.com.tr" style="color:#6b7280;text-decoration:none;">toptango.com.tr</a></p>',
     '</div>',
     '</div>',
   ].join('');
 }
 
-module.exports = { sendResendMail, mailTemplate };
+module.exports = { sendResendMail, mailTemplate, buildFromAddress };

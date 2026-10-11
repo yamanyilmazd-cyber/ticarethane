@@ -13,7 +13,7 @@ router.get('/', (req, res) => {
       SELECT l.id, l.title, l.price, l.currency, l.price_type, l.price_basis,
         l.city, l.listing_type, l.status, l.views, l.created_at, l.is_featured,
         c.name AS category_name, c.slug AS category_slug,
-        u.name AS seller_name, u.company_name,
+        u.name AS seller_name, u.company_name, u.logo AS seller_logo,
         f.created_at AS favorited_at,
         (SELECT filename FROM listing_images WHERE listing_id=l.id ORDER BY sort_order LIMIT 1) AS thumbnail
       FROM favorites f
