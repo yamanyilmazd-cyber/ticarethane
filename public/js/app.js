@@ -1773,6 +1773,7 @@ function renderEmailVerificationGate(opts) {
     '<div class="container" style="max-width:520px;padding:60px 24px;">' +
       '<div class="card"><div class="card-header">E-posta Doğrulama</div><div class="card-body">' +
         '<p style="color:var(--text-mid);margin:0 0 20px;line-height:1.6;">Hesabınızı kullanmaya başlamadan önce e-posta adresinizi doğrulamanız gerekiyor. <strong>' + esc((State.user && State.user.email) || '') + '</strong> adresine bir doğrulama kodu gönderdik.</p>' +
+        '<p style="font-size:.82rem;color:var(--text-mid);background:var(--amber-pale);border-radius:6px;padding:8px 10px;margin:-8px 0 16px;">Mail gelmediyse <strong>Spam / Gereksiz</strong> klasörünüzü kontrol edin; maili bulursanız "Spam değil" olarak işaretleyin.</p>' +
         '<div id="verifyStep1">' +
           '<button type="button" class="btn btn-accent" id="sendCodeBtn">Doğrulama Kodu Gönder</button>' +
         '</div>' +
@@ -3256,7 +3257,8 @@ function renderForgotPassword() {
     '<div class="auth-page">' +
       '<div class="auth-card">' +
         '<h2>Şifremi Unuttum</h2>' +
-        '<p style="color:var(--text-mid);margin-bottom:20px;">E-posta adresinizi girin, sıfırlama bağlantısı gönderelim.</p>' +
+        '<p style="color:var(--text-mid);margin-bottom:12px;">E-posta adresinizi girin, sıfırlama bağlantısı gönderelim.</p>' +
+        '<p style="font-size:.82rem;color:var(--text-mid);background:var(--amber-pale);border-radius:6px;padding:8px 10px;margin-bottom:16px;">Mail birkaç dakika içinde gelir. Gelmezse <strong>Spam / Gereksiz</strong> klasörünüzü kontrol edin; maili bulursanız "Spam değil" olarak işaretleyin.</p>' +
         '<form id="forgotForm">' +
           '<div class="form-group mb-4"><label class="form-label">E-posta <span class="req">*</span></label>' +
             '<input type="email" name="email" class="form-control" placeholder="ornek@firma.com" required autofocus /></div>' +
