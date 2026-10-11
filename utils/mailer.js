@@ -16,6 +16,24 @@ function buildFromAddress() {
   return BRAND_NAME + ' <' + addr + '>';
 }
 
+const REPLY_TO = process.env.MAIL_REPLY_TO || 'destek@toptango.com.tr';
+
+// HTML'den okunabilir duz metin uretir: butonlari/linkleri "metin (url)" yapar.
+function htmlToText(html) {
+  return String(html || '')
+    .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (m, url, label) => {
+      const t = label.replace(/<[^>]+>/g, '').trim();
+      return t && t !== url ? t + ' (' + url + ')' : url;
+    })
+    .replace(/<\/(p|div|h[1-6]|tr)>/gi, '\n\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<hr[^>]*>/gi, '\n----\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&copy;/g, '(c)').replace(/&middot;/g, '-').replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 async function sendResendMail(to, subject, html) {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) return { sent: false };
@@ -24,7 +42,10 @@ async function sendResendMail(to, subject, html) {
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: fromAddr, to: [to], subject, html }),
+      // HTML'in yaninda duz metin versiyonu da gonderiyoruz (yalnizca HTML
+      // iceren mailler spam filtrelerinde daha yuksek puan aliyor) ve yanit
+      // adresi olarak gercek destek kutusunu veriyoruz.
+      body: JSON.stringify({ from: fromAddr, to: [to], subject, html, text: htmlToText(html), reply_to: REPLY_TO }),
     });
     const result = await resp.json();
     if (!resp.ok) { console.error('[MAIL] Resend hatasi:', JSON.stringify(result)); return { sent: false }; }
