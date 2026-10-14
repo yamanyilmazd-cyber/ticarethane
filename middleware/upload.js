@@ -170,4 +170,55 @@ async function processLogo(req, res, next) {
   }
 }
 
-module.exports = { upload, convertHeic, resizeIfNeeded, uploadLogo, processLogo };
+// ---- Slider/reklam banner gorseli (ana sayfa) ----
+// Tek dosya, 5 MB sinir. Logo gibi tek-dosya oldugu icin convertHeic/
+// resizeIfNeeded (cogul req.files bekler) degil, kendi tek-dosya isleme
+// adimini kullanir.
+const uploadBannerSingle = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 }
+}).single('image');
+
+function uploadBanner(req, res, next) {
+  uploadBannerSingle(req, res, function(err) {
+    if (!err) return next();
+    const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Görsel en fazla 5 MB olabilir.' : (err.message || 'Görsel yüklenemedi.');
+    res.status(400).json({ error: msg });
+  });
+}
+
+// HEIC ise JPEG'e cevirir (tarayicilar HEIC'i gosteremiyor), ayrica cok
+// buyuk gorselleri 1920px'i gecmeyecek sekilde kucultur. PNG/WebP/JPEG
+// formatini korur, sadece gerektiginde kucultur.
+async function processBanner(req, res, next) {
+  if (!req.file) return next();
+  const original = req.file.path;
+  const ext = path.extname(req.file.filename).toLowerCase();
+  if (!sharp) {
+    if (ext === '.heic' || ext === '.heif') {
+      try { fs.unlinkSync(original); } catch {}
+      return res.status(400).json({ error: 'Lütfen görseli JPG, PNG veya WebP olarak yükleyin.' });
+    }
+    return next();
+  }
+  try {
+    const isHeic = ext === '.heic' || ext === '.heif';
+    const newFilename = isHeic ? req.file.filename.slice(0, -ext.length) + '.jpg' : req.file.filename;
+    const newPath = path.join(UPLOAD_DIR, newFilename);
+    let pipeline = sharp(original).rotate().resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true });
+    if (isHeic) pipeline = pipeline.jpeg({ quality: 85 });
+    const buffer = await pipeline.toBuffer();
+    fs.writeFileSync(newPath, buffer);
+    if (newPath !== original) { try { fs.unlinkSync(original); } catch {} }
+    req.file.filename = newFilename;
+    req.file.path = newPath;
+    next();
+  } catch (e) {
+    console.error('[UPLOAD] Banner isleme hatasi:', e.message);
+    try { fs.unlinkSync(original); } catch {}
+    res.status(400).json({ error: 'Görsel işlenemedi. Lütfen geçerli bir görsel yükleyin.' });
+  }
+}
+
+module.exports = { upload, convertHeic, resizeIfNeeded, uploadLogo, processLogo, uploadBanner, processBanner };
