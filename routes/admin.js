@@ -7,7 +7,7 @@ const { getDb }                       = require('../database/db');
 const { authenticate, requireAdmin, requireFullAdmin } = require('../middleware/auth');
 const { createNotification }          = require('./notifications');
 const { sendResendMail, mailTemplate } = require('../utils/mailer');
-const { upload }                      = require('../middleware/upload');
+const { upload, uploadBanner, processBanner } = require('../middleware/upload');
 
 const router = express.Router();
 router.use(authenticate, requireAdmin);
@@ -868,12 +868,16 @@ router.get('/banners', (_req, res) => {
   }
 });
 
-router.post('/banners', upload.single('image'), (req, res) => {
+router.post('/banners', uploadBanner, processBanner, (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Gorsel gerekli.' });
     const db = getDb();
     const maxRow = db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM banners').get();
     const linkUrl = (req.body.link_url || '').trim() || null;
+    if (linkUrl && !/^https?:\/\//i.test(linkUrl)) {
+      try { fs.unlinkSync(path.join(__dirname, '..', 'uploads', req.file.filename)); } catch {}
+      return res.status(400).json({ error: 'Link http:// veya https:// ile baslamali.' });
+    }
     const result = db.prepare('INSERT INTO banners (image, link_url, sort_order) VALUES (?, ?, ?)').run(req.file.filename, linkUrl, maxRow.m + 1);
     res.json({ message: 'Banner eklendi.', id: result.lastInsertRowid });
   } catch (err) {
