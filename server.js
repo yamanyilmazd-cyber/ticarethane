@@ -201,6 +201,7 @@ app.use('/api/notifications',  notificationsRoutes);
 app.use('/api/reports',        reportsRoutes);
 app.use('/api/showcase',       showcaseRoutes);
 app.use('/api/rates',          require('./routes/rates'));
+app.use('/api/banners',        require('./routes/banners'));
 
 // Bilinmeyen API rotaları
 app.all('/api/*', (_req, res) => {
