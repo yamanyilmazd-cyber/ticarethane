@@ -722,9 +722,12 @@ async function renderHome() {
     var results = await Promise.all([
       api('GET', '/listings?limit=12&sort=newest'),
       api('GET', '/showcase').catch(function() { return { listings: [] }; }),
+      api('GET', '/banners').catch(function() { return { banners: [] }; }),
     ]);
     var data = results[0];
     var vitrinListings = (results[1].listings || []).slice(0, 8);
+    var banners = results[2].banners || [];
+    var heroHTML = banners.length ? '<section class="hero-slider" id="heroSlider"><div class="hero-slider-track">' + banners.map(function(b, i) { var img = '<img src="/uploads/' + esc(b.image) + '" alt="" />'; return b.link_url ? '<a class="hero-slide' + (i===0?' active':'') + '" href="' + esc(b.link_url) + '" target="_blank" rel="noopener">' + img + '</a>' : '<div class="hero-slide' + (i===0?' active':'') + '">' + img + '</div>'; }).join('') + '</div>' + (banners.length > 1 ? '<div class="hero-slider-dots">' + banners.map(function(_b, i) { return '<button type="button" class="hero-dot' + (i===0?' active':'') + '" data-dot="' + i + '"></button>'; }).join('') + '</div>' : '') + '</section>' : '';
 
     var catCards =
       '<a class="cat-card cat-card-all" href="#/ara">' +
@@ -752,19 +755,7 @@ async function renderHome() {
       : '';
 
     app.innerHTML =
-      '<section class="hero">' +
-        '<div class="container">' +
-          '<div class="hero-inner">' +
-            '<div class="hero-label">Ticari Mal Platformu</div>' +
-            '<h1>Türkiye Ticari Mal<br><span>İlan Merkezi</span></h1>' +
-            '<p>Kimyadan demire, tarımdan plastiğe — alıcı ve satıcıları sektörel kategorilerle buluşturuyoruz.</p>' +
-            '<div class="hero-stats">' +
-              '<div><em class="hero-stat-val">' + State.categories.length + '</em><span class="hero-stat-lbl">Sektör</span></div>' +
-              '<div><em class="hero-stat-val">81 İl</em><span class="hero-stat-lbl">Hizmet Bölgesi</span></div>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-      '</section>' +
+      heroHTML +
       '<section class="section" style="padding-bottom:16px;">' +
         '<div class="container">' +
           '<div class="section-header"><div><div class="section-title">Sektörler</div><div class="section-sub">Aradığınız ticari malı sektörüne göre bulun</div></div><a href="#/ara" class="btn btn-ghost btn-sm">Tüm İlanlar</a></div>' +
@@ -779,10 +770,24 @@ async function renderHome() {
         '</div>' +
       '</section>';
 
+    initHeroSlider(banners);
     updateFxCards((data.listings || []).concat(vitrinListings));
   } catch(err) {
     app.innerHTML = '<div class="container" style="padding:40px;"><div class="alert alert-error">' + esc(err.message) + '</div></div>';
   }
+}
+
+var _heroSliderTimer = null;
+function initHeroSlider(banners) {
+  if (_heroSliderTimer) { clearInterval(_heroSliderTimer); _heroSliderTimer = null; }
+  if (!banners || banners.length < 2) return;
+  var idx = 0;
+  var slides = document.querySelectorAll('#heroSlider .hero-slide');
+  var dots = document.querySelectorAll('#heroSlider .hero-dot');
+  function show(i) { slides.forEach(function(s,j){ s.classList.toggle('active', j===i); }); dots.forEach(function(d,j){ d.classList.toggle('active', j===i); }); idx = i; }
+  dots.forEach(function(d,i){ d.addEventListener('click', function(){ show(i); resetTimer(); }); });
+  function resetTimer() { clearInterval(_heroSliderTimer); _heroSliderTimer = setInterval(function(){ if (!document.getElementById('heroSlider')) { clearInterval(_heroSliderTimer); return; } show((idx+1) % slides.length); }, 5000); }
+  resetTimer();
 }
 
 async function renderSearch() {
@@ -2275,6 +2280,7 @@ async function renderAdmin() {
         '<div class="admin-sidebar-item" data-tab="pending">Bekleyen' + (stats.pending_listings > 0 ? ' <span style="background:var(--red);color:#fff;border-radius:99px;padding:1px 7px;font-size:.7rem;font-weight:700;margin-left:4px;">' + stats.pending_listings + '</span>' : '') + '</div>' +
         '<div class="admin-sidebar-item" data-tab="listings">Tüm İlanlar</div>' +
         '<div class="admin-sidebar-item" data-tab="vitrin">Vitrin</div>' +
+        '<div class="admin-sidebar-item" data-tab="banners">Slider / Reklam</div>' +
         '<div class="admin-sidebar-item" data-tab="users">Kullanıcılar</div>' +
 
         '<div class="admin-sidebar-item" data-tab="companies">Firmalar</div>' +
@@ -2311,6 +2317,7 @@ async function renderAdmin() {
         '<div id="atab_pending"  class="tab-content"><div id="pendingContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
         '<div id="atab_listings" class="tab-content"><div id="allListingsContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
         '<div id="atab_vitrin"   class="tab-content"><div id="vitrinAdminContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
+        '<div id="atab_banners"  class="tab-content"><div id="bannersAdminContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
         '<div id="atab_users"    class="tab-content"><div id="usersContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
 
         '<div id="atab_companies" class="tab-content"><div id="companiesContent"><div class="page-loading"><div class="spinner"></div></div></div></div>' +
@@ -2349,6 +2356,7 @@ async function renderAdmin() {
 
     if (tab === 'listings')       loadAdminListings(filter ? { status: filter } : {});
     else if (tab === 'vitrin')    loadAdminVitrin();
+    else if (tab === 'banners')   loadAdminBanners();
     else if (tab === 'users')     loadAdminUsers(filter ? { status: filter } : {});
     else if (tab === 'pending')   loadAdminPending();
     else if (tab === 'companies') loadAdminCompanies();
@@ -2369,6 +2377,7 @@ async function renderAdmin() {
       if (tab === 'pending')  loadAdminPending();
       if (tab === 'listings') loadAdminListings();
       if (tab === 'vitrin')   loadAdminVitrin();
+      if (tab === 'banners')  loadAdminBanners();
       if (tab === 'users')    loadAdminUsers();
 
       if (tab === 'companies') loadAdminCompanies();
@@ -2613,6 +2622,60 @@ async function loadAdminVitrin() {
           document.getElementById('vrow_'+id)?.remove();
           toast('Vitrinden çıkarıldı.', 'success');
         } catch(e) { toast(e.message,'error'); }
+      });
+    });
+  } catch(err) { c.innerHTML = '<div class="alert alert-error">' + esc(err.message) + '</div>'; }
+}
+
+async function loadAdminBanners() {
+  var c = document.getElementById('bannersAdminContent');
+  c.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
+  try {
+    var rows = await api('GET', '/admin/banners');
+    c.innerHTML =
+      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;"><h2 style="margin:0;">Slider / Reklam</h2><span style="font-size:.82rem;color:var(--text-mid);">' + rows.length + ' görsel</span></div>' +
+      '<div class="card" style="margin-bottom:20px;"><div class="card-body">' +
+        '<form id="bannerUploadForm">' +
+          '<div class="form-group mb-4"><label class="form-label">Görsel <span class="req">*</span></label><input type="file" name="image" accept="image/jpeg,image/png,image/webp" required /></div>' +
+          '<div class="form-group mb-4"><label class="form-label">Tıklanınca gidilecek link (opsiyonel)</label><input type="url" name="link_url" class="form-control" placeholder="https://..." /></div>' +
+          '<div id="bannerFormError" class="alert alert-error" style="display:none;"></div>' +
+          '<button type="submit" class="btn btn-accent" id="bannerSubmitBtn">Ekle</button>' +
+        '</form>' +
+      '</div></div>' +
+      (rows.length
+        ? '<div class="table-wrapper"><table><thead><tr><th>Görsel</th><th>Link</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>' +
+          rows.map(function(b) {
+            return '<tr id="brow_' + b.id + '">' +
+              '<td><img src="/uploads/' + esc(b.image) + '" style="width:120px;height:40px;object-fit:cover;border-radius:4px;" /></td>' +
+              '<td style="font-size:.82rem;">' + (b.link_url ? '<a href="' + esc(b.link_url) + '" target="_blank" style="color:var(--blue);">' + esc(b.link_url) + '</a>' : '—') + '</td>' +
+              '<td><span class="badge ' + (b.is_active ? 'badge-active' : 'badge-rejected') + '">' + (b.is_active ? 'Yayında' : 'Gizli') + '</span></td>' +
+              '<td style="display:flex;gap:6px;"><button type="button" class="btn btn-ghost btn-sm" data-toggle="' + b.id + '">' + (b.is_active ? 'Gizle' : 'Yayınla') + '</button><button type="button" class="btn btn-ghost btn-sm" data-del="' + b.id + '" style="color:var(--red);">Sil</button></td>' +
+            '</tr>';
+          }).join('') +
+          '</tbody></table></div>'
+        : '<div class="empty-state"><div class="empty-state-title">Henüz görsel eklenmedi.</div></div>');
+
+    document.getElementById('bannerUploadForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var fd = new FormData(e.target);
+      var errEl = document.getElementById('bannerFormError');
+      var btn = document.getElementById('bannerSubmitBtn');
+      errEl.style.display = 'none';
+      btn.disabled = true; btn.textContent = 'Yükleniyor...';
+      try { await api('POST', '/admin/banners', fd, true); toast('Eklendi.', 'success'); loadAdminBanners(); }
+      catch(err) { errEl.textContent = err.message; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Ekle'; }
+    });
+    c.querySelectorAll('[data-toggle]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        try { await api('PATCH', '/admin/banners/' + btn.dataset.toggle + '/toggle'); loadAdminBanners(); }
+        catch(e) { toast(e.message, 'error'); }
+      });
+    });
+    c.querySelectorAll('[data-del]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Bu görseli silmek istediğinize emin misiniz?')) return;
+        try { await api('DELETE', '/admin/banners/' + btn.dataset.del); document.getElementById('brow_' + btn.dataset.del)?.remove(); toast('Silindi.', 'success'); }
+        catch(e) { toast(e.message, 'error'); }
       });
     });
   } catch(err) { c.innerHTML = '<div class="alert alert-error">' + esc(err.message) + '</div>'; }
