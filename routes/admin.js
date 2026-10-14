@@ -7,6 +7,7 @@ const { getDb }                       = require('../database/db');
 const { authenticate, requireAdmin, requireFullAdmin } = require('../middleware/auth');
 const { createNotification }          = require('./notifications');
 const { sendResendMail, mailTemplate } = require('../utils/mailer');
+const { upload }                      = require('../middleware/upload');
 
 const router = express.Router();
 router.use(authenticate, requireAdmin);
@@ -853,6 +854,59 @@ router.patch('/reports/:id/resolve', (req, res) => {
   }
 });
 
+
+// ================================================================
+// SLIDER / REKLAM BANNER'LARI
+// ================================================================
+router.get('/banners', (_req, res) => {
+  try {
+    const db = getDb();
+    const rows = db.prepare('SELECT * FROM banners ORDER BY sort_order ASC, id ASC').all();
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Banner listesi yuklenemedi.' });
+  }
+});
+
+router.post('/banners', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Gorsel gerekli.' });
+    const db = getDb();
+    const maxRow = db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM banners').get();
+    const linkUrl = (req.body.link_url || '').trim() || null;
+    const result = db.prepare('INSERT INTO banners (image, link_url, sort_order) VALUES (?, ?, ?)').run(req.file.filename, linkUrl, maxRow.m + 1);
+    res.json({ message: 'Banner eklendi.', id: result.lastInsertRowid });
+  } catch (err) {
+    console.error('[ADMIN] banner ekleme hatasi:', err.message);
+    res.status(500).json({ error: 'Banner eklenemedi.' });
+  }
+});
+
+router.patch('/banners/:id/toggle', (req, res) => {
+  try {
+    const db = getDb();
+    const b = db.prepare('SELECT is_active FROM banners WHERE id = ?').get(req.params.id);
+    if (!b) return res.status(404).json({ error: 'Banner bulunamadi.' });
+    const next = b.is_active ? 0 : 1;
+    db.prepare('UPDATE banners SET is_active = ? WHERE id = ?').run(next, req.params.id);
+    res.json({ message: next ? 'Yayinlandi.' : 'Gizlendi.', is_active: next });
+  } catch (err) {
+    res.status(500).json({ error: 'Islem basarisiz.' });
+  }
+});
+
+router.delete('/banners/:id', (req, res) => {
+  try {
+    const db = getDb();
+    const b = db.prepare('SELECT image FROM banners WHERE id = ?').get(req.params.id);
+    if (!b) return res.status(404).json({ error: 'Banner bulunamadi.' });
+    db.prepare('DELETE FROM banners WHERE id = ?').run(req.params.id);
+    if (b.image) { try { fs.unlinkSync(path.join(__dirname, '..', 'uploads', b.image)); } catch {} }
+    res.json({ message: 'Banner silindi.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Silinemedi.' });
+  }
+});
 
 // Global hata yakalayici
 router.use(function(err, req, res, _next) {
