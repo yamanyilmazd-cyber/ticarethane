@@ -276,6 +276,12 @@ const SCHEMA_DDL = [
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
     token TEXT NOT NULL UNIQUE, platform TEXT DEFAULT 'ios',
     created_at TEXT DEFAULT (datetime('now')))`,
+  // Ana sayfadaki slider/reklam gorselleri. image = uploads/ icindeki dosya
+  // adi, link_url tiklaninca gidilecek adres (bos olabilir).
+  `CREATE TABLE IF NOT EXISTS banners (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, image TEXT NOT NULL,
+    link_url TEXT, sort_order INTEGER DEFAULT 0, is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')))`,
   `CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category_id)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_city     ON listings(city)`,
   `CREATE INDEX IF NOT EXISTS idx_listings_status   ON listings(status)`,
@@ -289,6 +295,7 @@ const SCHEMA_DDL = [
   `CREATE INDEX IF NOT EXISTS idx_favorites_listing ON favorites(listing_id)`,
   `CREATE INDEX IF NOT EXISTS idx_showcase_listing   ON showcase_listings(listing_id)`,
   `CREATE INDEX IF NOT EXISTS idx_device_tokens_user ON device_tokens(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_banners_active     ON banners(is_active, sort_order)`,
 ];
 
 // Mevcut tablolara sonradan eklenen kolonlar — hem yerel hem Turso semasina
@@ -356,7 +363,7 @@ async function initTursoBackground() {
       'users', 'categories', 'subcategories', 'listings', 'listing_images',
       'conversations', 'messages', 'favorites', 'notifications',
       'listing_reports', 'password_reset_tokens', 'listing_tags', 'admin_notes',
-      'showcase_listings', 'device_tokens'
+      'showcase_listings', 'device_tokens', 'banners'
     ];
 
     let totalRows = 0;
