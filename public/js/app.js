@@ -267,7 +267,6 @@ function router() {
     return;
   }
 
-  if (isLoggedIn() && !isAdmin() && State.user && !State.user.phone) { renderPhoneCompletionGate(); return; }
    // Form state temizle — eski sayfa kalıntısı yüklenmesin
   _pendingFiles = [];
   _toDeleteImgs = new Set();
@@ -494,6 +493,8 @@ function citySelectHTML(name, selected) {
 function validateTurkishPhone(val) {
   if (!val || !val.trim()) return null;
   var digits = val.replace(/\D/g, '');
+  // Telefon opsiyonel: sadece on-dolu "+90" kaldiysa bos say
+  if (digits === '' || digits === '90') return null;
   if (digits.startsWith('90') && digits.length > 10) digits = digits.slice(2);
   if (digits.startsWith('0') && digits.length >= 10) digits = digits.slice(1);
   if (digits.length < 10 || digits.length > 11) return 'Geçerli bir telefon numarası giriniz (+90 5XX XXX XX XX).';
@@ -1631,7 +1632,7 @@ function listingFormHTML(l) {
     '</div></div>' +
     '<div class="form-group"><label class="form-label">Şehir <span class="req">*</span></label>' + citySelectHTML('city', l.city) + '</div>' +
     '<div class="form-group"><label class="form-label">İlçe</label><input type="text" name="district" class="form-control" value="' + esc(l.district||'') + '" placeholder="Örn: Pendik" /></div>' +
-    '<div class="form-group"><label class="form-label">İletişim Telefonu <span class="req">*</span></label><input type="tel" name="contact_phone" class="form-control" value="' + esc(l.contact_phone||'+90 ') + '" placeholder="+90 5XX XXX XX XX" required /></div>' +
+    '<div class="form-group"><label class="form-label">İletişim Telefonu <small>(isteğe bağlı)</small></label><input type="tel" name="contact_phone" class="form-control" value="' + esc(l.contact_phone||'+90 ') + '" placeholder="+90 5XX XXX XX XX" /></div>' +
     '<div class="form-group"><label class="form-label">İletişim E-postası</label><input type="email" name="contact_email" class="form-control" value="' + esc(l.contact_email||'') + '" placeholder="firma@ornek.com" /></div>' +
     '<div class="form-group" style="grid-column:1/-1;"><label class="form-label">Web Sitesi</label><input type="text" name="website" autocomplete="off" class="form-control" value="' + esc(l.website||'') + '" placeholder="https://www.firma.com" /></div>' +
     '<div class="form-group" style="grid-column:1/-1;"><label class="form-label">Açıklama <span class="req">*</span></label><textarea name="description" class="form-control" rows="7" placeholder="Ürün özellikleri, kalite standardı, ambalaj türü, teslimat koşulları..." required>' + esc(l.description||'') + '</textarea></div>' +
@@ -2153,7 +2154,7 @@ async function renderRegister() {
           '</div>' +
           '<div class="form-group mb-4"><label class="form-label">E-posta <span class="req">*</span></label><input type="email" name="email" class="form-control" placeholder="ornek@firma.com" required /></div>' +
           '<div class="grid-2">' +
-            '<div class="form-group mb-4"><label class="form-label">Telefon <span class="req">*</span></label><input type="tel" name="phone" class="form-control" value="+90 " placeholder="+90 5XX XXX XX XX" required /></div>' +
+            '<div class="form-group mb-4"><label class="form-label">Telefon <small>(isteğe bağlı)</small></label><input type="tel" name="phone" class="form-control" value="+90 " placeholder="+90 5XX XXX XX XX" /></div>' +
             '<div class="form-group mb-4"><label class="form-label">Şehir</label>' + citySelectHTML('city','') + '</div>' +
           '</div>' +
           '<div class="form-group mb-4"><label class="form-label">Firma Logosu <span style="font-weight:400;color:var(--text-muted);">(isteğe bağlı — ilanlarınızda görünür)</span></label><div class="logo-pick"><input type="file" id="regLogoInput" class="form-control" accept="image/jpeg,image/png,image/webp" /><img id="regLogoPreview" class="logo-pick-preview" alt="" /></div></div>' +

@@ -478,7 +478,8 @@ router.put('/:id', authenticate, upload.array('images', 8), convertHeic, resizeI
       city?.trim()          || listing.city,
       district?.trim()      || listing.district,
       listing_type          || listing.listing_type,
-      contact_phone?.trim() || listing.contact_phone,
+      contact_phone === undefined ? listing.contact_phone
+        : (contact_phone.replace(/\D/g, '').length > 2 ? contact_phone.trim() : null),
       contact_email?.trim() || listing.contact_email,
       website?.trim()       || listing.website,
       listing.id

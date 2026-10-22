@@ -96,8 +96,9 @@ router.post('/register', async (req, res) => {
     const city         = sanitize(req.body.city);
 
     // Zorunlu alanlar
-    if (!name || !email || !password || !phone)
-      return res.status(400).json({ error: 'Ad, e-posta, telefon ve şifre zorunludur.' });
+    // Telefon opsiyonel (App Store 5.1.1(v))
+    if (!name || !email || !password)
+      return res.status(400).json({ error: 'Ad, e-posta ve şifre zorunludur.' });
 
     // Uzunluk kontrolleri
     if (name.length < 6 || name.length > 100)
