@@ -1,14 +1,28 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18285393404"></script>
+  <!-- Google tag (gtag.js): sadece web'de ve cerez onayi verildiyse yuklenir.
+       iOS uygulamasinda (Capacitor) hic yuklenmez — App Tracking Transparency. -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'AW-18285393404');
+    window.TG_IS_APP = !!(
+      (window.Capacitor && (typeof window.Capacitor.isNativePlatform === 'function'
+        ? window.Capacitor.isNativePlatform()
+        : (window.Capacitor.platform && window.Capacitor.platform !== 'web'))) ||
+      (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge)
+    );
+    window.tgLoadAds = function() {
+      if (window.TG_IS_APP || window._tgAdsLoaded) return;
+      window._tgAdsLoaded = true;
+      var s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=AW-18285393404';
+      document.head.appendChild(s);
+      gtag('js', new Date());
+      gtag('config', 'AW-18285393404');
+    };
+    try { if (localStorage.getItem('tg_cookie_consent') === 'all') window.tgLoadAds(); } catch (e) {}
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -23,7 +37,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=15" />
+  <link rel="stylesheet" href="/css/style.css?v=16" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <!-- SEO -->
   <meta name="description" content="Toptango - Türkiye'nin ticaret platformu. Toplu mal, hammadde, sanayi ürünü ilan verin ve alın." />
@@ -89,9 +103,14 @@
         <h4>Yasal</h4>
         <ul>
           <li><a href="#/sozlesme">Kullanım Koşulları</a></li>
-          <li><a href="#/kvkk">Gizlilik Politikası</a></li>
+          <li><a href="#/gizlilik-politikasi">Gizlilik Politikası</a></li>
+          <li><a href="#/kvkk">KVKK Aydınlatma Metni</a></li>
+          <li><a href="#/cerez-politikasi">Çerez Politikası</a></li>
+          <li><a href="#/ucretlendirme">Ücretlendirme ve İade</a></li>
+          <li><a href="#/hesap-silme">Hesap ve Veri Silme</a></li>
           <li><a href="#/ilan-kurallari">İlan Kuralları</a></li>
           <li><a href="#/iletisim">İletişim</a></li>
+          <li><a href="#" id="cookiePrefsLink">Çerez Tercihleri</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -104,6 +123,7 @@
     <div class="footer-bottom">
       <div class="footer-logo">Toptan<span>go</span></div>
       <div style="font-size:.8rem;">&copy; <span id="footerYear"></span> Toptango. Tüm hakları saklıdır.</div>
+      <div class="footer-business" style="font-size:.75rem;opacity:.85;margin-top:6px;">Hizmet sağlayıcı: Asaf Demir Yamanyılmaz · Reşatbey Mah. Türkkuşu Cad. Günep Panorama İş Merkezi A Blok No:1003, Seyhan / Adana · <a href="mailto:destek@toptango.com.tr">destek@toptango.com.tr</a></div>
     </div>
   </div>
 </footer>
@@ -111,6 +131,6 @@
 <div class="toast-container" id="toastContainer"></div>
 <div id="modalContainer"></div>
 
-<script src="/js/app.js?v=15"></script>
+<script src="/js/app.js?v=16"></script>
 </body>
 </html>

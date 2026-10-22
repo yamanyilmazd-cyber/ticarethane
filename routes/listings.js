@@ -406,7 +406,7 @@ router.post('/', authenticate, requireEmailVerified, upload.array('images', 8), 
       city.trim(),
       district?.trim()      || null,
       listing_type || 'sell',
-      contact_phone?.trim() || null,
+      (contact_phone && contact_phone.replace(/\D/g, '').length > 2) ? contact_phone.trim() : null,
       contact_email?.trim() || null,
       (website?.trim() && !/^https?:\/\//i.test(website.trim()) ? 'https://' + website.trim() : website?.trim() || null),
       expires.toISOString()

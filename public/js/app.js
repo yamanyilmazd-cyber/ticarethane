@@ -211,6 +211,10 @@ var routes = {
   '/iletisim':        renderIletisim,
   '/ilan-kurallari':   renderIlanKurallari,
   '/hakkimizda':       renderHakkimizda,
+  '/gizlilik-politikasi': renderGizlilik,
+  '/cerez-politikasi':    renderCerezPolitikasi,
+  '/ucretlendirme':       renderUcretlendirme,
+  '/hesap-silme':         renderHesapSilme,
   '/hizli-ilan/:slug': renderCreateListing,
 };
 
@@ -305,8 +309,50 @@ document.addEventListener('click', function(e) {
   }
 });
 
+// iOS uygulamasi (Capacitor WebView) icinde mi? Tespit index.html <head>'de yapiliyor.
+function isNativeApp() { return !!window.TG_IS_APP; }
+
+// ---- Cerez onay bandi (sadece web; uygulamada takip/reklam cerezi hic yuklenmez) ----
+function getCookieConsent() { try { return localStorage.getItem('tg_cookie_consent'); } catch (e) { return null; } }
+function showCookieBanner() {
+  if (isNativeApp() || document.getElementById('cookieBanner')) return;
+  var el = document.createElement('div');
+  el.id = 'cookieBanner';
+  el.className = 'cookie-banner';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-label', 'Çerez tercihleri');
+  el.innerHTML =
+    '<p>Sitemizin çalışması için zorunlu çerezleri kullanıyoruz. Reklam ölçümü (Google Ads) için ise yalnızca onayınızla çerez kullanırız. ' +
+    'Ayrıntılar: <a href="#/cerez-politikasi">Çerez Politikası</a>.</p>' +
+    '<div class="cookie-banner-actions">' +
+      '<button type="button" class="btn btn-outline" id="cookieRejectBtn">Yalnızca Zorunlu</button>' +
+      '<button type="button" class="btn btn-outline" id="cookieAcceptBtn">Tümünü Kabul Et</button>' +
+    '</div>';
+  document.body.appendChild(el);
+  document.getElementById('cookieAcceptBtn').addEventListener('click', function() {
+    try { localStorage.setItem('tg_cookie_consent', 'all'); } catch (e) {}
+    el.remove();
+    if (window.tgLoadAds) window.tgLoadAds();
+  });
+  document.getElementById('cookieRejectBtn').addEventListener('click', function() {
+    var hadAds = !!window._tgAdsLoaded;
+    try { localStorage.setItem('tg_cookie_consent', 'necessary'); } catch (e) {}
+    el.remove();
+    if (hadAds) location.reload(); // yuklenmis reklam etiketini kaldirmak icin
+  });
+}
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.id === 'cookiePrefsLink') { e.preventDefault(); showCookieBanner(); }
+});
+
 window.addEventListener('load', function() {
   document.getElementById('footerYear').textContent = new Date().getFullYear();
+  if (isNativeApp()) {
+    var prefs = document.getElementById('cookiePrefsLink');
+    if (prefs && prefs.parentNode) prefs.parentNode.style.display = 'none';
+  } else if (!getCookieConsent()) {
+    showCookieBanner();
+  }
   loadCategories().then(function() {
     buildCatBar();
     setupNavSearch();
@@ -723,12 +769,13 @@ async function renderHome() {
     var results = await Promise.all([
       api('GET', '/listings?limit=12&sort=newest'),
       api('GET', '/showcase').catch(function() { return { listings: [] }; }),
-      api('GET', '/banners').catch(function() { return { banners: [] }; }),
+      // Slider/reklam alani sadece web sitesinde; iOS uygulamasinda gosterilmez
+      isNativeApp() ? Promise.resolve({ banners: [] }) : api('GET', '/banners').catch(function() { return { banners: [] }; }),
     ]);
     var data = results[0];
     var vitrinListings = (results[1].listings || []).slice(0, 8);
     var banners = results[2].banners || [];
-    var heroHTML = banners.length ? '<section class="hero-slider" id="heroSlider"><div class="hero-slider-track">' + banners.map(function(b, i) { var img = '<img src="/uploads/' + esc(b.image) + '" alt="" />'; return b.link_url ? '<a class="hero-slide' + (i===0?' active':'') + '" href="' + esc(b.link_url) + '" target="_blank" rel="noopener">' + img + '</a>' : '<div class="hero-slide' + (i===0?' active':'') + '">' + img + '</div>'; }).join('') + '</div>' + (banners.length > 1 ? '<div class="hero-slider-dots">' + banners.map(function(_b, i) { return '<button type="button" class="hero-dot' + (i===0?' active':'') + '" data-dot="' + i + '"></button>'; }).join('') + '</div>' : '') + '</section>' : '';
+    var heroHTML = banners.length ? '<section class="hero-slider" id="heroSlider"><div class="hero-slider-track">' + banners.map(function(b, i) { var img = '<img src="/uploads/' + esc(b.image) + '" alt="ToptanGO tanıtım görseli ' + (i+1) + '" />'; var ext = !/^https?:\/\/(www\.)?toptango\.com\.tr/i.test(b.link_url || ''); return b.link_url ? '<a class="hero-slide' + (i===0?' active':'') + '" href="' + esc(b.link_url) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '>' + img + '</a>' : '<div class="hero-slide' + (i===0?' active':'') + '">' + img + '</div>'; }).join('') + '</div>' + (banners.length > 1 ? '<div class="hero-slider-dots">' + banners.map(function(_b, i) { return '<button type="button" class="hero-dot' + (i===0?' active':'') + '" data-dot="' + i + '" aria-label="Görsel ' + (i+1) + '"></button>'; }).join('') + '</div>' : '') + '</section>' : '';
 
     var catCards =
       '<a class="cat-card cat-card-all" href="#/ara">' +
@@ -2166,13 +2213,21 @@ async function renderRegister() {
           '<div style="background:#f8f9ff;border:1px solid #dde3f0;border-radius:8px;padding:12px 14px;margin-bottom:12px;">' +
           '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;color:#444;line-height:1.5;">' +
           '<input type="checkbox" id="termsCheck" name="termsCheck" required style="margin-top:3px;flex-shrink:0;" />' +
-          '<span><a href="#/sozlesme" style="color:#2563eb;text-decoration:underline;">Kullanım Koşulları</a> ve <a href="#/kvkk" style="color:#2563eb;text-decoration:underline;">KVKK Metni</a> kapsamında bilgilendirildim, kabul ediyorum.</span>' +
+          '<span><a href="#/sozlesme" style="color:#2563eb;text-decoration:underline;">Kullanım Koşulları ve Üyelik Sözleşmesi</a>&#39;ni okudum, kabul ediyorum. <span class="req">*</span></span>' +
+          '</label>' +
+          '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;color:#444;line-height:1.5;margin-top:8px;">' +
+          '<input type="checkbox" id="kvkkCheck" name="kvkkCheck" required style="margin-top:3px;flex-shrink:0;" />' +
+          '<span><a href="#/kvkk" style="color:#2563eb;text-decoration:underline;">KVKK Aydınlatma Metni</a> ve <a href="#/gizlilik-politikasi" style="color:#2563eb;text-decoration:underline;">Gizlilik Politikası</a>&#39;nı okudum, bilgilendirildim. <span class="req">*</span></span>' +
+          '</label>' +
+          '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;color:#444;line-height:1.5;margin-top:8px;">' +
+          '<input type="checkbox" id="ageCheck" name="ageCheck" required style="margin-top:3px;flex-shrink:0;" />' +
+          '<span>18 yaşından büyüğüm. <span class="req">*</span></span>' +
           '</label>' +
           '</div>' +
           '<div id="regError" class="alert alert-error" style="display:none;"></div>' +
           '<button type="submit" class="btn btn-accent w-100 btn-lg" id="regBtn">Üye Ol</button>' +
           '<div id="googleSignInDiv" style="display:flex;justify-content:center;margin:12px 0 8px;"></div>' +
-          '<p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-bottom:12px;">Google ile devam ederek <a href="#/sozlesme" style="color:#2563eb;">Kullanım Koşulları</a> ve <a href="#/kvkk" style="color:#2563eb;">KVKK Metni</a>&#39;ni kabul etmiş olursunuz.</p>' +
+          '<p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-bottom:12px;">' + (isNativeApp() ? 'Apple' : 'Google') + ' ile devam ederek 18 yaşından büyük olduğunuzu, <a href="#/sozlesme" style="color:#2563eb;">Kullanım Koşulları</a>&#39;nı kabul ettiğinizi ve <a href="#/kvkk" style="color:#2563eb;">KVKK Aydınlatma Metni</a> ile <a href="#/gizlilik-politikasi" style="color:#2563eb;">Gizlilik Politikası</a>&#39;nı okuduğunuzu beyan etmiş olursunuz.</p>' +
           '<div class="auth-divider">Zaten hesabınız var mı?</div>' +
           '<a href="#/giris" class="btn btn-outline w-100">Giriş Yap</a>' +
         '</form>' +
@@ -3524,13 +3579,17 @@ function renderKvkk() {
   s += '<p style="color:#888;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Haziran 2026</p>';
   s += '<p>6698 sayılı Kişisel Verilerin Korunması Kanunu (&#34;KVKK&#34;) kapsamında veri sorumlusu sıfatıyla <strong>Toptango</strong>, kişisel verilerinizin işlenmesine ilişkin sizi bilgilendirmek amacıyla bu Aydınlatma Metnini hazırlamıştır.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">1. Veri Sorumlusu</h2>';
-  s += '<p>Toptango, 6698 sayılı KVKK uyarınca veri sorumlusu olarak faaliyet göstermektedir. İletişim: <strong>destek@toptango.com.tr</strong></p>';
+  s += '<p>Veri sorumlusu: <strong>Asaf Demir Yamanyılmaz</strong> (Toptango platformunun işleteni). Adres: Reşatbey Mah. Türkkuşu Cad. Günep Panorama İş Merkezi A Blok No:1003, Seyhan / Adana. İletişim: <strong>destek@toptango.com.tr</strong></p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">2. İşlenen Kişisel Veriler</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li><strong>Kimlik verileri:</strong> Ad, soyad, firma adı,</li><li><strong>İletişim verileri:</strong> E-posta adresi, telefon numarası, şehir bilgisi,</li><li><strong>Hesap verileri:</strong> Kullanıcı adı, şifreli hesap bilgileri,</li><li><strong>İlan verileri:</strong> Yayımladığınız ürün, fiyat, açıklama ve görsel bilgileri,</li><li><strong>Teknik veriler:</strong> IP adresi, tarayıcı bilgisi, oturum süresi, platform kullanım istatistikleri.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">3. Kişisel Verilerin İşlenme Amacı</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Üyelik kaydının oluşturulması ve hesap yönetimi,</li><li>Platform hizmetlerinin sunulması ve iyileştirilmesi,</li><li>İlan yayımlama, güncelleme ve yönetim süreçleri,</li><li>Kullanıcılar arası iletişimin sağlanması,</li><li>Yasal yükümlülüklerin yerine getirilmesi,</li><li>Platform güvenliğinin sağlanması ve dolandırıcılığın önlenmesi,</li><li>Teknik destek ve müşteri hizmetlerinin sağlanması.</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">4. Kişisel Verilerin Aktarıldığı Taraflar</h2>';
-  s += '<p>Kişisel verileriniz; yasal zorunluluklar kapsamında kamu kurum ve kuruluşlarıyla, Platform&#39;un teknik altyapısını sağlayan bulut hizmeti sağlayıcılarıyla ve açık rızanızın bulunduğu üçüncü taraf iş ortaklarıyla KVKK&#39;nın 8. ve 9. maddeleri çerçevesinde paylaşılabilir.</p>';
+  s += '<p>Kişisel verileriniz; yasal zorunluluklar kapsamında yetkili kamu kurum ve kuruluşlarıyla ve Platform&#39;un teknik altyapısını sağlayan aşağıdaki hizmet sağlayıcılarla, yalnızca hizmetin gerektirdiği ölçüde KVKK&#39;nın 8. ve 9. maddeleri çerçevesinde paylaşılabilir. Kişisel verileriniz satılmaz.</p>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li><strong>Railway</strong> (sunucu ve veritabanı barındırma) ve <strong>Netlify</strong> (alan adı yönlendirme),</li><li><strong>Resend</strong> (doğrulama kodu ve şifre sıfırlama gibi işlem e-postaları),</li><li><strong>Google</strong> (Google ile giriş; yalnızca web sitesinde ve çerez onayınız varsa Google Ads reklam ölçümü; yazı tipleri),</li><li><strong>Apple</strong> (Apple ile giriş ve iOS bildirimleri).</li></ul>';
+  s += '<p>Bu sağlayıcıların sunucuları yurt dışında bulunabileceğinden, verileriniz KVKK md. 9 kapsamında yurt dışına aktarılabilir. iOS uygulamasında reklam veya takip amaçlı veri toplanmaz.</p>';
+  s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">Saklama Süresi</h2>';
+  s += '<p>Hesap ve ilan verileriniz üyeliğiniz süresince saklanır. Hesabınızı sildiğinizde verileriniz kalıcı olarak silinir; yalnızca kanunen saklanması zorunlu kayıtlar (ör. 5651 sayılı Kanun kapsamındaki trafik kayıtları) yasal süre boyunca tutulur.</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">5. Hukuki Sebep</h2>';
   s += '<ul style="margin:10px 0 10px 24px;"><li>Sözleşmenin kurulması ve ifası (KVKK md. 5/2-c),</li><li>Hukuki yükümlülüklerin yerine getirilmesi (KVKK md. 5/2-ç),</li><li>Meşru menfaat kapsamında zorunlu işlemler (KVKK md. 5/2-f),</li><li>Açık rızaya dayalı işlemler (KVKK md. 5/1).</li></ul>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">6. Haklarınız (KVKK Madde 11)</h2>';
@@ -3549,10 +3608,69 @@ function renderHakkimizda() {
   s += '<h4>Misyonumuz</h4>';
   s += '<p>Türkiye&#39;nin 81 ilindeki üretici, tedarikçi ve toptancıların birbirine kolayca ulaşabildiği, güvenilir ve şeffaf bir ticaret ortamı sunmak.</p>';
   s += '<h4>Neden Toptango?</h4>';
-  s += '<ul style="margin:10px 0 10px 24px;"><li>Sektörel kategorilerle hızlı ve doğru eşleşme,</li><li>Doğrulanmış firma profilleri ile güvenilir alışveriş,</li><li>Kolay ilan verme ve yönetim araçları,</li><li>Türkiye genelinde geniş kullanıcı ağı.</li></ul>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li>Sektörel kategorilerle hızlı ve doğru eşleşme,</li><li>Doğrulanmış rozetli firma profilleri,</li><li>Kolay ilan verme ve yönetim araçları,</li><li>Komisyon ve gizli ücret olmadan, ücretsiz ilan verme (bkz. <a href="#/ucretlendirme">Ücretlendirme</a>),</li><li>Türkiye&#39;nin 81 iline açık hizmet.</li></ul>';
   s += '<p>Sorularınız veya iş birliği talepleriniz için bizimle <a href="#/iletisim">iletişime</a> geçebilirsiniz.</p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
+}
+
+// ---- Yasal sayfalar (ortak sablon) ----
+function legalPage(title, sections) {
+  document.title = title + ' - Toptango';
+  var h2 = '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">';
+  var s = '<div style="max-width:820px;margin:40px auto;padding:0 20px 60px;font-family:Inter,sans-serif;color:#1a1a2e;line-height:1.7;">';
+  s += '<a href="#/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:28px;">&larr; Ana Sayfaya Dön</a>';
+  s += '<h1 style="font-size:1.9rem;font-weight:800;border-bottom:2px solid #e8eaf0;padding-bottom:16px;margin-bottom:8px;">' + title + '</h1>';
+  s += '<p style="color:#6b6b7b;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Ekim 2026</p>';
+  sections.forEach(function(sec) { s += (sec[0] ? h2 + sec[0] + '</h2>' : '') + sec[1]; });
+  s += '</div>';
+  document.getElementById('app').innerHTML = s;
+}
+
+var LEGAL_PROVIDER = '<strong>Asaf Demir Yamanyılmaz</strong>, Reşatbey Mah. Türkkuşu Cad. Günep Panorama İş Merkezi A Blok No:1003, Seyhan / Adana — <a href="mailto:destek@toptango.com.tr">destek@toptango.com.tr</a>';
+
+function renderGizlilik() {
+  legalPage('Gizlilik Politikası', [
+    ['', '<p>Bu politika, Toptango web sitesi (toptango.com.tr) ve ToptanGO iOS uygulaması (&#34;Platform&#34;) üzerinden hangi verileri topladığımızı, neden topladığımızı ve haklarınızı açıklar. Ayrıntılı yasal bilgilendirme için <a href="#/kvkk">KVKK Aydınlatma Metni</a>&#39;ne bakabilirsiniz.</p>'],
+    ['1. Hizmet Sağlayıcı', '<p>' + LEGAL_PROVIDER + '</p>'],
+    ['2. Topladığımız Veriler', '<ul style="margin:10px 0 10px 24px;"><li><strong>Zorunlu:</strong> ad soyad, e-posta adresi, şifre (şifrelenmiş olarak saklanır).</li><li><strong>İsteğe bağlı:</strong> telefon numarası, firma adı, şehir, firma logosu. Bu bilgileri vermeden üye olabilir ve ilan verebilirsiniz.</li><li><strong>İlan içerikleri:</strong> ilan başlığı, açıklama, fiyat, görseller ve ilanda paylaşmayı seçtiğiniz iletişim bilgileri (herkese açık yayımlanır).</li><li><strong>Mesajlar:</strong> Platform içi mesajlaşmada gönderdiğiniz mesajlar.</li><li><strong>Teknik veriler:</strong> IP adresi, tarayıcı/cihaz bilgisi, iOS bildirimlerini açtıysanız cihaz bildirim anahtarı.</li></ul>'],
+    ['3. Verileri Ne İçin Kullanıyoruz', '<p>Üyelik ve hesap yönetimi, ilanların yayımlanması, kullanıcılar arası iletişim, güvenlik ve dolandırıcılığın önlenmesi, yasal yükümlülükler ve (yalnızca web&#39;de, onayınızla) reklam performansının ölçülmesi. Verilerinizi satmayız ve reklamcılara kişisel profil olarak aktarmayız.</p>'],
+    ['4. iOS Uygulaması', '<p>ToptanGO iOS uygulaması reklam veya takip amaçlı hiçbir araç (ör. Google Ads, analiz/izleme SDK&#39;ları) yüklemez ve sizi diğer şirketlerin uygulama veya web sitelerinde izlemez. Bildirim izni ve kamera/galeri izni yalnızca siz izin verirseniz ve ilgili özellik için kullanılır.</p>'],
+    ['5. Üçüncü Taraf Hizmetler', '<p>Railway (barındırma), Netlify (alan adı), Resend (işlem e-postaları), Google (giriş, yazı tipleri ve web&#39;de onaya bağlı reklam ölçümü) ve Apple (giriş ve bildirimler). Bu sağlayıcılar verileri yalnızca hizmetin sunulması için işler.</p>'],
+    ['6. Yaş Sınırı', '<p>Platform ticari (B2B) kullanıma yöneliktir ve 18 yaşından küçüklere yönelik değildir. 18 yaşından küçük olduğunu bildiğimiz kişilere ait hesapları ve verileri sileriz.</p>'],
+    ['7. Haklarınız ve Veri Silme', '<p>Verilerinize erişme, düzeltme ve silme hakkınız vardır. Hesabınızı <strong>Hesabım &gt; Hesabımı Sil</strong> adımıyla kendiniz anında silebilir veya <a href="#/hesap-silme">Hesap ve Veri Silme</a> sayfasındaki yöntemle talepte bulunabilirsiniz.</p>'],
+    ['8. Güvenlik', '<p>Şifreler tek yönlü şifrelenerek (bcrypt) saklanır, veri aktarımı HTTPS ile şifrelenir.</p>'],
+    ['9. Değişiklikler', '<p>Bu politikadaki önemli değişiklikleri Platform üzerinden duyururuz.</p>']
+  ]);
+}
+
+function renderCerezPolitikasi() {
+  legalPage('Çerez Politikası', [
+    ['', '<p>Bu politika, Toptango web sitesinde kullanılan çerezleri ve benzeri teknolojileri (tarayıcı yerel depolaması) açıklar.</p>'],
+    ['1. Zorunlu Çerezler / Yerel Depolama', '<p>Oturumunuzun açık kalması (giriş anahtarı), &#34;Beni hatırla&#34; tercihi ve çerez tercihinizin hatırlanması için kullanılır. Bunlar olmadan site çalışmaz ve onay gerektirmez.</p>'],
+    ['2. Google ile Giriş', '<p>&#34;Google ile giriş&#34; düğmesi Google tarafından sağlanır; bu düğmeyi kullandığınızda Google kendi çerezlerini kullanabilir.</p>'],
+    ['3. Reklam Ölçümü (Onaya Bağlı)', '<p>Google Ads dönüşüm ölçümü etiketi <strong>yalnızca &#34;Tümünü Kabul Et&#34; seçeneğini işaretlerseniz</strong> yüklenir. &#34;Yalnızca Zorunlu&#34; seçerseniz yüklenmez. iOS uygulamasında bu etiket hiçbir koşulda yüklenmez.</p>'],
+    ['4. Tercihinizi Değiştirme', '<p>Sayfanın en altındaki <strong>Çerez Tercihleri</strong> bağlantısından seçiminizi istediğiniz zaman değiştirebilir veya tarayıcı ayarlarınızdan çerezleri silebilirsiniz.</p>'],
+    ['5. İletişim', '<p>' + LEGAL_PROVIDER + '</p>']
+  ]);
+}
+
+function renderUcretlendirme() {
+  legalPage('Ücretlendirme ve İade Politikası', [
+    ['1. Ücretsiz Hizmet', '<p>Toptango&#39;ya üyelik, ilan verme, ilanları görüntüleme, mesajlaşma ve vitrin kullanımı şu anda <strong>tamamen ücretsizdir</strong>. Platform, alıcı ve satıcı arasındaki satışlardan <strong>komisyon almaz</strong> ve gizli/sürpriz bir ücret talep etmez. iOS uygulamasında uygulama içi satın alma bulunmaz.</p>'],
+    ['2. Alıcı ile Satıcı Arasındaki İşlemler', '<p>Toptango bir ilan platformudur; satışın tarafı değildir. Ürün bedeli, ödeme, teslimat, iade ve garanti konuları doğrudan alıcı ile satıcı arasında kararlaştırılır. Platform üzerinden ödeme alınmadığı için Toptango&#39;nun iade edeceği bir bedel de bulunmaz. Şüpheli bir durumda ilanı &#34;Şikayet Et&#34; ile bize bildirin.</p>'],
+    ['3. Gelecekte Ücretli Hizmetler', '<p>İleride ücretli bir hizmet sunulursa; fiyat, kapsam ve iade koşulları satın alma öncesinde açıkça gösterilecek, ücretsiz mevcut hizmetler önceden duyurulmadan ücretli hale getirilmeyecektir.</p>'],
+    ['4. İletişim', '<p>' + LEGAL_PROVIDER + '</p>']
+  ]);
+}
+
+function renderHesapSilme() {
+  legalPage('Hesap ve Veri Silme', [
+    ['1. Uygulamadan veya Siteden Anında Silme', '<p>Giriş yaptıktan sonra <strong>Hesabım</strong> sayfasına gidin ve <strong>Hesabımı Sil</strong> düğmesine basın. Onay verdiğiniz anda hesabınız, ilanlarınız, görselleriniz, favorileriniz, mesajlarınız ve bildirim kayıtlarınız kalıcı olarak silinir. Apple ile giriş yaptıysanız, iPhone&#39;unuzda <strong>Ayarlar &gt; [adınız] &gt; Apple ile Giriş Yap</strong> bölümünden ToptanGO bağlantısını da kaldırabilirsiniz.</p>' +
+      (isLoggedIn() ? '<p><a class="btn btn-primary" href="#/hesabim">Hesabım sayfasına git</a></p>' : '<p><a class="btn btn-primary" href="#/giris">Giriş yap</a></p>')],
+    ['2. E-posta ile Silme Talebi', '<p>Hesabınıza giriş yapamıyorsanız, üye olduğunuz e-posta adresinden <a href="mailto:destek@toptango.com.tr?subject=Hesap%20Silme%20Talebi">destek@toptango.com.tr</a> adresine &#34;Hesap Silme Talebi&#34; konulu bir e-posta gönderin. Kimliğinizi doğruladıktan sonra talebiniz en geç 30 gün içinde tamamlanır.</p>'],
+    ['3. Saklanan Veriler', '<p>Silme işleminden sonra yalnızca kanunen saklanması zorunlu kayıtlar yasal süre boyunca tutulur ve süre sonunda imha edilir.</p>']
+  ]);
 }
 
 function renderIletisim() {

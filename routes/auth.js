@@ -511,6 +511,11 @@ router.delete('/account', authenticate, async (req, res) => {
     db.prepare('DELETE FROM listing_images WHERE listing_id IN (SELECT id FROM listings WHERE user_id=?)').run(uid);
     db.prepare('DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE user1_id=? OR user2_id=?)').run(uid, uid);
     db.prepare('DELETE FROM conversations WHERE user1_id=? OR user2_id=?').run(uid, uid);
+    // Kullaniciya bagli diger kayitlar (KVKK / App Store 5.1.1(v): tam silme)
+    db.prepare('DELETE FROM favorites WHERE user_id=? OR listing_id IN (SELECT id FROM listings WHERE user_id=?)').run(uid, uid);
+    db.prepare('DELETE FROM showcase_listings WHERE listing_id IN (SELECT id FROM listings WHERE user_id=?)').run(uid);
+    db.prepare('DELETE FROM notifications WHERE user_id=?').run(uid);
+    db.prepare('DELETE FROM device_tokens WHERE user_id=?').run(uid);
     db.prepare('DELETE FROM listings WHERE user_id=?').run(uid);
     db.prepare('DELETE FROM users WHERE id=?').run(uid);
 
