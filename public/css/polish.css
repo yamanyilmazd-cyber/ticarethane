@@ -1,0 +1,356 @@
+/* ================================================================
+   Toptango — Tasarım cilası (polish.css)
+   style.css'in ÜSTÜNE yüklenir; hiçbir class adı / JS davranışı
+   değişmez. Geri almak için index.html'deki tek <link> satırını sil.
+
+   İlkeler (Apple HIG / WWDC "Designing Fluid Interfaces"):
+   - Geri bildirim basıldığı anda (:active), bırakınca değil
+   - Hover efektleri sadece fareli cihazlarda (dokunmatikte "yapışmaz")
+   - Kayan paneller geldikleri yönden girer (alttan sheet, sağdan çekmece)
+   - Buzlu cam yüzeyler (çerez bandı, slider noktaları, modal arka planı)
+   - Büyük başlıkta sıkı, küçük metinde doğal harf aralığı
+   - Azaltılmış hareket / saydamlık / yüksek kontrast tercihlerine saygı
+   ================================================================ */
+
+:root {
+  /* style.css'te kullanılıp hiç tanımlanmamış token'lar (konuşma listesi
+     hover'ı, sohbet gün ayracı, bildirim hover'ı görünmüyordu) */
+  --bg-alt:  #efede7;
+  --surface: #f3f1ec;
+
+  /* iOS sheet eğrisi: hızlı başlar, yumuşak oturur (overshoot yok) */
+  --ease-out:    cubic-bezier(.32, .72, 0, 1);
+  --ease-spring: cubic-bezier(.2, .8, .2, 1);
+
+  --r:     10px;
+  --r-lg:  14px;
+  --r-xl:  20px;
+
+  /* Katmanlı, daha doğal gölgeler (yakın + uzak ışık) */
+  --sh-sm: 0 1px 2px rgba(22,32,50,.05), 0 1px 3px rgba(22,32,50,.04);
+  --sh:    0 1px 2px rgba(22,32,50,.05), 0 4px 12px rgba(22,32,50,.06);
+  --sh-lg: 0 2px 4px rgba(22,32,50,.04), 0 12px 32px rgba(22,32,50,.10);
+  --sh-xl: 0 4px 8px rgba(22,32,50,.05), 0 24px 56px rgba(22,32,50,.18);
+}
+
+/* ------ Tipografi ------ */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+::selection { background: rgba(224,154,34,.28); }
+
+.section-title {
+  font-size: 1.375rem; font-weight: 700; letter-spacing: -0.022em; line-height: 1.2;
+}
+.section-sub { letter-spacing: -0.003em; }
+.hero h1, .cat-hero-title, .dash-header h1 { letter-spacing: -0.025em; }
+.home-intro-title { letter-spacing: -0.022em; }
+.auth-card h2, .modal-header h2, .admin-content h2 { letter-spacing: -0.018em; }
+.navbar-logo { letter-spacing: -0.03em; }
+
+/* Fiyat ve sayılar hizalı dursun */
+.listing-card-price, .listing-price-main, .stat-val, .hero-stat-val,
+.sector-bar-count, .city-tag-count, .page-btn, .conv-badge, .mf-badge {
+  font-variant-numeric: tabular-nums;
+}
+.listing-card-price { letter-spacing: -0.015em; }
+.listing-price-main { letter-spacing: -0.025em; }
+
+/* ------ Dokunma geri bildirimi (anında, basınca) ------ */
+.btn, .btn-nav, .navbar-search button, .hero-search button, .page-btn,
+.cat-card, .listing-card, .mobile-filter-btn, .mf-group-row, .hero-dot,
+.cat-bar-item, .dash-tab, .modal-close, .mf-close, .mf-back {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ================================================================
+   NAVBAR
+   Bilinçli olarak OPAK bırakıldı: iOS uygulaması (MainViewController
+   setupStatusBarCover) durum çubuğunun altına düz #162032 bir şerit
+   koyuyor. Yarı saydam navbar açık zemin üstünde gri-maviye dönüp o
+   şeritle arasında renk çizgisi oluşturuyordu (simülatörde doğrulandı).
+   ================================================================ */
+
+.navbar-search input {
+  border-radius: var(--r) 0 0 var(--r);
+  transition: background .2s var(--ease-out), border-color .2s var(--ease-out), box-shadow .2s var(--ease-out);
+}
+.navbar-search input:focus {
+  background: rgba(255,255,255,.16);
+  border-color: rgba(255,255,255,.28);
+  box-shadow: 0 0 0 4px rgba(224,154,34,.18);
+}
+.navbar-search button {
+  border-radius: 0 var(--r) var(--r) 0;
+  transition: background .15s, transform .1s ease-out;
+}
+.navbar-search button:active { transform: scale(.97); }
+
+.btn-nav {
+  border-radius: var(--r);
+  transition: background .15s, opacity .15s, transform .1s ease-out;
+}
+.btn-nav:active { transform: scale(.94); }
+
+/* Kategori şeridi */
+.cat-bar-item { transition: color .2s var(--ease-out), border-color .2s var(--ease-out), opacity .1s; }
+.cat-bar-item:active { opacity: .6; }
+
+/* ================================================================
+   BUTONLAR
+   ================================================================ */
+.btn {
+  border-radius: var(--r);
+  transition: background .15s, box-shadow .2s var(--ease-out), opacity .15s, transform .1s ease-out, color .15s, border-color .15s;
+}
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn-accent, .btn-nav-accent, .navbar-search button, .hero-search button {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+}
+.btn-accent:hover:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 14px rgba(200,130,26,.28); }
+.btn-primary:hover:not(:disabled) { box-shadow: 0 4px 14px rgba(22,32,50,.22); }
+
+.page-btn { border-radius: var(--r); transition: all .15s, transform .1s ease-out; }
+.page-btn:active:not(:disabled) { transform: scale(.94); }
+
+.mobile-filter-btn { transition: transform .1s ease-out, opacity .15s; }
+.mobile-filter-btn:active { transform: scale(.98); }
+.mf-group-row { transition: background .12s; }
+.mf-group-row:active { background: var(--surface); }
+
+/* ================================================================
+   FORMLAR
+   ================================================================ */
+.form-control {
+  border-radius: var(--r);
+  transition: border-color .2s var(--ease-out), box-shadow .2s var(--ease-out), background .2s;
+}
+.form-control:hover:not(:focus):not(:disabled) { border-color: var(--border-mid); }
+.form-control:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(34,85,196,.12); }
+
+/* ================================================================
+   KARTLAR (kategori + ilan)
+   ================================================================ */
+.cat-card {
+  border-radius: 16px;
+  border-color: rgba(22,32,50,.07);
+  box-shadow: var(--sh-sm);
+  transition: box-shadow .35s var(--ease-spring), border-color .35s var(--ease-spring), transform .35s var(--ease-spring);
+}
+.cat-icon-wrap { border-radius: 30%; }
+.cat-card-name { letter-spacing: -0.005em; }
+
+.listing-card {
+  border-radius: 16px;
+  border-color: rgba(22,32,50,.07);
+  box-shadow: var(--sh-sm);
+  transition: box-shadow .35s var(--ease-spring), transform .35s var(--ease-spring);
+}
+.listing-card-img { transition: transform .6s var(--ease-spring); }
+.listing-card-title { letter-spacing: -0.01em; }
+.listing-card-meta { border-top-color: rgba(22,32,50,.06); }
+
+/* Basınca: anında hafif içe çökme (dokunmatik + fare) */
+.cat-card:active, .listing-card:active {
+  transform: scale(.98);
+  transition-duration: .1s;
+}
+
+/* Hover lift sadece gerçek fareli cihazlarda */
+@media (hover: hover) and (pointer: fine) {
+  .cat-card:hover { box-shadow: var(--sh-lg); border-color: rgba(22,32,50,.12); transform: translateY(-3px); }
+  .listing-card:hover { box-shadow: var(--sh-lg); transform: translateY(-3px); }
+  .listing-card:hover .listing-card-img { transform: scale(1.04); }
+  .cat-card:active, .listing-card:active { transform: translateY(-1px) scale(.985); }
+}
+/* Dokunmatikte style.css'teki hover kaldırma (iOS'ta dokunduktan sonra
+   kart havada asılı kalıyordu) */
+@media (hover: none) {
+  .cat-card:hover, .listing-card:hover { transform: none; box-shadow: var(--sh-sm); }
+  .cat-card:hover { border-color: rgba(22,32,50,.07); }
+  .stat-card-link:hover { transform: none; box-shadow: var(--sh-sm); }
+  .cat-card:active, .listing-card:active { transform: scale(.98); }
+}
+
+/* Öne çıkan ilan: altın çerçeve hover'da da korunsun */
+.listing-card:has(.badge-featured) {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px #fef3c7, 0 4px 12px rgba(245,158,11,.15);
+}
+@media (hover: hover) and (pointer: fine) {
+  .listing-card:has(.badge-featured):hover { box-shadow: 0 0 0 2px #fef3c7, 0 14px 32px rgba(245,158,11,.22); }
+}
+
+/* "Tüm İlanlar" kartının gradyanı kendi gölgesiyle */
+.cat-card-all { border-color: transparent; box-shadow: 0 6px 20px rgba(34,85,196,.25); }
+
+/* Vitrin şeridi: ince kaydırma çubuğu, kenarlarda gölge kesilmesin */
+.vitrin-scroll {
+  scrollbar-width: thin; scrollbar-color: var(--border-mid) transparent;
+  padding-top: 4px; padding-bottom: 14px;
+  scroll-padding-inline: 2px;
+}
+.vitrin-scroll::-webkit-scrollbar { height: 6px; }
+.vitrin-scroll::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 99px; }
+.vitrin-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* Filtre / içerik blokları */
+.filter-block, .card, .stat-card, .listing-contact-card, .listing-price-box, .table-wrapper, .conv-list {
+  border-radius: var(--r-lg);
+}
+.filter-block, .card, .stat-card, .listing-contact-card { border-color: rgba(22,32,50,.08); box-shadow: var(--sh-sm); }
+.filter-radio { transition: color .15s; }
+.listing-main-img { border-radius: 16px; }
+.listing-thumb { border-radius: var(--r); transition: border-color .15s, transform .1s ease-out; }
+.listing-thumb:active { transform: scale(.95); }
+.badge { letter-spacing: .01em; }
+
+/* ================================================================
+   HERO SLIDER — noktalar buzlu kapsül içinde
+   ================================================================ */
+.hero-slide { transition: opacity .8s var(--ease-out); }
+.hero-slider-dots {
+  padding: 6px 9px; border-radius: 99px;
+  background: rgba(10,15,25,.28);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+}
+.hero-dot { transition: background .3s var(--ease-out), width .35s var(--ease-spring); }
+
+/* ================================================================
+   MODAL — masaüstünde ortadan, mobilde alttan (sheet)
+   ================================================================ */
+.modal-overlay {
+  background: rgba(10,15,25,.42);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  backdrop-filter: blur(8px) saturate(140%);
+  animation: tgFade .25s var(--ease-out);
+}
+.modal { animation: tgModalIn .38s var(--ease-out); }
+.modal-close { border-radius: 99px; transition: background .15s, transform .1s ease-out; }
+.modal-close:active { transform: scale(.9); }
+@keyframes tgFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tgModalIn {
+  from { opacity: 0; transform: translateY(10px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes tgSheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: none; }
+}
+@keyframes tgSlideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: none; }
+}
+
+@media (max-width: 768px) {
+  .modal { animation: tgSheetUp .42s var(--ease-out); }
+  /* sheet tutamacı: alttan açılan panel olduğunu belli eder */
+  .modal::before {
+    content: ""; display: block; width: 36px; height: 5px; border-radius: 99px;
+    background: rgba(22,32,50,.18); margin: 8px auto 0;
+  }
+}
+
+/* Mobil filtre çekmecesi: sağdan girer, alt paneller de sağdan */
+@media (max-width: 860px) {
+  .mobile-filter-overlay {
+    background: rgba(10,15,25,.42);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+  .mobile-filter-overlay.open { animation: tgFade .25s var(--ease-out); }
+  .mobile-filter-overlay.open .mf-sheet { animation: tgSlideInRight .38s var(--ease-out); }
+  .mf-sheet { border-radius: 20px 0 0 20px; box-shadow: -12px 0 40px rgba(10,15,25,.22); }
+  .mf-panel.open { animation: tgSlideInRight .32s var(--ease-out); }
+  .mf-close, .mf-back { border-radius: 99px; transition: background .15s, transform .1s ease-out; }
+  .mf-close:active, .mf-back:active { transform: scale(.9); background: rgba(255,255,255,.12); }
+}
+
+/* ================================================================
+   TOAST & ÇEREZ BANDI
+   ================================================================ */
+.toast {
+  border-radius: var(--r-lg);
+  animation: tgToastIn .4s var(--ease-out);
+  letter-spacing: -0.005em;
+}
+@keyframes tgToastIn {
+  from { opacity: 0; transform: translateY(14px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+.cookie-banner {
+  border-radius: 18px;
+  border-color: rgba(255,255,255,.6);
+  background: rgba(255,255,255,.84);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: 0 2px 6px rgba(10,15,25,.06), 0 18px 48px rgba(10,15,25,.18);
+  animation: tgToastIn .45s var(--ease-out);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .cookie-banner { background: #fff; }
+}
+
+/* iOS uygulamasının (MainViewController.swift) giriş sayfasına enjekte ettiği
+   native "Apple ile Giriş Yap" butonu inline border-radius:8px ile geliyor;
+   site butonlarıyla aynı köşede kalsın ve basınca tepki versin. Uygulamayı
+   güncellemeden buradan düzeltiliyor (inline stil yüzünden !important şart). */
+#nativeAppleSignInBtn {
+  border-radius: var(--r) !important;
+  transition: transform .1s ease-out, opacity .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+#nativeAppleSignInBtn:active { transform: scale(.97); }
+
+/* ================================================================
+   AUTH / DİĞER
+   ================================================================ */
+.auth-card { border-radius: 22px; border-color: rgba(22,32,50,.07); }
+.upload-area { border-radius: var(--r-lg); transition: border-color .2s var(--ease-out), background .2s var(--ease-out); }
+.chat-bubble { border-radius: 20px; }
+.bubble-mine { border-bottom-right-radius: 6px; }
+.bubble-theirs { border-bottom-left-radius: 6px; }
+.footer-col ul li a { transition: color .2s var(--ease-out); }
+
+/* ================================================================
+   ERİŞİLEBİLİRLİK TERCİHLERİ
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .cat-card:hover, .listing-card:hover, .stat-card-link:hover,
+  .cat-card:active, .listing-card:active,
+  .btn:active:not(:disabled), .btn-nav:active, .page-btn:active:not(:disabled),
+  .navbar-search button:active, .mobile-filter-btn:active, .listing-thumb:active,
+  .modal-close:active, .mf-close:active, .mf-back:active,
+  #nativeAppleSignInBtn:active { transform: none !important; }
+  .listing-card:hover .listing-card-img { transform: none !important; }
+  /* Kayma yerine kısa çapraz geçiş */
+  .modal, .toast, .cookie-banner,
+  .mobile-filter-overlay.open .mf-sheet, .mf-panel.open {
+    animation: tgFade .2s ease !important;
+  }
+  .hero-dot { transition: background .2s; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .cookie-banner { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .modal-overlay, .mobile-filter-overlay { background: rgba(10,15,25,.6); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .hero-slider-dots { background: rgba(10,15,25,.55); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+@media (prefers-contrast: more) {
+  .cat-card, .listing-card, .filter-block, .card, .stat-card, .listing-contact-card, .auth-card { border-color: var(--border-mid); }
+  .cookie-banner { background: #fff; border-color: #94a3b8; }
+}
+
+/* ================================================================
+   MOBİL
+   ================================================================ */
+@media (max-width: 768px) {
+  .section-title { font-size: 1.2rem; }
+  .cat-card, .listing-card { border-radius: 14px; }
+}
