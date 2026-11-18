@@ -804,13 +804,6 @@ async function renderHome() {
 
     app.innerHTML =
       heroHTML +
-      // SEO: ana sayfanin tek H1'i + kisa tanitim (hero gorselindeki mesajin metin karsiligi)
-      '<section class="section home-intro">' +
-        '<div class="container">' +
-          '<h1 class="home-intro-title">Türkiye\'nin ticari mal ve hammadde ilan platformu</h1>' +
-          '<p class="home-intro-text">Toptan ticari mal, hammadde ve sanayi ürünü alım-satım ilanları. İlan vermek ücretsiz, satışlardan komisyon alınmaz.</p>' +
-        '</div>' +
-      '</section>' +
       '<section class="section" style="padding-bottom:16px;">' +
         '<div class="container">' +
           '<div class="section-header"><div><div class="section-title">Sektörler</div><div class="section-sub">Aradığınız ticari malı sektörüne göre bulun</div></div><a href="#/ara" class="btn btn-ghost btn-sm">Tüm İlanlar</a></div>' +
