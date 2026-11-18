@@ -546,7 +546,7 @@ router.post('/forgot-password', async (req, res) => {
 
     // E-posta gonder
     const base = process.env.APP_URL || 'http://localhost:3000';
-    const resetLink = base + '/#/sifre-sifirla?token=' + token;
+    const resetLink = base + '/sifre-sifirla?token=' + token;
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
     console.info('[MAIL] KEY mevcut:', !!RESEND_API_KEY, '| FROM:', process.env.SMTP_FROM || '(YOK)');

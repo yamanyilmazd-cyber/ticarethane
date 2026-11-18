@@ -26,26 +26,12 @@
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--seo:start (sunucu bu blogu her sayfa icin yeniden yazar: utils/ssr.js) -->
   <title>Toptango | Ticari Mal ve Hammadde İlan Platformu</title>
   <meta name="description" content="Türkiye genelinde toptan ticari mal, hammadde ve sanayi ürünü alım-satım ilanları. Kimya, demir-çelik, tarım, plastik ve daha fazlası; ücretsiz, komisyonsuz." />
-
-  <link rel="icon" type="image/png" href="/favicon.png" />
-  <link rel="shortcut icon" href="/favicon.ico" />
-  <meta name="theme-color" content="#162032" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=18" />
-  <link rel="stylesheet" href="/css/polish.css?v=2" />
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <!-- SEO -->
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://www.toptango.com.tr/" />
   <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Toptango" />
-  <meta property="og:locale" content="tr_TR" />
   <meta property="og:url" content="https://www.toptango.com.tr/" />
   <meta property="og:title" content="Toptango | Ticari Mal ve Hammadde İlan Platformu" />
   <meta property="og:description" content="Toptan ticari mal, hammadde ve sanayi ürünü alım-satım ilanları. Ücretsiz ve komisyonsuz ilan verin." />
@@ -55,6 +41,22 @@
   <meta property="og:image:alt" content="Toptango — Ticari mal ve hammadde ilan platformu" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="https://www.toptango.com.tr/og-image.png" />
+  <!--seo:end-->
+
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="shortcut icon" href="/favicon.ico" />
+  <meta name="theme-color" content="#162032" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css?v=19" />
+  <link rel="stylesheet" href="/css/polish.css?v=2" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- SEO (tum sayfalarda ortak) -->
+  <meta property="og:site_name" content="Toptango" />
+  <meta property="og:locale" content="tr_TR" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -95,7 +97,7 @@
 <!-- ===== NAVBAR ===== -->
 <nav class="navbar">
   <div class="container navbar-inner">
-    <a href="#/" class="navbar-logo">Toptan<span>go</span></a>
+    <a href="/" class="navbar-logo">Toptan<span>go</span></a>
 
     <div class="navbar-search">
       <form id="navSearchForm">
@@ -118,7 +120,9 @@
 <!-- ===== ANA İÇERİK ===== -->
 <main id="app">
   <!-- JavaScript calistirmayan tarayici ve botlar (AI tarayicilari dahil) icin
-       statik icerik. app.js yuklenince bu blok uygulama arayuzuyle degisir. -->
+       statik icerik. app.js yuklenince bu blok uygulama arayuzuyle degisir.
+       Sunucu ssr:start/ssr:end arasini her sayfa icin yeniden yazar (utils/ssr.js). -->
+  <!--ssr:start-->
   <section class="section home-intro">
     <div class="container">
       <h1 class="home-intro-title">Türkiye'nin ticari mal ve hammadde ilan platformu</h1>
@@ -126,6 +130,7 @@
       <div class="page-loading"><div class="spinner"></div></div>
     </div>
   </section>
+  <!--ssr:end-->
 </main>
 
 <!-- ===== FOOTER ===== -->
@@ -139,25 +144,25 @@
       <div class="footer-col">
         <h4>Platform</h4>
         <ul>
-          <li><a href="#/hakkimizda">Hakkımızda</a></li>
-          <li><a href="#/">Ana Sayfa</a></li>
-          <li><a href="#/ara">Tüm İlanlar</a></li>
-          <li><a href="#/vitrin">Vitrin</a></li>
-          <li><a href="#/ilan-ver">İlan Ver</a></li>
-          <li><a href="#/hesabim">Hesabım</a></li>
+          <li><a href="/hakkimizda">Hakkımızda</a></li>
+          <li><a href="/">Ana Sayfa</a></li>
+          <li><a href="/ara">Tüm İlanlar</a></li>
+          <li><a href="/vitrin">Vitrin</a></li>
+          <li><a href="/ilan-ver">İlan Ver</a></li>
+          <li><a href="/hesabim">Hesabım</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h4>Yasal</h4>
         <ul>
-          <li><a href="#/sozlesme">Kullanım Koşulları</a></li>
-          <li><a href="#/gizlilik-politikasi">Gizlilik Politikası</a></li>
-          <li><a href="#/kvkk">KVKK Aydınlatma Metni</a></li>
-          <li><a href="#/cerez-politikasi">Çerez Politikası</a></li>
-          <li><a href="#/ucretlendirme">Ücretlendirme ve İade</a></li>
-          <li><a href="#/hesap-silme">Hesap ve Veri Silme</a></li>
-          <li><a href="#/ilan-kurallari">İlan Kuralları</a></li>
-          <li><a href="#/iletisim">İletişim</a></li>
+          <li><a href="/sozlesme">Kullanım Koşulları</a></li>
+          <li><a href="/gizlilik-politikasi">Gizlilik Politikası</a></li>
+          <li><a href="/kvkk">KVKK Aydınlatma Metni</a></li>
+          <li><a href="/cerez-politikasi">Çerez Politikası</a></li>
+          <li><a href="/ucretlendirme">Ücretlendirme ve İade</a></li>
+          <li><a href="/hesap-silme">Hesap ve Veri Silme</a></li>
+          <li><a href="/ilan-kurallari">İlan Kuralları</a></li>
+          <li><a href="/iletisim">İletişim</a></li>
           <li><a href="#" id="cookiePrefsLink">Çerez Tercihleri</a></li>
         </ul>
       </div>

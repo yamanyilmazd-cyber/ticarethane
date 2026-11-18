@@ -23,7 +23,7 @@ async function sendListingApprovedEmail(user, listing) {
   if (!user || !user.email) return;
   try {
     const base = process.env.APP_URL || 'https://www.toptango.com.tr';
-    const link = base + '/#/ilan/' + listing.id;
+    const link = base + '/ilan/' + listing.id;
     const html = mailTemplate('İlanınız Onaylandı', [
       '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 12px;">Merhaba <strong>' + escMail(user.name) + '</strong>,</p>',
       '<p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">"<strong>' + escMail(listing.title) + '</strong>" başlıklı ilanınız moderasyon onayından geçti ve artık ToptanGO üzerinde yayında.</p>',

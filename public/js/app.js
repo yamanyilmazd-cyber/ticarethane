@@ -185,7 +185,7 @@ function toast(msg, type, ms) {
 }
 
 // ================================================================
-// ROUTER — href="#/path" ile çalışır, onclick gerekmez
+// ROUTER — href="/path" ile çalışır, onclick gerekmez
 // ================================================================
 var routes = {
   '/':                    renderHome,
@@ -218,9 +218,37 @@ var routes = {
   '/hizli-ilan/:slug': renderCreateListing,
 };
 
+// Rota artik URL yolundan okunuyor (History API): /ilan/12-kask, /kategori/kimya.
+// Eski "#/..." linkleri asagidaki legacyHashRedirect() ile yeni yollara cevriliyor.
+// (Fonksiyon adi geriye uyumluluk icin getHash olarak kaldi.)
 function getHash() {
-  return window.location.hash || '#/';
+  return (window.location.pathname || '/') + (window.location.search || '');
 }
+
+// Turkce karakterleri sadelestirip URL'ye uygun slug uretir.
+// Sunucudaki utils/slug.js ile AYNI kurali kullanmali.
+function slugify(s) {
+  return String(s || '').toLocaleLowerCase('tr-TR')
+    .replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o')
+    .replace(/ş/g, 's').replace(/ü/g, 'u').replace(/â/g, 'a').replace(/î/g, 'i').replace(/û/g, 'u')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    .slice(0, 80).replace(/-+$/, '');
+}
+function listingPath(l) {
+  var s = slugify(l && l.title);
+  return '/ilan/' + l.id + (s ? '-' + s : '');
+}
+
+// Eski hash linkleri (#/ilan/12, e-postalardaki #/sifre-sifirla?token=...,
+// eski bildirim linkleri) yeni yola tasinir; gecmise yeni kayit eklenmez.
+function legacyHashRedirect() {
+  var h = window.location.hash || '';
+  if (h.indexOf('#/') === 0 || h.indexOf('#!/') === 0) {
+    history.replaceState(null, '', h.replace(/^#!?/, ''));
+  }
+}
+legacyHashRedirect();
 
 function matchRoute(hash) {
   var path = (hash.replace(/^#!?/, '').replace(/^\/+/, '/') || '/').split('?')[0];
@@ -240,8 +268,25 @@ function matchRoute(hash) {
 }
 
 function goTo(path) {
-  window.location.hash = path;
+  path = String(path || '/').replace(/^#!?/, '');
+  if (path.charAt(0) !== '/') path = '/' + path;
+  if (path !== getHash()) history.pushState(null, '', path);
+  router();
 }
+
+// Ic linklere tiklandiginda sayfayi yenilemeden yonlendir. Gercek <a href="/...">
+// linkleri arama motorlari icin taranabilir; tiklamada SPA gibi davranir.
+document.addEventListener('click', function(e) {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+  if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+  var href = a.getAttribute('href') || '';
+  if (href.indexOf('#/') === 0) href = href.slice(1); // eski hash linkleri (or. bildirimler)
+  if (href.charAt(0) !== '/' || href.indexOf('//') === 0) return;
+  if (/^\/(api|uploads|css|js)\//.test(href) || /\.[a-z0-9]{2,5}(\?|$)/i.test(href.split('#')[0])) return;
+  e.preventDefault();
+  goTo(href);
+});
 
 function router() {
   var hash   = getHash();
@@ -263,7 +308,7 @@ function router() {
         '<div style="font-size:3rem;">🔒</div>' +
         '<div class="empty-state-title" style="margin-top:12px;">Yetkisiz Erişim</div>' +
         '<div class="empty-state-sub">Bu sayfaya giriş yetkiniz yok.</div>' +
-        '<a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a>' +
+        '<a href="/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a>' +
         '</div>';
     } else {
       goTo('/giris');
@@ -275,7 +320,9 @@ function router() {
   _pendingFiles = [];
   _toDeleteImgs = new Set();
 
-  document.title = 'Toptango | Ticari Mal ve Hammadde İlan Platformu';
+  // Ilk yuklemede sunucunun bastigi sayfaya ozel <title> korunur; sonraki
+  // gecislerde varsayilana donulur (sayfaya ozel basligi render fonksiyonu koyar).
+  if (_routerRuns++ > 0) document.title = 'Toptango | Ticari Mal ve Hammadde İlan Platformu';
   // html { scroll-behavior: smooth } genel CSS kuralindan dolayi normal
   // scrollTo(0,0) animasyonlu calisiyor — sayfa icerigi (spinner, sonra
   // gercek sayfa) degisirken bu animasyon yarida kesilip kullanici eski
@@ -295,17 +342,22 @@ function router() {
     scrollTop();
   }).catch(function(err) {
     console.error('[Router]', err);
-    app.innerHTML = '<div class="container" style="padding:60px 0;text-align:center;"><p class="text-muted">Sayfa yüklenemedi.</p><a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
+    app.innerHTML = '<div class="container" style="padding:60px 0;text-align:center;"><p class="text-muted">Sayfa yüklenemedi.</p><a href="/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
     scrollTop();
   });
 }
 
-window.addEventListener('hashchange', router);
+var _routerRuns = 0;
+window.addEventListener('popstate', router);
+// Eski bir #/ linki sayfa icinden acilirsa (or. kopyalanmis link) yeni yola cevir
+window.addEventListener('hashchange', function() {
+  if ((window.location.hash || '').indexOf('#/') === 0) { legacyHashRedirect(); router(); }
+});
 
 // Hesabım sayfası Çıkış Yap butonu (delegasyon)
 document.addEventListener('click', function(e) {
   if (e.target && e.target.id === 'dashLogoutBtn') {
-    clearAuth(); if ((location.hash || '#/') === '#/' ) { updateNavbar(); router(); } else { goTo('/'); } toast('Çıkış yapıldı.', 'success');
+    clearAuth(); if (location.pathname === '/') { updateNavbar(); router(); } else { goTo('/'); } toast('Çıkış yapıldı.', 'success');
   }
 });
 
@@ -323,7 +375,7 @@ function showCookieBanner() {
   el.setAttribute('aria-label', 'Çerez tercihleri');
   el.innerHTML =
     '<p>Sitemizin çalışması için zorunlu çerezleri kullanıyoruz. Reklam ölçümü (Google Ads) için ise yalnızca onayınızla çerez kullanırız. ' +
-    'Ayrıntılar: <a href="#/cerez-politikasi">Çerez Politikası</a>.</p>' +
+    'Ayrıntılar: <a href="/cerez-politikasi">Çerez Politikası</a>.</p>' +
     '<div class="cookie-banner-actions">' +
       '<button type="button" class="btn btn-outline" id="cookieRejectBtn">Yalnızca Zorunlu</button>' +
       '<button type="button" class="btn btn-outline" id="cookieAcceptBtn">Tümünü Kabul Et</button>' +
@@ -390,10 +442,10 @@ async function loadCategories() {
 
 function buildCatBar() {
   var el = document.getElementById('catBarInner');
-  var html = '<a class="cat-bar-item" href="#/ara">Tüm İlanlar</a>' +
-    '<a class="cat-bar-item cat-bar-item-vitrin" data-slug="vitrin" href="#/vitrin">★ Vitrin</a>';
+  var html = '<a class="cat-bar-item" href="/ara">Tüm İlanlar</a>' +
+    '<a class="cat-bar-item cat-bar-item-vitrin" data-slug="vitrin" href="/vitrin">★ Vitrin</a>';
   State.categories.forEach(function(c) {
-    html += '<a class="cat-bar-item" data-slug="' + c.slug + '" href="#/kategori/' + c.slug + '">' + esc(c.name) + '</a>';
+    html += '<a class="cat-bar-item" data-slug="' + c.slug + '" href="/kategori/' + c.slug + '">' + esc(c.name) + '</a>';
   });
   el.innerHTML = html;
 }
@@ -402,7 +454,7 @@ function updateCatBar(hash) {
   document.querySelectorAll('.cat-bar-item').forEach(function(el) {
     el.classList.remove('active');
     var slug = el.dataset.slug;
-    if (!slug && (hash === '#/' || hash.startsWith('#/ara'))) el.classList.add('active');
+    if (!slug && (hash === '/' || hash.startsWith('/ara'))) el.classList.add('active');
     else if (slug && hash.includes(slug)) el.classList.add('active');
   });
 }
@@ -432,36 +484,36 @@ function updateNavbar() {
   if (isLoggedIn()) {
     var name = (State.user && State.user.name) ? State.user.name : 'Hesabım';
     el.innerHTML =
-      '<a href="#/favorilerim" class="btn-nav btn-nav-ghost btn-nav-icon" title="Favorilerim">' +
+      '<a href="/favorilerim" class="btn-nav btn-nav-ghost btn-nav-icon" title="Favorilerim">' +
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>' +
       '</a>' +
-      '<a href="#/bildirimler" class="btn-nav btn-nav-ghost btn-nav-icon" title="Bildirimler">' +
+      '<a href="/bildirimler" class="btn-nav btn-nav-ghost btn-nav-icon" title="Bildirimler">' +
         '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:99px;font-size:.6rem;font-weight:700;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;"></span>' +
       '</a>' +
-      '<a href="#/mesajlar" class="btn-nav btn-nav-ghost btn-nav-icon" title="Mesajlar">' +
+      '<a href="/mesajlar" class="btn-nav btn-nav-ghost btn-nav-icon" title="Mesajlar">' +
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' +
         '<span id="msgBadge" style="display:none;position:absolute;top:-4px;right:-6px;background:var(--red);color:#fff;border-radius:99px;font-size:.65rem;font-weight:700;width:17px;height:17px;align-items:center;justify-content:center;"></span>' +
       '</a>' +
-      '<a href="#/hesabim" class="btn-nav btn-nav-ghost" title="Hesabım" style="display:inline-flex;align-items:center;gap:5px;">' +
+      '<a href="/hesabim" class="btn-nav btn-nav-ghost" title="Hesabım" style="display:inline-flex;align-items:center;gap:5px;">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' +
         '<span class="nav-txt">' + esc(name) + '</span></a>' +
-      (isAdmin() ? '<a href="#/admin" class="btn-nav btn-nav-ghost" title="Yönetim" style="display:inline-flex;align-items:center;gap:5px;">' +
+      (isAdmin() ? '<a href="/admin" class="btn-nav btn-nav-ghost" title="Yönetim" style="display:inline-flex;align-items:center;gap:5px;">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>' +
         '<span class="nav-txt">Yönetim</span></a>' : '') +
-      '<a href="#/ilan-ver" class="btn-nav btn-nav-accent" style="white-space:nowrap;">+<span class="nav-txt"> İlan Ver</span></a>' +
+      '<a href="/ilan-ver" class="btn-nav btn-nav-accent" style="white-space:nowrap;">+<span class="nav-txt"> İlan Ver</span></a>' +
       '<button class="btn-nav btn-nav-ghost" id="logoutBtn" title="Çıkış" style="display:inline-flex;align-items:center;gap:5px;">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>' +
         '<span class="nav-txt">Çıkış</span></button>';
     var lb = document.getElementById('logoutBtn');
     if (lb) lb.addEventListener('click', function() {
-      clearAuth(); if ((location.hash || '#/') === '#/' ) { updateNavbar(); router(); } else { goTo('/'); } toast('Çıkış yapıldı.', 'success');
+      clearAuth(); if (location.pathname === '/') { updateNavbar(); router(); } else { goTo('/'); } toast('Çıkış yapıldı.', 'success');
     });
     // Bildirim sayısı
     fetchNotifCount();
   } else {
     el.innerHTML =
-      '<a href="#/giris" class="btn-nav btn-nav-ghost">Giriş Yap</a>' +
-      '<a href="#/kayit" class="btn-nav btn-nav-accent">Üye Ol</a>';
+      '<a href="/giris" class="btn-nav btn-nav-ghost">Giriş Yap</a>' +
+      '<a href="/kayit" class="btn-nav btn-nav-accent">Üye Ol</a>';
   }
 }
 
@@ -729,7 +781,7 @@ function listingCardHTML(l) {
     }
   }
   priceHtml += vatLabelHTML(l);
-  return '<a class="listing-card" href="#/ilan/' + l.id + '">' +
+  return '<a class="listing-card" href="' + listingPath(l) + '">' +
     img +
     '<div class="listing-card-body">' +
       '<div class="listing-card-cat">' + esc(l.category_name || '') + '</div>' +
@@ -750,7 +802,7 @@ function paginationHTML(pag, baseHash) {
   function pageLink(p) {
     var u = new URL('http://x' + baseHash.replace('#',''));
     u.searchParams.set('page', p);
-    return '#' + u.toString().replace('http://x','');
+    return u.toString().replace('http://x','');
   }
   var btns = '<a class="page-btn' + (pag.page===1?' disabled':'') + '" href="' + (pag.page>1?pageLink(pag.page-1):'#') + '">‹</a>';
   for (var p = Math.max(1,pag.page-2); p <= Math.min(pag.pages,pag.page+2); p++) {
@@ -778,12 +830,12 @@ async function renderHome() {
     var heroHTML = banners.length ? '<section class="hero-slider" id="heroSlider"><div class="hero-slider-track">' + banners.map(function(b, i) { var img = '<img src="/uploads/' + esc(b.image) + '" alt="ToptanGO tanıtım görseli ' + (i+1) + '" />'; var ext = !/^https?:\/\/(www\.)?toptango\.com\.tr/i.test(b.link_url || ''); return b.link_url ? '<a class="hero-slide' + (i===0?' active':'') + '" href="' + esc(b.link_url) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '>' + img + '</a>' : '<div class="hero-slide' + (i===0?' active':'') + '">' + img + '</div>'; }).join('') + '</div>' + (banners.length > 1 ? '<div class="hero-slider-dots">' + banners.map(function(_b, i) { return '<button type="button" class="hero-dot' + (i===0?' active':'') + '" data-dot="' + i + '" aria-label="Görsel ' + (i+1) + '"></button>'; }).join('') + '</div>' : '') + '</section>' : '';
 
     var catCards =
-      '<a class="cat-card cat-card-all" href="#/ara">' +
+      '<a class="cat-card cat-card-all" href="/ara">' +
         '<div class="cat-icon-wrap ic-all"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></div>' +
         '<div class="cat-card-name">Tüm İlanlar</div>' +
       '</a>' +
       State.categories.map(function(c, i) {
-        return '<a class="cat-card" href="#/kategori/' + c.slug + '">' +
+        return '<a class="cat-card" href="/kategori/' + c.slug + '">' +
           '<div class="cat-icon-wrap ic-' + (i % 18) + '">' + sectorIcon(c.slug, i) + '</div>' +
           '<div class="cat-card-name">' + esc(c.name) + '</div>' +
         '</a>';
@@ -796,7 +848,7 @@ async function renderHome() {
     var vitrinHTML = vitrinListings.length > 0
       ? '<section class="section vitrin-section" style="padding-top:0;">' +
           '<div class="container">' +
-            '<div class="section-header"><div><div class="section-title">★ Vitrin</div><div class="section-sub">Toptango ekibinin özenle seçtiği ilanlar</div></div><a href="#/vitrin" class="btn btn-ghost btn-sm">Vitrini Gör</a></div>' +
+            '<div class="section-header"><div><div class="section-title">★ Vitrin</div><div class="section-sub">Toptango ekibinin özenle seçtiği ilanlar</div></div><a href="/vitrin" class="btn btn-ghost btn-sm">Vitrini Gör</a></div>' +
             '<div class="vitrin-scroll">' + vitrinListings.map(listingCardHTML).join('') + '</div>' +
           '</div>' +
         '</section>'
@@ -806,14 +858,14 @@ async function renderHome() {
       heroHTML +
       '<section class="section" style="padding-bottom:16px;">' +
         '<div class="container">' +
-          '<div class="section-header"><div><div class="section-title">Sektörler</div><div class="section-sub">Aradığınız ticari malı sektörüne göre bulun</div></div><a href="#/ara" class="btn btn-ghost btn-sm">Tüm İlanlar</a></div>' +
+          '<div class="section-header"><div><div class="section-title">Sektörler</div><div class="section-sub">Aradığınız ticari malı sektörüne göre bulun</div></div><a href="/ara" class="btn btn-ghost btn-sm">Tüm İlanlar</a></div>' +
           '<div class="cat-grid">' + catCards + '</div>' +
         '</div>' +
       '</section>' +
       vitrinHTML +
       '<section class="section">' +
         '<div class="container">' +
-          '<div class="section-header"><div><div class="section-title">Son İlanlar</div><div class="section-sub">Platforma yeni eklenen ilanlar</div></div><a href="#/ara" class="btn btn-ghost btn-sm">Tümünü Gör</a></div>' +
+          '<div class="section-header"><div><div class="section-title">Son İlanlar</div><div class="section-sub">Platforma yeni eklenen ilanlar</div></div><a href="/ara" class="btn btn-ghost btn-sm">Tümünü Gör</a></div>' +
           listings +
         '</div>' +
       '</section>';
@@ -913,7 +965,7 @@ async function renderSearch() {
       p.sort = sort;
       Object.assign(p, overrides);
       Object.keys(p).forEach(function(k) { if (!p[k]) delete p[k]; });
-      return '#/ara?' + new URLSearchParams(p).toString();
+      return '/ara?' + new URLSearchParams(p).toString();
     }
 
     function toggled(list, v) {
@@ -935,7 +987,7 @@ async function renderSearch() {
 
     var activeCount = [search,cities.length,types.length,cats.length,subs.length,priceMin,priceMax,ptypes.length,pbases.length,currencies.length,qunits.length,lotMin,lotMax].filter(Boolean).length;
 
-    var clearHref = '#/ara' + (search?'?search='+encodeURIComponent(search):'');
+    var clearHref = '/ara' + (search?'?search='+encodeURIComponent(search):'');
     var priceRangeCustom =
       '<form class="js-price-form" style="display:flex;flex-direction:column;gap:8px;">' +
         '<input type="number" placeholder="Min ₺" value="' + priceMin + '" name="min" class="form-control" style="font-size:.82rem;padding:6px 10px;" min="0" />' +
@@ -972,14 +1024,14 @@ async function renderSearch() {
 
     app.innerHTML =
       '<div class="container">' +
-        '<div class="breadcrumb"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>' + (search ? '"'+esc(search)+'"' : 'Tüm İlanlar') + '</span></div>' +
+        '<div class="breadcrumb"><a href="/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>' + (search ? '"'+esc(search)+'"' : 'Tüm İlanlar') + '</span></div>' +
         '<div class="page-layout">' +
           '<aside class="filter-sidebar">' + sidebar + '</aside>' +
           '<div>' +
             mobileDrawer +
             '<div class="section-header">' +
               '<div><div class="section-title">' + (search ? '"'+esc(search)+'" için sonuçlar' : 'Tüm İlanlar') + ' <span class="text-muted fs-sm">(' + data.pagination.total + ' ilan)</span></div></div>' +
-              (isLoggedIn() ? '<a href="#/ilan-ver" class="btn btn-accent btn-sm">+ İlan Ver</a>' : '') +
+              (isLoggedIn() ? '<a href="/ilan-ver" class="btn btn-accent btn-sm">+ İlan Ver</a>' : '') +
             '</div>' +
             (data.fuzzy
               ? '<div class="alert alert-info" style="margin-bottom:16px;">"' + esc(search) + '" için tam eşleşme bulunamadı — yakın sonuçlar gösteriliyor.</div>'
@@ -987,7 +1039,7 @@ async function renderSearch() {
             ((search && data.sellers && data.sellers.length)
               ? '<div class="filter-block" style="margin-bottom:18px;"><div class="filter-block-title">Firmalar</div><div class="filter-block-body">' +
                 data.sellers.map(function(f) {
-                  return '<a class="filter-radio" href="#/satici/' + f.id + '" style="font-weight:600;">' +
+                  return '<a class="filter-radio" href="/satici/' + f.id + '" style="font-weight:600;">' +
                     esc(f.company_name || f.name) +
                     (f.is_verified ? ' <span style="color:#16a34a;">✓</span>' : '') +
                     (f.city ? ' <span style="color:var(--text-muted);font-weight:400;">· ' + esc(f.city) + '</span>' : '') +
@@ -1010,7 +1062,7 @@ async function renderSearch() {
           e.preventDefault();
           var mn = f.querySelector('[name="min"]').value.trim();
           var mx = f.querySelector('[name="max"]').value.trim();
-          window.location.hash = aLink({price_min: mn, price_max: mx, page: 1});
+          goTo(aLink({price_min: mn, price_max: mx, page: 1}));
         });
       })(priceForms[pfi]);
     }
@@ -1021,7 +1073,7 @@ async function renderSearch() {
           e.preventDefault();
           var lmn = f.querySelector('[name="min"]').value.trim();
           var lmx = f.querySelector('[name="max"]').value.trim();
-          window.location.hash = aLink({lot_min: lmn, lot_max: lmx, page: 1});
+          goTo(aLink({lot_min: lmn, lot_max: lmx, page: 1}));
         });
       })(lotForms[lfi]);
     }
@@ -1031,7 +1083,7 @@ async function renderSearch() {
   } catch(err) {
     console.error('[renderSearch]', err);
     var appEl = document.getElementById('app');
-    if (appEl) appEl.innerHTML = '<div class="container" style="padding:40px 16px;text-align:center;"><div class="alert alert-error">Arama yüklenemedi: ' + esc(err.message||'Bilinmeyen hata') + '</div><a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
+    if (appEl) appEl.innerHTML = '<div class="container" style="padding:40px 16px;text-align:center;"><div class="alert alert-error">Arama yüklenemedi: ' + esc(err.message||'Bilinmeyen hata') + '</div><a href="/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
   }
 }
 async function renderCategory(params) {
@@ -1062,6 +1114,7 @@ async function renderCategory(params) {
     var data = results[1] || {};
     var listings = data.listings || [];
     var pagination = data.pagination || { total: 0, page: 1, pages: 1, limit: 24 };
+    if (cat.name) document.title = 'Toptan ' + cat.name + ' İlanları | Toptango';
 
     var idx  = State.categories.findIndex(function(c) { return c.slug === slug; });
     var icon = sectorIcon(slug, idx);
@@ -1076,7 +1129,7 @@ async function renderCategory(params) {
       if (curs.length)   p.currency     = curs.join(',');
       Object.assign(p, overrides);
       Object.keys(p).forEach(function(k) { if (!p[k]) delete p[k]; });
-      return '#/kategori/' + slug + '?' + new URLSearchParams(p).toString();
+      return '/kategori/' + slug + '?' + new URLSearchParams(p).toString();
     }
     function toggled(list, v) {
       var out = list.slice(); var i = out.indexOf(v);
@@ -1094,7 +1147,7 @@ async function renderCategory(params) {
     var activeFilters = [types.length, cities.length, subs.length, ptypes.length, curs.length].filter(Boolean).length;
 
     var subLink = multiLink(subs, 'subcategory');
-    var clearHref = '#/kategori/' + slug;
+    var clearHref = '/kategori/' + slug;
     var filterBlocks = [
       { title:'Alt Kategori', name:'f_sub', multi:true, current:subs, options:[['','Tümü']].concat((cat.subcategories||[]).map(function(s){ return [String(s.id), s.name]; })), linkFn: subLink },
       { title:'İlan Türü',   name:'f_type', multi:true, current:types, options:[['','Tümü'],['sell','Satılır'],['buy','Alınır']], linkFn: multiLink(types, 'listing_type') },
@@ -1111,14 +1164,14 @@ async function renderCategory(params) {
     var emptyState = '<div class="empty-state">' +
       '<div class="empty-state-icon"><span class="cat-icon-wrap ' + icCls + '" style="width:64px;height:64px;border-radius:20px;display:inline-flex;">' + icon + '</span></div>' +
       '<div class="empty-state-title">' + (activeFilters > 0 ? 'Bu filtreye uygun ilan yok.' : 'Bu sektörde henüz ilan yok.') + '</div>' +
-      '<div class="empty-state-sub">' + (activeFilters > 0 ? '<a href="#/kategori/'+slug+'" style="color:var(--blue);">Filtreleri temizleyin</a> veya başka bir arama deneyin.' : (isLoggedIn() ? 'Bu sektörde ilk ilanı siz verin.' : 'İlan vermek için üye olun.')) + '</div>' +
-      (isLoggedIn() ? '<a href="#/ilan-ver" class="btn btn-accent" style="margin-top:16px;">İlan Ver</a>' : '<a href="#/kayit" class="btn btn-accent" style="margin-top:16px;">Üye Ol</a>') +
+      '<div class="empty-state-sub">' + (activeFilters > 0 ? '<a href="/kategori/'+slug+'" style="color:var(--blue);">Filtreleri temizleyin</a> veya başka bir arama deneyin.' : (isLoggedIn() ? 'Bu sektörde ilk ilanı siz verin.' : 'İlan vermek için üye olun.')) + '</div>' +
+      (isLoggedIn() ? '<a href="/ilan-ver" class="btn btn-accent" style="margin-top:16px;">İlan Ver</a>' : '<a href="/kayit" class="btn btn-accent" style="margin-top:16px;">Üye Ol</a>') +
       '</div>';
 
     document.getElementById('app').innerHTML =
       '<div class="cat-hero"><div class="container"><div class="cat-hero-inner">' +
         '<span class="cat-icon-wrap ' + icCls + ' cat-hero-icon">' + icon + '</span>' +
-        '<div><div class="cat-hero-label"><a href="#/" style="color:inherit;opacity:.7;">Ana Sayfa</a> / İlanlar</div>' +
+        '<div><div class="cat-hero-label"><a href="/" style="color:inherit;opacity:.7;">Ana Sayfa</a> / İlanlar</div>' +
         '<h1 class="cat-hero-title">' + esc(cat.name || slug) + '</h1>' +
         '<p class="cat-hero-desc">' + esc(cat.description || '') + '</p></div>' +
       '</div></div></div>' +
@@ -1131,7 +1184,7 @@ async function renderCategory(params) {
               '<div style="font-size:.85rem;color:var(--text-muted);">' +
                 (pagination.total > 0 ? '<strong style="color:var(--navy);">' + pagination.total + '</strong> ilan bulundu' : 'Sonuç bulunamadı') +
               '</div>' +
-              (isLoggedIn() ? '<a href="#/ilan-ver" class="btn btn-accent btn-sm">+ İlan Ver</a>' : '<a href="#/giris" class="btn btn-ghost btn-sm">Giriş Yap</a>') +
+              (isLoggedIn() ? '<a href="/ilan-ver" class="btn btn-accent btn-sm">+ İlan Ver</a>' : '<a href="/giris" class="btn btn-ghost btn-sm">Giriş Yap</a>') +
             '</div>' +
             (listings.length ? '<div class="listing-grid">' + listings.map(listingCardHTML).join('') + '</div>' : emptyState) +
             paginationHTML(pagination, catLink({})) +
@@ -1145,7 +1198,7 @@ async function renderCategory(params) {
       '<div class="container" style="padding:60px 0;text-align:center;">' +
         '<p class="text-muted">Kategori yüklenemedi.</p>' +
         '<p style="font-size:.8rem;color:var(--text-muted);margin-top:8px;">' + esc(err.message || '') + '</p>' +
-        '<a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a>' +
+        '<a href="/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a>' +
       '</div>';
   }
 }
@@ -1162,7 +1215,7 @@ async function renderVitrin() {
     app.innerHTML =
       '<div class="cat-hero"><div class="container"><div class="cat-hero-inner">' +
         '<span class="cat-icon-wrap ic-4 cat-hero-icon">' + VITRIN_ICON + '</span>' +
-        '<div><div class="cat-hero-label"><a href="#/" style="color:inherit;opacity:.7;">Ana Sayfa</a> / Vitrin</div>' +
+        '<div><div class="cat-hero-label"><a href="/" style="color:inherit;opacity:.7;">Ana Sayfa</a> / Vitrin</div>' +
         '<h1 class="cat-hero-title">Vitrin</h1>' +
         '<p class="cat-hero-desc">Toptango ekibinin özenle seçtiği öne çıkan ilanlar.</p></div>' +
       '</div></div></div>' +
@@ -1175,7 +1228,7 @@ async function renderVitrin() {
     updateFxCards(listings);
   } catch(err) {
     console.error('[renderVitrin]', err);
-    app.innerHTML = '<div class="container" style="padding:60px 0;text-align:center;"><p class="text-muted">Vitrin yüklenemedi.</p><a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
+    app.innerHTML = '<div class="container" style="padding:60px 0;text-align:center;"><p class="text-muted">Vitrin yüklenemedi.</p><a href="/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
   }
 }
 
@@ -1285,12 +1338,15 @@ function wireMobileFilterDrawer() {
 async function renderListingDetail(params) {
   var l;
   try {
-    l = await api('GET', '/listings/' + params.id);
+    l = await api('GET', '/listings/' + parseInt(params.id, 10));
   } catch(err) {
     var appEl = document.getElementById('app');
-    if (appEl) appEl.innerHTML = '<div class="container" style="padding:40px 16px;text-align:center;"><div class="alert alert-error">' + (err.message && err.message.includes('404') ? 'İlan bulunamadı.' : 'Bir hata oluştu, lütfen tekrar deneyin.') + '</div><a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
+    if (appEl) appEl.innerHTML = '<div class="container" style="padding:40px 16px;text-align:center;"><div class="alert alert-error">' + (err.message && err.message.includes('404') ? 'İlan bulunamadı.' : 'Bir hata oluştu, lütfen tekrar deneyin.') + '</div><a href="/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
     return;
   }
+  // Adres cubugunu standart (slug'li) URL'ye esitle ve sayfa basligini ayarla
+  if (location.pathname !== listingPath(l)) history.replaceState(null, '', listingPath(l) + location.search);
+  document.title = l.title + (l.city ? ' – ' + l.city : '') + ' | Toptango';
   var app = document.getElementById('app');
   var imgs = l.images || [];
 
@@ -1308,7 +1364,7 @@ async function renderListingDetail(params) {
     var canSell   = (l.status === 'active' || l.status === 'pending');
     var canRenew  = (l.status === 'active' || l.status === 'expired');
     myControls = '<div class="card"><div class="card-header">İlan İşlemleri</div><div class="card-body" style="display:flex;flex-direction:column;gap:8px;">' +
-      '<a href="#/ilan-duzenle/' + l.id + '" class="btn btn-outline w-100">Düzenle</a>' +
+      '<a href="/ilan-duzenle/' + l.id + '" class="btn btn-outline w-100">Düzenle</a>' +
       (canRenew ? '<button class="btn btn-outline w-100" id="renewBtn">30 Gün Uzat</button>' : '') +
       (canSell  ? '<button class="btn btn-success w-100" id="soldBtn">Satıldı Olarak İşaretle</button>' : '') +
       '<button class="btn btn-danger w-100" id="delBtn">İlanı Sil</button>' +
@@ -1335,15 +1391,15 @@ async function renderListingDetail(params) {
   } else if (!isLoggedIn()) {
     msgCard = '<div class="card mb-4"><div class="card-body" style="text-align:center;">' +
       '<p style="font-size:.87rem;color:var(--text-muted);margin-bottom:10px;">Satıcıya mesaj göndermek için giriş yapın.</p>' +
-      '<a href="#/giris" class="btn btn-primary w-100">Giriş Yap</a>' +
+      '<a href="/giris" class="btn btn-primary w-100">Giriş Yap</a>' +
       '</div></div>';
   }
 
   app.innerHTML =
     '<div class="container">' +
       (l.status !== 'active' && isAdmin() ? '<div class="alert alert-warning" style="margin:16px 0 0;">⚠️ Bu ilan <strong>' + (l.status==='pending'?'onay bekliyor':l.status) + '</strong> durumunda. <button type="button" class="btn btn-success btn-sm" id="quickApproveBtn" style="margin-left:8px;">Onayla</button> <button type="button" class="btn btn-danger btn-sm" id="quickRejectBtn" style="margin-left:4px;">Reddet</button></div>' : '') +
-      '<div class="breadcrumb"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span>' +
-      '<a href="#/kategori/' + (l.category_slug||'') + '">' + esc(l.category_name||'') + '</a>' +
+      '<div class="breadcrumb"><a href="/">Anasayfa</a><span class="breadcrumb-sep">/</span>' +
+      '<a href="/kategori/' + (l.category_slug||'') + '">' + esc(l.category_name||'') + '</a>' +
       '<span class="breadcrumb-sep">/</span><span>' + esc(l.title) + '</span></div>' +
       '<div class="listing-detail"><div class="listing-detail-grid">' +
         '<div>' +
@@ -1394,11 +1450,11 @@ async function renderListingDetail(params) {
           })() +
           '<div class="listing-contact-card mb-4">' +
             '<div class="seller-head">' + sellerLogoHTML(l.seller_logo, 'lg') + '<div style="font-size:.95rem;font-weight:700;color:var(--navy);">Satıcı Bilgileri</div></div>' +
-            '<a href="#/satici/' + l.user_id + '" class="btn btn-ghost btn-sm w-100" style="margin-bottom:8px;">🏢 Firmanın Tüm İlanları</a>' +
+            '<a href="/satici/' + l.user_id + '" class="btn btn-ghost btn-sm w-100" style="margin-bottom:8px;">🏢 Firmanın Tüm İlanları</a>' +
             infoRow('Firma / Kişi', (l.company_name||l.seller_name||'') + (l.seller_verified ? ' ✓ Doğrulanmış' : '')) + infoRow('Konum', l.seller_city) +
             (l.contact_phone ? '<a href="tel:' + esc(l.contact_phone.replace(/[^\d+]/g, '')) + '" class="btn btn-primary w-100">' + esc(l.contact_phone) + '</a>' : '') +
             (l.contact_email ? '<i class="bi bi-envelope me-1"></i> ' + esc(l.contact_email) + ' &nbsp;<a href="mailto:' + esc(encodeURIComponent(l.contact_email).replace(/%40/g, '@')) + '" style="font-size:0.85em;">(e-posta gönder)</a>' : '') +
-            (l.contact_hidden && !isLoggedIn() ? '<div class="text-muted fs-sm" style="margin:4px 0 8px;">Telefon ve e-posta, giriş yapan üyelere gösterilir.</div><a href="#/giris" class="btn btn-primary w-100">Giriş Yap</a>' : '') +
+            (l.contact_hidden && !isLoggedIn() ? '<div class="text-muted fs-sm" style="margin:4px 0 8px;">Telefon ve e-posta, giriş yapan üyelere gösterilir.</div><a href="/giris" class="btn btn-primary w-100">Giriş Yap</a>' : '') +
             (l.website && /^https?:\/\//i.test(l.website) ? '<a href="' + esc(l.website) + '" target="_blank" rel="noopener noreferrer" class="btn btn-ghost w-100">Web Sitesi</a>' : '') +
           '</div>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">' + favBtn + shareBtn + reportBtn + '</div>' +
@@ -1490,7 +1546,7 @@ async function renderListingDetail(params) {
   var shareBtn = document.getElementById('shareBtn');
   if (shareBtn) {
     shareBtn.addEventListener('click', function() {
-      var url = window.location.origin + window.location.pathname + '#/ilan/' + l.id;
+      var url = window.location.origin + listingPath(l);
       if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(function() { toast('Bağlantı kopyalandı!', 'success'); });
       } else {
@@ -1766,12 +1822,12 @@ async function renderCreateListing(params) {
   _pendingFiles = [];
   document.getElementById('app').innerHTML =
     '<div class="container" style="max-width:820px;padding:32px 24px;">' +
-      '<div class="breadcrumb"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>İlan Ver</span></div>' +
+      '<div class="breadcrumb"><a href="/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>İlan Ver</span></div>' +
       '<div class="card"><div class="card-header">Yeni İlan Oluştur</div><div class="card-body">' +
         '<div class="alert alert-info">İlanınız moderasyon onayından sonra yayına alınır.' + (isQuickFunnel ? ' Formu doldurup gönderdiğinizde ilanınızı yayınlamak için ücretsiz üyelik oluşturmanız istenecek.' : '') + '</div>' +
         '<form id="createForm">' + listingFormHTML(presetCat ? { category_id: presetCat.id } : null) +
           '<hr style="border:none;border-top:1px solid var(--border);margin:22px 0;" />' +
-          '<div class="d-flex gap-3 align-center"><button type="submit" class="btn btn-accent btn-lg" id="createBtn">İlanı Gönder</button>' + (isQuickFunnel ? '' : '<a href="#/hesabim" class="btn btn-ghost">İptal</a>') + '</div>' +
+          '<div class="d-flex gap-3 align-center"><button type="submit" class="btn btn-accent btn-lg" id="createBtn">İlanı Gönder</button>' + (isQuickFunnel ? '' : '<a href="/hesabim" class="btn btn-ghost">İptal</a>') + '</div>' +
         '</form>' +
       '</div></div>' +
     '</div>';
@@ -1890,7 +1946,7 @@ async function renderEditListing(params) {
     document.getElementById('app').innerHTML =
       '<div class="container" style="padding:60px 24px;text-align:center;">' +
       '<div class="alert alert-error">' + (err.message && err.message.includes('404') ? 'İlan bulunamadı.' : 'Yüklenirken hata oluştu.') + '</div>' +
-      '<a href="#/hesabim" class="btn btn-primary" style="margin-top:16px;">Hesabıma Dön</a></div>';
+      '<a href="/hesabim" class="btn btn-primary" style="margin-top:16px;">Hesabıma Dön</a></div>';
     return;
   }
   if (!State.user || State.user.id !== l.user_id) { goTo('/hesabim'); return; }
@@ -1904,7 +1960,7 @@ async function renderEditListing(params) {
             l.images.map(function(img) { return '<div class="upload-preview-item" id="eimg_' + img.id + '"><img src="/uploads/'+img.filename+'" /><button type="button" class="upload-preview-remove" data-imgid="' + img.id + '">✕</button></div>'; }).join('') +
           '</div></div>' : '') +
           '<hr style="border:none;border-top:1px solid var(--border);margin:22px 0;" />' +
-          '<div class="d-flex gap-3 align-center"><button type="submit" class="btn btn-accent btn-lg" id="editBtn">Güncelle</button><a href="#/ilan/' + id + '" class="btn btn-ghost">İptal</a></div>' +
+          '<div class="d-flex gap-3 align-center"><button type="submit" class="btn btn-accent btn-lg" id="editBtn">Güncelle</button><a href="/ilan/' + id + '" class="btn btn-ghost">İptal</a></div>' +
         '</form>' +
       '</div></div>' +
     '</div>';
@@ -1966,13 +2022,13 @@ async function renderDashboard() {
 
   var listingRows = listings.map(function(l) {
     return '<tr>' +
-      '<td><a href="#/ilan/' + l.id + '" style="color:var(--blue);font-weight:600;">' + esc(l.title) + '</a></td>' +
+      '<td><a href="/ilan/' + l.id + '" style="color:var(--blue);font-weight:600;">' + esc(l.title) + '</a></td>' +
       '<td>' + esc(l.category_name||'') + '</td>' +
       '<td><span class="badge badge-' + l.status + '">' + (statusTR[l.status]||l.status) + '</span></td>' +
       '<td>' + l.views + '</td>' +
       '<td>' + parseUTC(l.created_at).toLocaleDateString('tr-TR') + '</td>' +
       '<td><div class="d-flex gap-2">' +
-        '<a href="#/ilan-duzenle/' + l.id + '" class="btn btn-ghost btn-sm">Düzenle</a>' +
+        '<a href="/ilan-duzenle/' + l.id + '" class="btn btn-ghost btn-sm">Düzenle</a>' +
         (l.status!=='sold' ? '<button class="btn btn-ghost btn-sm" data-sold="'+l.id+'">Satıldı</button>' : '') +
         '<button class="btn btn-danger btn-sm" data-del="'+l.id+'">Sil</button>' +
       '</div></td>' +
@@ -1984,10 +2040,10 @@ async function renderDashboard() {
     '<div class="container" style="padding:28px 24px;">' +
       '<div class="dash-tabs"><button class="dash-tab active" data-tab="ilanlar">İlanlarım</button><button class="dash-tab" data-tab="profil">Profilim</button></div>' +
       '<div id="tab_ilanlar" class="tab-content active">' +
-        '<div class="section-header"><div class="section-title">İlanlarım <span class="text-muted fs-sm">(' + listings.length + ')</span></div><a href="#/ilan-ver" class="btn btn-accent">+ Yeni İlan</a></div>' +
+        '<div class="section-header"><div class="section-title">İlanlarım <span class="text-muted fs-sm">(' + listings.length + ')</span></div><a href="/ilan-ver" class="btn btn-accent">+ Yeni İlan</a></div>' +
         (listings.length
           ? '<div class="table-wrapper"><table><thead><tr><th>Başlık</th><th>Sektör</th><th>Durum</th><th>Görüntülenme</th><th>Tarih</th><th>İşlemler</th></tr></thead><tbody>' + listingRows + '</tbody></table></div>'
-          : '<div class="empty-state"><div class="empty-state-title">Henüz ilanınız yok.</div><a href="#/ilan-ver" class="btn btn-accent">İlan Ver</a></div>') +
+          : '<div class="empty-state"><div class="empty-state-title">Henüz ilanınız yok.</div><a href="/ilan-ver" class="btn btn-accent">İlan Ver</a></div>') +
       '</div>' +
       '<div id="tab_profil" class="tab-content">' +
         '<div class="card" style="max-width:540px;">' +
@@ -2130,11 +2186,11 @@ async function renderLogin() {
             '<label class="form-check-label" for="rememberMe" style="cursor:pointer;"> Beni hatırla</label>' +
           '</div>' +
           '<div id="loginError" class="alert alert-error" style="display:none;"></div>' +
-          '<div style="text-align:right;margin-bottom:8px;"><a href="#/sifremi-unuttum" style="font-size:.82rem;color:var(--blue);">Şifremi unuttum</a></div>' +
+          '<div style="text-align:right;margin-bottom:8px;"><a href="/sifremi-unuttum" style="font-size:.82rem;color:var(--blue);">Şifremi unuttum</a></div>' +
           '<button type="submit" class="btn btn-primary w-100 btn-lg" id="loginBtn">Giriş Yap</button>' +
           '<div id="googleSignInDiv" style="display:flex;justify-content:center;margin:12px 0;"></div>' +
           '<div class="auth-divider">veya</div>' +
-          '<a href="#/kayit" class="btn btn-outline w-100">Üye Ol</a>' +
+          '<a href="/kayit" class="btn btn-outline w-100">Üye Ol</a>' +
         '</form>' +
       '</div>' +
     '</div>';
@@ -2214,11 +2270,11 @@ async function renderRegister() {
           '<div style="background:#f8f9ff;border:1px solid #dde3f0;border-radius:8px;padding:12px 14px;margin-bottom:12px;">' +
           '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;color:#444;line-height:1.5;">' +
           '<input type="checkbox" id="termsCheck" name="termsCheck" required style="margin-top:3px;flex-shrink:0;" />' +
-          '<span><a href="#/sozlesme" style="color:#2563eb;text-decoration:underline;">Kullanım Koşulları ve Üyelik Sözleşmesi</a>&#39;ni okudum, kabul ediyorum. <span class="req">*</span></span>' +
+          '<span><a href="/sozlesme" style="color:#2563eb;text-decoration:underline;">Kullanım Koşulları ve Üyelik Sözleşmesi</a>&#39;ni okudum, kabul ediyorum. <span class="req">*</span></span>' +
           '</label>' +
           '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;color:#444;line-height:1.5;margin-top:8px;">' +
           '<input type="checkbox" id="kvkkCheck" name="kvkkCheck" required style="margin-top:3px;flex-shrink:0;" />' +
-          '<span><a href="#/kvkk" style="color:#2563eb;text-decoration:underline;">KVKK Aydınlatma Metni</a> ve <a href="#/gizlilik-politikasi" style="color:#2563eb;text-decoration:underline;">Gizlilik Politikası</a>&#39;nı okudum, bilgilendirildim. <span class="req">*</span></span>' +
+          '<span><a href="/kvkk" style="color:#2563eb;text-decoration:underline;">KVKK Aydınlatma Metni</a> ve <a href="/gizlilik-politikasi" style="color:#2563eb;text-decoration:underline;">Gizlilik Politikası</a>&#39;nı okudum, bilgilendirildim. <span class="req">*</span></span>' +
           '</label>' +
           '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;color:#444;line-height:1.5;margin-top:8px;">' +
           '<input type="checkbox" id="ageCheck" name="ageCheck" required style="margin-top:3px;flex-shrink:0;" />' +
@@ -2228,9 +2284,9 @@ async function renderRegister() {
           '<div id="regError" class="alert alert-error" style="display:none;"></div>' +
           '<button type="submit" class="btn btn-accent w-100 btn-lg" id="regBtn">Üye Ol</button>' +
           '<div id="googleSignInDiv" style="display:flex;justify-content:center;margin:12px 0 8px;"></div>' +
-          '<p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-bottom:12px;">' + (isNativeApp() ? 'Apple' : 'Google') + ' ile devam ederek 18 yaşından büyük olduğunuzu, <a href="#/sozlesme" style="color:#2563eb;">Kullanım Koşulları</a>&#39;nı kabul ettiğinizi ve <a href="#/kvkk" style="color:#2563eb;">KVKK Aydınlatma Metni</a> ile <a href="#/gizlilik-politikasi" style="color:#2563eb;">Gizlilik Politikası</a>&#39;nı okuduğunuzu beyan etmiş olursunuz.</p>' +
+          '<p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-bottom:12px;">' + (isNativeApp() ? 'Apple' : 'Google') + ' ile devam ederek 18 yaşından büyük olduğunuzu, <a href="/sozlesme" style="color:#2563eb;">Kullanım Koşulları</a>&#39;nı kabul ettiğinizi ve <a href="/kvkk" style="color:#2563eb;">KVKK Aydınlatma Metni</a> ile <a href="/gizlilik-politikasi" style="color:#2563eb;">Gizlilik Politikası</a>&#39;nı okuduğunuzu beyan etmiş olursunuz.</p>' +
           '<div class="auth-divider">Zaten hesabınız var mı?</div>' +
-          '<a href="#/giris" class="btn btn-outline w-100">Giriş Yap</a>' +
+          '<a href="/giris" class="btn btn-outline w-100">Giriş Yap</a>' +
         '</form>' +
       '</div>' +
     '</div>';
@@ -2303,7 +2359,7 @@ async function renderAdmin() {
   document.getElementById('app').innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
   if (!isAdmin()) {
     if (isLoggedIn()) {
-      document.getElementById('app').innerHTML = '<div class="container" style="text-align:center;padding:80px 24px;"><div style="font-size:3rem;">🔒</div><div class="empty-state-title" style="margin-top:12px;">Yetkisiz Erişim</div><a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
+      document.getElementById('app').innerHTML = '<div class="container" style="text-align:center;padding:80px 24px;"><div style="font-size:3rem;">🔒</div><div class="empty-state-title" style="margin-top:12px;">Yetkisiz Erişim</div><a href="/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
     } else { goTo('/giris'); }
     return;
   }
@@ -2311,7 +2367,7 @@ async function renderAdmin() {
   try {
     stats = await api('GET', '/admin/stats');
   } catch(err) {
-    document.getElementById('app').innerHTML = '<div class="container" style="padding:60px 24px;text-align:center;"><div class="alert alert-error">Admin paneli yüklenemedi: ' + esc(err.message) + '</div><a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
+    document.getElementById('app').innerHTML = '<div class="container" style="padding:60px 24px;text-align:center;"><div class="alert alert-error">Admin paneli yüklenemedi: ' + esc(err.message) + '</div><a href="/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
     return;
   }
   var ch = stats; // change helpers inline
@@ -2507,7 +2563,7 @@ async function loadAdminPending() {
       rows.map(function(l) {
         return '<tr id="prow_' + l.id + '">' +
           '<td>#' + l.id + '</td>' +
-          '<td><a href="#/ilan/' + l.id + '" style="color:var(--blue);font-weight:600;">' + esc(l.title) + '</a><div style="font-size:.75rem;color:var(--text-mid);">' + esc(l.city||'') + ' · ' + (l.image_count||0) + ' görsel</div></td>' +
+          '<td><a href="/ilan/' + l.id + '" style="color:var(--blue);font-weight:600;">' + esc(l.title) + '</a><div style="font-size:.75rem;color:var(--text-mid);">' + esc(l.city||'') + ' · ' + (l.image_count||0) + ' görsel</div></td>' +
           '<td>' + esc(l.category_name||'—') + '</td>' +
           '<td><div style="font-weight:600;">' + esc(l.user_name||'') + '</div><div style="font-size:.75rem;color:var(--text-mid);">' + esc(l.user_email||'') + '</div></td>' +
           '<td style="white-space:nowrap;">' + timeAgo(l.created_at) + '</td>' +
@@ -2563,7 +2619,7 @@ async function loadAdminListings(filters) {
       data.listings.map(function(l) {
         return '<tr id="arow_' + l.id + '">' +
           '<td>#' + l.id + '</td>' +
-          '<td><a href="#/ilan/' + l.id + '" target="_blank" style="color:var(--blue);">' + esc(l.title) + '</a></td>' +
+          '<td><a href="/ilan/' + l.id + '" target="_blank" style="color:var(--blue);">' + esc(l.title) + '</a></td>' +
           '<td><span class="badge badge-' + l.status + '">' + (sl[l.status]||l.status) + '</span></td>' +
           '<td style="font-size:.82rem;">' + esc(l.category_name||'') + '</td>' +
           '<td style="font-size:.82rem;">' + esc(l.user_name||'') + '</td>' +
@@ -2660,7 +2716,7 @@ async function loadAdminVitrin() {
           rows.map(function(l) {
             return '<tr id="vrow_' + l.id + '">' +
               '<td>#' + l.id + '</td>' +
-              '<td><a href="#/ilan/' + l.id + '" target="_blank" style="color:var(--blue);">' + esc(l.title) + '</a></td>' +
+              '<td><a href="/ilan/' + l.id + '" target="_blank" style="color:var(--blue);">' + esc(l.title) + '</a></td>' +
               '<td><span class="badge badge-' + l.status + '">' + (sl[l.status]||l.status) + '</span></td>' +
               '<td style="font-size:.82rem;">' + esc(l.category_name||'') + '</td>' +
               '<td style="font-size:.82rem;">' + esc(l.user_name||'') + '</td>' +
@@ -3051,7 +3107,7 @@ async function loadAdminStats() {
       '<div class="card" style="margin-top:20px;"><div class="card-header">En Çok Görüntülenen İlanlar</div>' +
       '<div class="table-wrapper"><table><thead><tr><th>#</th><th>Başlık</th><th>Sektör</th><th>Görüntülenme</th><th>Fiyat</th><th>Durum</th></tr></thead><tbody>' +
       (d.topListings||[]).map(function(l, i) {
-        return '<tr><td>' + (i+1) + '</td><td><a href="#/ilan/' + l.id + '" target="_blank" style="color:var(--blue);">' + esc(l.title) + '</a></td>' +
+        return '<tr><td>' + (i+1) + '</td><td><a href="/ilan/' + l.id + '" target="_blank" style="color:var(--blue);">' + esc(l.title) + '</a></td>' +
           '<td style="font-size:.82rem;">' + esc(l.category_name||'') + '</td><td>' + (l.views||0) + '</td>' +
           '<td style="font-size:.82rem;">' + (l.price ? formatPrice(l) : '—') + '</td>' +
           '<td><span class="badge badge-' + l.status + '">' + l.status + '</span></td></tr>';
@@ -3082,7 +3138,7 @@ async function renderMessages() {
       html += '<div class="conv-list">';
       convs.forEach(function(c) {
         var hasUnread = c.unread > 0;
-        html += '<a href="#/mesajlar/' + c.id + '" class="conv-item' + (hasUnread?' conv-unread':'') + '">' +
+        html += '<a href="/mesajlar/' + c.id + '" class="conv-item' + (hasUnread?' conv-unread':'') + '">' +
           '<div class="conv-avatar">' + esc((c.other_name||'?')[0]).toUpperCase() + '</div>' +
           '<div class="conv-body"><div class="conv-top"><span class="conv-name">' + esc(c.other_company||c.other_name||'Kullanıcı') + '</span><span class="conv-time">' + timeAgo(c.last_message_at) + '</span></div>' +
           (c.listing_title?'<div class="conv-listing">📦 '+esc(c.listing_title)+'</div>':'') +
@@ -3113,10 +3169,10 @@ async function renderConversation(params) {
 
     var html =
       '<div class="chat-header"><div class="container" style="display:flex;align-items:center;gap:12px;">' +
-        '<a href="#/mesajlar" class="btn btn-ghost btn-sm">← Geri</a>' +
+        '<a href="/mesajlar" class="btn btn-ghost btn-sm">← Geri</a>' +
         '<div class="conv-avatar" style="width:36px;height:36px;font-size:1rem;">' + esc((other.name||'?')[0]).toUpperCase() + '</div>' +
         '<div><div style="font-weight:700;">' + esc(other.company_name||other.name) + '</div>' + (other.city?'<div style="font-size:.8rem;color:var(--text-mid);">'+esc(other.city)+'</div>':'') + '</div>' +
-        (listing?'<a href="#/ilan/'+listing.id+'" style="margin-left:auto;font-size:.8rem;color:var(--blue);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📦 '+esc(listing.title)+'</a>':'') +
+        (listing?'<a href="/ilan/'+listing.id+'" style="margin-left:auto;font-size:.8rem;color:var(--blue);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📦 '+esc(listing.title)+'</a>':'') +
       '</div></div>' +
       '<div class="chat-messages-wrap"><div class="container" style="max-width:720px;"><div id="chatMsgs" class="chat-messages">';
 
@@ -3181,6 +3237,7 @@ async function renderSellerPage(params) {
 
     var sellerName = (profil && (profil.company_name || profil.name)) ||
       (listings.length ? (listings[0].company_name || listings[0].seller_name) : 'Firma');
+    document.title = sellerName + ' İlanları | Toptango';
 
     var contentHTML = listings.length
       ? '<div class="listing-grid">' + listings.map(listingCardHTML).join('') + '</div>'
@@ -3188,7 +3245,7 @@ async function renderSellerPage(params) {
 
     app.innerHTML =
       '<div class="dash-header"><div class="container">' +
-        '<div class="breadcrumb" style="margin-bottom:8px;"><a href="#/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>Firma İlanları</span></div>' +
+        '<div class="breadcrumb" style="margin-bottom:8px;"><a href="/">Anasayfa</a><span class="breadcrumb-sep">/</span><span>Firma İlanları</span></div>' +
         '<h1>' + (profil && profil.logo ? sellerLogoHTML(profil.logo, 'lg') + ' ' : '') + esc(sellerName) + ((profil && profil.is_verified) ? ' <span style="font-size:.85rem;color:#22c55e;vertical-align:middle;white-space:nowrap;">✓ Doğrulanmış Firma</span>' : '') + '</h1>' +
         '<p>' + ((profil && profil.city) ? esc(profil.city) + ' · ' : '') + listings.length + ' aktif ilan</p>' +
       '</div></div>' +
@@ -3196,7 +3253,7 @@ async function renderSellerPage(params) {
 
     if (listings.length) updateFxCards(listings);
   } catch(e) {
-    app.innerHTML = '<div class="container" style="padding:60px 16px;text-align:center;"><div class="alert alert-error">' + esc(e.message) + '</div><a href="#/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
+    app.innerHTML = '<div class="container" style="padding:60px 16px;text-align:center;"><div class="alert alert-error">' + esc(e.message) + '</div><a href="/" class="btn btn-primary" style="margin-top:16px;">Ana Sayfaya Dön</a></div>';
   }
 }
 
@@ -3209,7 +3266,7 @@ function render404() {
     '<div style="font-size:4rem;font-weight:800;color:var(--border-mid);">404</div>' +
     '<div style="font-size:1.3rem;font-weight:700;margin:8px 0;">Sayfa Bulunamadı</div>' +
     '<div style="color:var(--text-mid);margin-bottom:24px;">Aradığınız sayfa mevcut değil.</div>' +
-    '<a href="#/" class="btn btn-primary">Ana Sayfaya Dön</a></div>';
+    '<a href="/" class="btn btn-primary">Ana Sayfaya Dön</a></div>';
 }
 
 // ================================================================
@@ -3252,7 +3309,7 @@ async function loadAdminCompanies() {
           '<td>' + (co.total_views||0) + '</td>' +
           '<td style="font-size:.82rem;">' + fmt(co.avg_price) + '</td>' +
           '<td style="font-size:.75rem;white-space:nowrap;color:var(--text-mid);">' + (co.last_listing_at ? parseUTC(co.last_listing_at).toLocaleDateString('tr-TR') : '—') + '</td>' +
-          '<td><a href="#/satici/' + co.user_id + '" target="_blank" class="btn btn-ghost btn-sm">İlanlar</a></td>' +
+          '<td><a href="/satici/' + co.user_id + '" target="_blank" class="btn btn-ghost btn-sm">İlanlar</a></td>' +
         '</tr>';
       }).join('') +
       '</tbody></table></div></div>';
@@ -3275,7 +3332,7 @@ async function loadAdminCompanies() {
               '<span style="font-weight:700;min-width:24px;">' + r.count + '</span>' +
             '</div>' +
           '</td>' +
-          '<td><a href="#/satici/' + r.user_id + '" target="_blank" class="btn btn-ghost btn-sm">İlanlar</a></td>' +
+          '<td><a href="/satici/' + r.user_id + '" target="_blank" class="btn btn-ghost btn-sm">İlanlar</a></td>' +
         '</tr>';
       }).join('') +
       '</tbody></table></div></div>';
@@ -3317,7 +3374,7 @@ async function renderFavorites() {
       '<div class="container" style="padding:40px 24px;">' +
         '<h1 style="margin-bottom:24px;">Favorilerim <span style="font-size:1rem;color:var(--text-mid);font-weight:400;">(' + favs.length + ' ilan)</span></h1>' +
         (favs.length === 0
-          ? '<div class="empty-state"><div class="empty-state-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" style="opacity:.35;"><path d="M12 2.5l2.95 6.28 6.93.7-5.18 4.73 1.5 6.82L12 17.6l-6.2 3.43 1.5-6.82L2.12 9.48l6.93-.7z"/></svg></div><div class="empty-state-title">Henüz favori ilanınız yok</div><div class="empty-state-sub">İlan detayında <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;"><path d="M12 2.5l2.95 6.28 6.93.7-5.18 4.73 1.5 6.82L12 17.6l-6.2 3.43 1.5-6.82L2.12 9.48l6.93-.7z"/></svg> butonuna tıklayarak favorilere ekleyebilirsiniz.</div><a href="#/ara" class="btn btn-primary" style="margin-top:16px;">İlanları Keşfet</a></div>'
+          ? '<div class="empty-state"><div class="empty-state-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" style="opacity:.35;"><path d="M12 2.5l2.95 6.28 6.93.7-5.18 4.73 1.5 6.82L12 17.6l-6.2 3.43 1.5-6.82L2.12 9.48l6.93-.7z"/></svg></div><div class="empty-state-title">Henüz favori ilanınız yok</div><div class="empty-state-sub">İlan detayında <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;"><path d="M12 2.5l2.95 6.28 6.93.7-5.18 4.73 1.5 6.82L12 17.6l-6.2 3.43 1.5-6.82L2.12 9.48l6.93-.7z"/></svg> butonuna tıklayarak favorilere ekleyebilirsiniz.</div><a href="/ara" class="btn btn-primary" style="margin-top:16px;">İlanları Keşfet</a></div>'
           : '<div class="listing-grid">' + favs.map(listingCardHTML).join('') + '</div>'
         ) +
       '</div>';
@@ -3385,7 +3442,7 @@ function renderForgotPassword() {
           '<div id="forgotMsg" class="alert" style="display:none;"></div>' +
           '<button type="submit" class="btn btn-primary w-100 btn-lg" id="forgotBtn">Sıfırlama Linki Gönder</button>' +
           '<div class="auth-divider"></div>' +
-          '<a href="#/giris" class="btn btn-outline w-100">Giriş Yap</a>' +
+          '<a href="/giris" class="btn btn-outline w-100">Giriş Yap</a>' +
         '</form>' +
       '</div>' +
     '</div>';
@@ -3437,14 +3494,14 @@ function renderForgotPassword() {
 // ================================================================
 function renderResetPassword() {
   if (isLoggedIn()) { goTo('/'); return; }
-  var sp = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  var sp = new URLSearchParams(window.location.search || '');
   var token = sp.get('token') || '';
   document.getElementById('app').innerHTML =
     '<div class="auth-page">' +
       '<div class="auth-card">' +
         '<h2>Yeni Şifre Belirle</h2>' +
         (!token
-          ? '<div class="alert alert-error">Geçersiz veya eksik sıfırlama bağlantısı.</div><a href="#/sifremi-unuttum" class="btn btn-primary w-100" style="margin-top:16px;">Tekrar Dene</a>'
+          ? '<div class="alert alert-error">Geçersiz veya eksik sıfırlama bağlantısı.</div><a href="/sifremi-unuttum" class="btn btn-primary w-100" style="margin-top:16px;">Tekrar Dene</a>'
           : '<form id="resetForm">' +
               '<div class="form-group mb-4"><label class="form-label">Yeni Şifre <span class="req">*</span></label>' +
                 '<input type="password" name="password" class="form-control" placeholder="En az 8 karakter" required minlength="8" autofocus /></div>' +
@@ -3502,7 +3559,7 @@ async function loadAdminReports() {
       reports.map(function(r) {
         return '<tr id="rrow_' + r.id + '">' +
           '<td>' + r.id + '</td>' +
-          '<td><a href="#/ilan/' + r.listing_id + '" style="color:var(--blue);">' + esc(r.listing_title || '#' + r.listing_id) + '</a></td>' +
+          '<td><a href="/ilan/' + r.listing_id + '" style="color:var(--blue);">' + esc(r.listing_title || '#' + r.listing_id) + '</a></td>' +
           '<td>' + esc(r.reason) + (r.detail ? '<div style="font-size:.75rem;color:var(--text-mid);">' + esc(r.detail) + '</div>' : '') + '</td>' +
           '<td style="font-size:.8rem;">' + esc(r.reporter_name || '—') + '</td>' +
           '<td><span class="badge ' + (r.status === 'pending' ? 'badge-pending' : 'badge-active') + '">' + (r.status === 'pending' ? 'Bekliyor' : 'Kapatıldı') + '</span></td>' +
@@ -3539,7 +3596,7 @@ async function loadAdminReports() {
 function renderSozlesme() {
   var s = '';
   s += '<div style="max-width:820px;margin:40px auto;padding:0 20px 60px;font-family:Inter,sans-serif;color:#1a1a2e;line-height:1.7;">';
-  s += '<a href="#/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:28px;">&larr; Ana Sayfaya Dön</a>';
+  s += '<a href="/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:28px;">&larr; Ana Sayfaya Dön</a>';
   s += '<h1 style="font-size:1.9rem;font-weight:800;border-bottom:2px solid #e8eaf0;padding-bottom:16px;margin-bottom:8px;">Kullanım Koşulları ve Üyelik Sözleşmesi</h1>';
   s += '<p style="color:#888;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Haziran 2026</p>';
   s += '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">1. Taraflar ve Konu</h2>';
@@ -3575,7 +3632,7 @@ function renderSozlesme() {
 function renderKvkk() {
   var s = '';
   s += '<div style="max-width:820px;margin:40px auto;padding:0 20px 60px;font-family:Inter,sans-serif;color:#1a1a2e;line-height:1.7;">';
-  s += '<a href="#/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:28px;">&larr; Ana Sayfaya Dön</a>';
+  s += '<a href="/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:28px;">&larr; Ana Sayfaya Dön</a>';
   s += '<h1 style="font-size:1.9rem;font-weight:800;border-bottom:2px solid #e8eaf0;padding-bottom:16px;margin-bottom:8px;">KVKK Aydınlatma Metni</h1>';
   s += '<p style="color:#888;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Haziran 2026</p>';
   s += '<p>6698 sayılı Kişisel Verilerin Korunması Kanunu (&#34;KVKK&#34;) kapsamında veri sorumlusu sıfatıyla <strong>Toptango</strong>, kişisel verilerinizin işlenmesine ilişkin sizi bilgilendirmek amacıyla bu Aydınlatma Metnini hazırlamıştır.</p>';
@@ -3609,8 +3666,8 @@ function renderHakkimizda() {
   s += '<h4>Misyonumuz</h4>';
   s += '<p>Türkiye&#39;nin 81 ilindeki üretici, tedarikçi ve toptancıların birbirine kolayca ulaşabildiği, güvenilir ve şeffaf bir ticaret ortamı sunmak.</p>';
   s += '<h4>Neden Toptango?</h4>';
-  s += '<ul style="margin:10px 0 10px 24px;"><li>Sektörel kategorilerle hızlı ve doğru eşleşme,</li><li>Doğrulanmış rozetli firma profilleri,</li><li>Kolay ilan verme ve yönetim araçları,</li><li>Komisyon ve gizli ücret olmadan, ücretsiz ilan verme (bkz. <a href="#/ucretlendirme">Ücretlendirme</a>),</li><li>Türkiye&#39;nin 81 iline açık hizmet.</li></ul>';
-  s += '<p>Sorularınız veya iş birliği talepleriniz için bizimle <a href="#/iletisim">iletişime</a> geçebilirsiniz.</p>';
+  s += '<ul style="margin:10px 0 10px 24px;"><li>Sektörel kategorilerle hızlı ve doğru eşleşme,</li><li>Doğrulanmış rozetli firma profilleri,</li><li>Kolay ilan verme ve yönetim araçları,</li><li>Komisyon ve gizli ücret olmadan, ücretsiz ilan verme (bkz. <a href="/ucretlendirme">Ücretlendirme</a>),</li><li>Türkiye&#39;nin 81 iline açık hizmet.</li></ul>';
+  s += '<p>Sorularınız veya iş birliği talepleriniz için bizimle <a href="/iletisim">iletişime</a> geçebilirsiniz.</p>';
   s += '</div>';
   document.getElementById('app').innerHTML = s;
 }
@@ -3620,7 +3677,7 @@ function legalPage(title, sections) {
   document.title = title + ' - Toptango';
   var h2 = '<h2 style="font-size:1.15rem;font-weight:700;margin-top:32px;margin-bottom:10px;">';
   var s = '<div style="max-width:820px;margin:40px auto;padding:0 20px 60px;font-family:Inter,sans-serif;color:#1a1a2e;line-height:1.7;">';
-  s += '<a href="#/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:28px;">&larr; Ana Sayfaya Dön</a>';
+  s += '<a href="/" style="color:#2563eb;font-size:0.9rem;display:block;margin-bottom:28px;">&larr; Ana Sayfaya Dön</a>';
   s += '<h1 style="font-size:1.9rem;font-weight:800;border-bottom:2px solid #e8eaf0;padding-bottom:16px;margin-bottom:8px;">' + title + '</h1>';
   s += '<p style="color:#6b6b7b;font-size:0.83rem;margin-bottom:36px;">Son güncelleme: Ekim 2026</p>';
   sections.forEach(function(sec) { s += (sec[0] ? h2 + sec[0] + '</h2>' : '') + sec[1]; });
@@ -3632,14 +3689,14 @@ var LEGAL_PROVIDER = '<strong>Asaf Demir Yamanyılmaz</strong>, Reşatbey Mah. T
 
 function renderGizlilik() {
   legalPage('Gizlilik Politikası', [
-    ['', '<p>Bu politika, Toptango web sitesi (toptango.com.tr) ve ToptanGO iOS uygulaması (&#34;Platform&#34;) üzerinden hangi verileri topladığımızı, neden topladığımızı ve haklarınızı açıklar. Ayrıntılı yasal bilgilendirme için <a href="#/kvkk">KVKK Aydınlatma Metni</a>&#39;ne bakabilirsiniz.</p>'],
+    ['', '<p>Bu politika, Toptango web sitesi (toptango.com.tr) ve ToptanGO iOS uygulaması (&#34;Platform&#34;) üzerinden hangi verileri topladığımızı, neden topladığımızı ve haklarınızı açıklar. Ayrıntılı yasal bilgilendirme için <a href="/kvkk">KVKK Aydınlatma Metni</a>&#39;ne bakabilirsiniz.</p>'],
     ['1. Hizmet Sağlayıcı', '<p>' + LEGAL_PROVIDER + '</p>'],
     ['2. Topladığımız Veriler', '<ul style="margin:10px 0 10px 24px;"><li><strong>Zorunlu:</strong> ad soyad, e-posta adresi, şifre (şifrelenmiş olarak saklanır).</li><li><strong>İsteğe bağlı:</strong> telefon numarası, firma adı, şehir, firma logosu. Bu bilgileri vermeden üye olabilir ve ilan verebilirsiniz.</li><li><strong>İlan içerikleri:</strong> ilan başlığı, açıklama, fiyat, görseller ve ilanda paylaşmayı seçtiğiniz iletişim bilgileri (herkese açık yayımlanır).</li><li><strong>Mesajlar:</strong> Platform içi mesajlaşmada gönderdiğiniz mesajlar.</li><li><strong>Teknik veriler:</strong> IP adresi, tarayıcı/cihaz bilgisi, iOS bildirimlerini açtıysanız cihaz bildirim anahtarı.</li></ul>'],
     ['3. Verileri Ne İçin Kullanıyoruz', '<p>Üyelik ve hesap yönetimi, ilanların yayımlanması, kullanıcılar arası iletişim, güvenlik ve dolandırıcılığın önlenmesi, yasal yükümlülükler ve (yalnızca web&#39;de, onayınızla) reklam performansının ölçülmesi. Verilerinizi satmayız ve reklamcılara kişisel profil olarak aktarmayız.</p>'],
     ['4. iOS Uygulaması', '<p>ToptanGO iOS uygulaması reklam veya takip amaçlı hiçbir araç (ör. Google Ads, analiz/izleme SDK&#39;ları) yüklemez ve sizi diğer şirketlerin uygulama veya web sitelerinde izlemez. Bildirim izni ve kamera/galeri izni yalnızca siz izin verirseniz ve ilgili özellik için kullanılır.</p>'],
     ['5. Üçüncü Taraf Hizmetler', '<p>Railway (barındırma), Netlify (alan adı), Resend (işlem e-postaları), Google (giriş, yazı tipleri ve web&#39;de onaya bağlı reklam ölçümü) ve Apple (giriş ve bildirimler). Bu sağlayıcılar verileri yalnızca hizmetin sunulması için işler.</p>'],
     ['6. Yaş Sınırı', '<p>Platform ticari (B2B) kullanıma yöneliktir ve 18 yaşından küçüklere yönelik değildir. 18 yaşından küçük olduğunu bildiğimiz kişilere ait hesapları ve verileri sileriz.</p>'],
-    ['7. Haklarınız ve Veri Silme', '<p>Verilerinize erişme, düzeltme ve silme hakkınız vardır. Hesabınızı <strong>Hesabım &gt; Hesabımı Sil</strong> adımıyla kendiniz anında silebilir veya <a href="#/hesap-silme">Hesap ve Veri Silme</a> sayfasındaki yöntemle talepte bulunabilirsiniz.</p>'],
+    ['7. Haklarınız ve Veri Silme', '<p>Verilerinize erişme, düzeltme ve silme hakkınız vardır. Hesabınızı <strong>Hesabım &gt; Hesabımı Sil</strong> adımıyla kendiniz anında silebilir veya <a href="/hesap-silme">Hesap ve Veri Silme</a> sayfasındaki yöntemle talepte bulunabilirsiniz.</p>'],
     ['8. Güvenlik', '<p>Şifreler tek yönlü şifrelenerek (bcrypt) saklanır, veri aktarımı HTTPS ile şifrelenir.</p>'],
     ['9. Değişiklikler', '<p>Bu politikadaki önemli değişiklikleri Platform üzerinden duyururuz.</p>']
   ]);
@@ -3668,7 +3725,7 @@ function renderUcretlendirme() {
 function renderHesapSilme() {
   legalPage('Hesap ve Veri Silme', [
     ['1. Uygulamadan veya Siteden Anında Silme', '<p>Giriş yaptıktan sonra <strong>Hesabım</strong> sayfasına gidin ve <strong>Hesabımı Sil</strong> düğmesine basın. Onay verdiğiniz anda hesabınız, ilanlarınız, görselleriniz, favorileriniz, mesajlarınız ve bildirim kayıtlarınız kalıcı olarak silinir. Apple ile giriş yaptıysanız, iPhone&#39;unuzda <strong>Ayarlar &gt; [adınız] &gt; Apple ile Giriş Yap</strong> bölümünden ToptanGO bağlantısını da kaldırabilirsiniz.</p>' +
-      (isLoggedIn() ? '<p><a class="btn btn-primary" href="#/hesabim">Hesabım sayfasına git</a></p>' : '<p><a class="btn btn-primary" href="#/giris">Giriş yap</a></p>')],
+      (isLoggedIn() ? '<p><a class="btn btn-primary" href="/hesabim">Hesabım sayfasına git</a></p>' : '<p><a class="btn btn-primary" href="/giris">Giriş yap</a></p>')],
     ['2. E-posta ile Silme Talebi', '<p>Hesabınıza giriş yapamıyorsanız, üye olduğunuz e-posta adresinden <a href="mailto:destek@toptango.com.tr?subject=Hesap%20Silme%20Talebi">destek@toptango.com.tr</a> adresine &#34;Hesap Silme Talebi&#34; konulu bir e-posta gönderin. Kimliğinizi doğruladıktan sonra talebiniz en geç 30 gün içinde tamamlanır.</p>'],
     ['3. Saklanan Veriler', '<p>Silme işleminden sonra yalnızca kanunen saklanması zorunlu kayıtlar yasal süre boyunca tutulur ve süre sonunda imha edilir.</p>']
   ]);

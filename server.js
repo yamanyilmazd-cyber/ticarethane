@@ -26,6 +26,7 @@ const favoritesRoutes   = require('./routes/favorites');
 const notificationsRoutes = require('./routes/notifications');
 const reportsRoutes     = require('./routes/reports');
 const showcaseRoutes    = require('./routes/showcase');
+const ssr               = require('./utils/ssr');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
@@ -149,7 +150,10 @@ app.get(['/.well-known/apple-app-site-association', '/apple-app-site-association
 // ---------- Statik dosyalar ----------
 // index.html hic cachelenmesin — icindeki /js/app.js ve /css/style.css
 // referanslari (cache-busting query'leri dahil) her zaman guncel gelsin.
+// index: false — "/" artik utils/ssr.js tarafindan sayfaya ozel uretiliyor.
+app.get('/index.html', (_req, res) => res.redirect(301, '/'));
 app.use(express.static(path.join(__dirname, 'public'), {
+  index: false,
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('index.html')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -215,35 +219,8 @@ app.all('/api/*', (_req, res) => {
   res.status(404).json({ error: 'API rotası bulunamadı.' });
 });
 
-// ---------- SEO: dinamik sitemap.xml ----------
-app.get('/sitemap.xml', (_req, res) => {
-  try {
-    const db = require('./database/db').getDb();
-    const base = 'https://www.toptango.com.tr';
-    const today = new Date().toISOString().slice(0, 10);
-
-    const staticPaths = ['/', '/ara', '/vitrin', '/sozlesme', '/kvkk', '/ilan-kurallari', '/iletisim', '/hakkimizda'];
-    const categories = db.prepare('SELECT slug FROM categories').all();
-    const listings   = db.prepare("SELECT id, updated_at FROM listings WHERE status='active'").all();
-
-    const urls = [];
-    staticPaths.forEach(p => urls.push({ loc: base + (p === '/' ? '/' : '/#' + p), lastmod: today }));
-    categories.forEach(c => urls.push({ loc: base + '/#/kategori/' + c.slug, lastmod: today }));
-    listings.forEach(l => urls.push({ loc: base + '/#/ilan/' + l.id, lastmod: (l.updated_at || today).slice(0, 10) }));
-
-    const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
-      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
-      urls.map(u => '  <url><loc>' + u.loc + '</loc><lastmod>' + u.lastmod + '</lastmod></url>').join('\n') +
-      '\n</urlset>';
-
-    res.header('Content-Type', 'application/xml');
-    res.send(xml);
-  } catch (err) {
-    console.error('[SITEMAP] hata:', err.message);
-    res.header('Content-Type', 'application/xml');
-    res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
-  }
-});
+// ---------- SEO: dinamik sitemap.xml (gercek URL'ler, gercek lastmod) ----------
+app.get('/sitemap.xml', ssr.sitemap);
 
 // ---------- SEO: robots.txt ----------
 app.get('/robots.txt', (_req, res) => {
@@ -254,36 +231,20 @@ app.get('/robots.txt', (_req, res) => {
   res.send('User-agent: *\nAllow: /\nSitemap: https://www.toptango.com.tr/sitemap.xml\n');
 });
 
-// ---------- SPA giris noktasi ----------
-// Uygulama hash tabanli yonlendirme kullaniyor (#/ilan/12 gibi); sunucuya
-// gelen tek gecerli sayfa yolu "/". Statik dosyalar yukarida express.static
-// ile servis ediliyor.
-app.get(['/', '/index.html'], (_req, res) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// ---------- Sayfalar (History API rotalari + sunucu tarafi SEO) ----------
+// /, /kategori/:slug, /ilan/:id-slug, /satici/:id, /vitrin, bilgi sayfalari ve
+// uygulama ici sayfalar: sayfaya ozel title/description/canonical/JSON-LD +
+// taranabilir icerik, dogru durum kodu (301/404/410). Bkz. utils/ssr.js
+app.use(ssr.handle);
 
 // ---------- 404 ----------
-// Bilinmeyen her yol icin gercek 404 (onceden ana sayfa 200 ile donuyordu:
-// "soft 404" — arama motorlari bunu kalite sorunu olarak isaretler).
+// Bilinmeyen sayfa yolu: uygulama kabugu 404 koduyla (menu ve arama calisir).
+// Dosya gibi gorunen yollar (/llms.txt, /resim.png) ve HTML istemeyenler: duz 404.
 app.use((req, res) => {
-  res.status(404);
-  if (req.method === 'GET' && req.accepts('html')) {
-    res.setHeader('Cache-Control', 'no-cache');
-    return res.send(
-      '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8" />' +
-      '<meta name="viewport" content="width=device-width, initial-scale=1.0" />' +
-      '<meta name="robots" content="noindex" />' +
-      '<title>Sayfa bulunamadı | Toptango</title>' +
-      '<link rel="icon" type="image/png" href="/favicon.png" /></head>' +
-      '<body style="margin:0;font-family:system-ui,-apple-system,sans-serif;background:#f5f7fa;color:#162032;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px;">' +
-      '<main><h1 style="font-size:1.5rem;margin:0 0 12px;">Sayfa bulunamadı</h1>' +
-      '<p style="color:#5b6577;margin:0 0 24px;">Aradığınız sayfa taşınmış ya da hiç var olmamış olabilir.</p>' +
-      '<a href="/" style="background:#162032;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;">Ana sayfaya dön</a></main>' +
-      '</body></html>'
-    );
+  if (req.method === 'GET' && req.accepts('html') && !/\.[a-z0-9]{2,5}$/i.test(req.path)) {
+    return ssr.notFound(req, res);
   }
-  res.type('text/plain').send('Not Found');
+  res.status(404).type('text/plain').send('Not Found');
 });
 
 // ---------- Global hata yakalayıcı ----------
@@ -335,7 +296,7 @@ process.on('unhandledRejection', (reason) => {
     
 const server = app.listen(PORT, () => {
       console.log(`[SERVER] Toptango http://localhost:${PORT} adresinde çalışıyor`);
-      if (!isProd) console.log(`[SERVER] Admin: http://localhost:${PORT}/#/admin`);
+      if (!isProd) console.log(`[SERVER] Admin: http://localhost:${PORT}/admin`);
     });
 
     // Graceful shutdown: Railway redeploy sirasinda SIGTERM temiz karsilanir,

@@ -276,7 +276,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
    okuyucular icin), ekranda sadece yukleniyor gostergesi gorunur.
    app.js yuklenince bu blok zaten tamamen degistiriliyor. */
 .section.home-intro { padding: 28px 0 0; }
-.home-intro-title, .home-intro-text {
+.home-intro-title, .home-intro-text, .ssr-content {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
 }
