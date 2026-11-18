@@ -270,16 +270,15 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   font-size: 1.2rem; font-weight: 700; color: var(--navy); margin-bottom: 6px;
 }
 .section-sub { font-size: .88rem; color: var(--text-muted); margin-bottom: 24px; }
-/* Ana sayfa tanitim basligi (H1) */
+/* index.html'deki statik tanitim blogu (JS calistirmayan botlar icin).
+   Kullaniciya gorunmez: sayfa yuklenirken / uygulamada yenilerken metin
+   bir an gorunup kayboluyordu. Metin DOM'da kalir (botlar ve ekran
+   okuyucular icin), ekranda sadece yukleniyor gostergesi gorunur.
+   app.js yuklenince bu blok zaten tamamen degistiriliyor. */
 .section.home-intro { padding: 28px 0 0; }
-.home-intro-title {
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 1.45rem; font-weight: 800; color: var(--navy); line-height: 1.3; margin: 0 0 8px;
-}
-.home-intro-text { font-size: .92rem; color: var(--text-muted); line-height: 1.6; margin: 0; max-width: 760px; }
-.home-intro .page-loading { margin-top: 24px; }
-@media (max-width: 600px) {
-  .home-intro-title { font-size: 1.2rem; }
+.home-intro-title, .home-intro-text {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 .section-header {
   display: flex; align-items: flex-end; justify-content: space-between;
