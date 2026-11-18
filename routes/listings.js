@@ -288,8 +288,7 @@ router.get('/:id', optionalAuth, (req, res) => {
          c.name AS category_name, c.slug AS category_slug,
          sc.name AS subcategory_name,
          u.name AS seller_name, u.company_name, u.logo AS seller_logo, u.city AS seller_city,
-         u.is_verified AS seller_verified,
-         u.phone AS seller_phone
+         u.is_verified AS seller_verified
        FROM listings l
        LEFT JOIN categories    c  ON l.category_id    = c.id
        LEFT JOIN subcategories sc ON l.subcategory_id = sc.id
@@ -313,7 +312,21 @@ router.get('/:id', optionalAuth, (req, res) => {
     ).all(listing.id).map(t => t.tag);
 
     const actualViews = (req.userId && req.userId === listing.user_id) ? listing.views : listing.views + 1;
-    res.json({ ...listing, views: actualViews, images, tags });
+
+    // Gizlilik (KVKK): ilan iletisim bilgileri (telefon/e-posta) sadece giris
+    // yapmis kullanicilara donulur — anonim istekler ve botlar toplu halde
+    // telefon/e-posta toplayamasin. Arayuz bu durumda "giris yapin" gosterir.
+    const out = { ...listing, views: actualViews, images, tags };
+    if (!req.userId) {
+      out.contact_hidden = !!(listing.contact_phone || listing.contact_email);
+      out.contact_phone = null;
+      out.contact_email = null;
+    }
+    // Ret gerekcesi sadece ilan sahibine ve admine
+    const isOwnerOrAdmin = req.userId && (req.userId === listing.user_id || req.userRole === 'admin');
+    if (!isOwnerOrAdmin) delete out.rejection_reason;
+
+    res.json(out);
   } catch (err) {
     console.error('[LISTINGS] get one:', err.message);
     res.status(500).json({ error: 'İlan yüklenirken hata oluştu.' });

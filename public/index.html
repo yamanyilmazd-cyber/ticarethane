@@ -26,8 +26,8 @@
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Toptango — Türkiye genelinde ticari mal ilan platformu. Kimya, demir-çelik, tarım, plastik ve daha fazlası." />
-  <title>Toptango | Ticari Mal Platformu</title>
+  <title>Toptango | Ticari Mal ve Hammadde İlan Platformu</title>
+  <meta name="description" content="Türkiye genelinde toptan ticari mal, hammadde ve sanayi ürünü alım-satım ilanları. Kimya, demir-çelik, tarım, plastik ve daha fazlası; ücretsiz, komisyonsuz." />
 
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="shortcut icon" href="/favicon.ico" />
@@ -37,18 +37,57 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css?v=16" />
+  <link rel="stylesheet" href="/css/style.css?v=17" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <!-- SEO -->
-  <meta name="description" content="Toptango - Türkiye'nin ticaret platformu. Toplu mal, hammadde, sanayi ürünü ilan verin ve alın." />
-  <meta name="keywords" content="toptan, ticaret, hammadde, sanayi, ilan, turkiye" />
-  <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Toptango" />
-  <meta property="og:title" content="Toptango - Ticari Mal Platformu" />
-  <meta property="og:description" content="Toplu mal, hammadde ve sanayi urunu alim-satim ilanlari." />
-  <meta name="twitter:card" content="summary" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://www.toptango.com.tr/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Toptango" />
+  <meta property="og:locale" content="tr_TR" />
+  <meta property="og:url" content="https://www.toptango.com.tr/" />
+  <meta property="og:title" content="Toptango | Ticari Mal ve Hammadde İlan Platformu" />
+  <meta property="og:description" content="Toptan ticari mal, hammadde ve sanayi ürünü alım-satım ilanları. Ücretsiz ve komisyonsuz ilan verin." />
+  <meta property="og:image" content="https://www.toptango.com.tr/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Toptango — Ticari mal ve hammadde ilan platformu" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://www.toptango.com.tr/og-image.png" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://www.toptango.com.tr/#org",
+        "name": "Toptango",
+        "alternateName": ["ToptanGO"],
+        "url": "https://www.toptango.com.tr/",
+        "logo": "https://www.toptango.com.tr/favicon.png",
+        "email": "destek@toptango.com.tr",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Reşatbey Mah. Türkkuşu Cad. Günep Panorama İş Merkezi A Blok No:1003",
+          "addressLocality": "Seyhan",
+          "addressRegion": "Adana",
+          "addressCountry": "TR"
+        },
+        "areaServed": { "@type": "Country", "name": "Türkiye" },
+        "sameAs": ["https://apps.apple.com/tr/app/toptango/id6819301021"]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://www.toptango.com.tr/#website",
+        "url": "https://www.toptango.com.tr/",
+        "name": "Toptango",
+        "alternateName": "ToptanGO",
+        "inLanguage": "tr-TR",
+        "publisher": { "@id": "https://www.toptango.com.tr/#org" }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 
@@ -59,7 +98,7 @@
 
     <div class="navbar-search">
       <form id="navSearchForm">
-        <input type="text" id="navSearchInput" placeholder="Ürün, sektör veya firma arayın..." autocomplete="off" />
+        <input type="text" id="navSearchInput" placeholder="Ürün, sektör veya firma arayın..." aria-label="Ürün, sektör veya firma arayın" autocomplete="off" />
         <button type="submit">Ara</button>
       </form>
     </div>
@@ -77,7 +116,15 @@
 
 <!-- ===== ANA İÇERİK ===== -->
 <main id="app">
-  <div class="page-loading"><div class="spinner"></div></div>
+  <!-- JavaScript calistirmayan tarayici ve botlar (AI tarayicilari dahil) icin
+       statik icerik. app.js yuklenince bu blok uygulama arayuzuyle degisir. -->
+  <section class="section home-intro">
+    <div class="container">
+      <h1 class="home-intro-title">Türkiye'nin ticari mal ve hammadde ilan platformu</h1>
+      <p class="home-intro-text">Toptango, toptan ticari mal, hammadde ve sanayi ürünü alıcılarını ve satıcılarını sektörel kategorilerde buluşturan bir B2B ilan platformudur. Satış (Satılır) ve alım (Alınır) ilanı vermek ücretsizdir; satışlardan komisyon alınmaz. Kimya, demir-çelik, tarım, plastik-polimer, gıda, tekstil, inşaat, makine-ekipman ve diğer sektörlerde Türkiye'nin 81 ilinden ilanlara ulaşabilir, satıcılarla platform içinden mesajlaşabilirsiniz.</p>
+      <div class="page-loading"><div class="spinner"></div></div>
+    </div>
+  </section>
 </main>
 
 <!-- ===== FOOTER ===== -->
@@ -131,6 +178,6 @@
 <div class="toast-container" id="toastContainer"></div>
 <div id="modalContainer"></div>
 
-<script src="/js/app.js?v=16"></script>
+<script src="/js/app.js?v=17"></script>
 </body>
 </html>
