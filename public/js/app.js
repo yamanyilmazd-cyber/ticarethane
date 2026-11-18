@@ -275,7 +275,7 @@ function router() {
   _pendingFiles = [];
   _toDeleteImgs = new Set();
 
-  document.title = 'Toptango | Ticari Mal Platformu';
+  document.title = 'Toptango | Ticari Mal ve Hammadde İlan Platformu';
   // html { scroll-behavior: smooth } genel CSS kuralindan dolayi normal
   // scrollTo(0,0) animasyonlu calisiyor — sayfa icerigi (spinner, sonra
   // gercek sayfa) degisirken bu animasyon yarida kesilip kullanici eski
@@ -804,6 +804,13 @@ async function renderHome() {
 
     app.innerHTML =
       heroHTML +
+      // SEO: ana sayfanin tek H1'i + kisa tanitim (hero gorselindeki mesajin metin karsiligi)
+      '<section class="section home-intro">' +
+        '<div class="container">' +
+          '<h1 class="home-intro-title">Türkiye\'nin ticari mal ve hammadde ilan platformu</h1>' +
+          '<p class="home-intro-text">Toptan ticari mal, hammadde ve sanayi ürünü alım-satım ilanları. İlan vermek ücretsiz, satışlardan komisyon alınmaz.</p>' +
+        '</div>' +
+      '</section>' +
       '<section class="section" style="padding-bottom:16px;">' +
         '<div class="container">' +
           '<div class="section-header"><div><div class="section-title">Sektörler</div><div class="section-sub">Aradığınız ticari malı sektörüne göre bulun</div></div><a href="#/ara" class="btn btn-ghost btn-sm">Tüm İlanlar</a></div>' +
@@ -1396,8 +1403,9 @@ async function renderListingDetail(params) {
             '<div class="seller-head">' + sellerLogoHTML(l.seller_logo, 'lg') + '<div style="font-size:.95rem;font-weight:700;color:var(--navy);">Satıcı Bilgileri</div></div>' +
             '<a href="#/satici/' + l.user_id + '" class="btn btn-ghost btn-sm w-100" style="margin-bottom:8px;">🏢 Firmanın Tüm İlanları</a>' +
             infoRow('Firma / Kişi', (l.company_name||l.seller_name||'') + (l.seller_verified ? ' ✓ Doğrulanmış' : '')) + infoRow('Konum', l.seller_city) +
-            (l.contact_phone ? '<a href="tel:' + l.contact_phone + '" class="btn btn-primary w-100">' + esc(l.contact_phone) + '</a>' : '') +
-            (l.contact_email ? '<i class="bi bi-envelope me-1"></i> ' + l.contact_email + ' &nbsp;<a href="mailto:' + l.contact_email + '" style="font-size:0.85em;">(e-posta gönder)</a>' : '') +
+            (l.contact_phone ? '<a href="tel:' + esc(l.contact_phone.replace(/[^\d+]/g, '')) + '" class="btn btn-primary w-100">' + esc(l.contact_phone) + '</a>' : '') +
+            (l.contact_email ? '<i class="bi bi-envelope me-1"></i> ' + esc(l.contact_email) + ' &nbsp;<a href="mailto:' + esc(encodeURIComponent(l.contact_email).replace(/%40/g, '@')) + '" style="font-size:0.85em;">(e-posta gönder)</a>' : '') +
+            (l.contact_hidden && !isLoggedIn() ? '<div class="text-muted fs-sm" style="margin:4px 0 8px;">Telefon ve e-posta, giriş yapan üyelere gösterilir.</div><a href="#/giris" class="btn btn-primary w-100">Giriş Yap</a>' : '') +
             (l.website && /^https?:\/\//i.test(l.website) ? '<a href="' + esc(l.website) + '" target="_blank" rel="noopener noreferrer" class="btn btn-ghost w-100">Web Sitesi</a>' : '') +
           '</div>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">' + favBtn + shareBtn + reportBtn + '</div>' +

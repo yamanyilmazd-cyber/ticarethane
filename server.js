@@ -163,6 +163,13 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
 }));
 
 // ---------- API rotaları ----------
+// SEO: API yanitlari arama sonuclarinda listelenmesin. robots.txt artik
+// /api/'yi engellemiyor (Googlebot sayfayi render ederken ilan verisini
+// cekebilsin diye); bunun yerine yanitlar noindex ile isaretleniyor.
+app.use('/api/', (_req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex');
+  next();
+});
 // İstemciye açık, hassas olmayan yapılandırma (Google Client ID herkese açık bir değerdir)
 app.get('/api/config', (_req, res) => {
   res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null });
@@ -241,13 +248,42 @@ app.get('/sitemap.xml', (_req, res) => {
 // ---------- SEO: robots.txt ----------
 app.get('/robots.txt', (_req, res) => {
   res.header('Content-Type', 'text/plain');
-  res.send('User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://www.toptango.com.tr/sitemap.xml\n');
+  // /api/ bilerek engellenmiyor: Googlebot, sayfayi render ederken ilan ve
+  // kategori verisini /api/ uzerinden ceker. API yanitlari X-Robots-Tag:
+  // noindex ile indekslenmekten korunuyor.
+  res.send('User-agent: *\nAllow: /\nSitemap: https://www.toptango.com.tr/sitemap.xml\n');
 });
 
-// ---------- SPA fallback ----------
-app.get('*', (_req, res) => {
+// ---------- SPA giris noktasi ----------
+// Uygulama hash tabanli yonlendirme kullaniyor (#/ilan/12 gibi); sunucuya
+// gelen tek gecerli sayfa yolu "/". Statik dosyalar yukarida express.static
+// ile servis ediliyor.
+app.get(['/', '/index.html'], (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ---------- 404 ----------
+// Bilinmeyen her yol icin gercek 404 (onceden ana sayfa 200 ile donuyordu:
+// "soft 404" — arama motorlari bunu kalite sorunu olarak isaretler).
+app.use((req, res) => {
+  res.status(404);
+  if (req.method === 'GET' && req.accepts('html')) {
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.send(
+      '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8" />' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0" />' +
+      '<meta name="robots" content="noindex" />' +
+      '<title>Sayfa bulunamadı | Toptango</title>' +
+      '<link rel="icon" type="image/png" href="/favicon.png" /></head>' +
+      '<body style="margin:0;font-family:system-ui,-apple-system,sans-serif;background:#f5f7fa;color:#162032;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px;">' +
+      '<main><h1 style="font-size:1.5rem;margin:0 0 12px;">Sayfa bulunamadı</h1>' +
+      '<p style="color:#5b6577;margin:0 0 24px;">Aradığınız sayfa taşınmış ya da hiç var olmamış olabilir.</p>' +
+      '<a href="/" style="background:#162032;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;">Ana sayfaya dön</a></main>' +
+      '</body></html>'
+    );
+  }
+  res.type('text/plain').send('Not Found');
 });
 
 // ---------- Global hata yakalayıcı ----------

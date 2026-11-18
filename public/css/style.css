@@ -270,6 +270,17 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   font-size: 1.2rem; font-weight: 700; color: var(--navy); margin-bottom: 6px;
 }
 .section-sub { font-size: .88rem; color: var(--text-muted); margin-bottom: 24px; }
+/* Ana sayfa tanitim basligi (H1) */
+.section.home-intro { padding: 28px 0 0; }
+.home-intro-title {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1.45rem; font-weight: 800; color: var(--navy); line-height: 1.3; margin: 0 0 8px;
+}
+.home-intro-text { font-size: .92rem; color: var(--text-muted); line-height: 1.6; margin: 0; max-width: 760px; }
+.home-intro .page-loading { margin-top: 24px; }
+@media (max-width: 600px) {
+  .home-intro-title { font-size: 1.2rem; }
+}
 .section-header {
   display: flex; align-items: flex-end; justify-content: space-between;
   margin-bottom: 24px; gap: 12px;
